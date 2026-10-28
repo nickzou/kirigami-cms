@@ -19,9 +19,16 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
+    "@types/mdast": "4.0.4",
     "@types/node": "^24.19.2",
     "dependency-cruiser": "18.7.0",
     "typescript": "6.0.3",
     "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "mdast-util-to-string": "4.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5"
   }
 }

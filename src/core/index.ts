@@ -1,3 +1,4 @@
+export { type Page, type Section, splitSections } from "./markdown/sections.js";
 export {
   InvalidPathError,
   NotFoundError,
