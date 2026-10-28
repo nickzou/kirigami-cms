@@ -75,6 +75,7 @@ describe("kirigami build", () => {
     const dir = await site();
     await run(["build", dir], capture(dir));
     const about = await readFile(join(dir, "dist/about/index.html"), "utf8");
+    expect(about).not.toContain("__kirigami");
     expect(about).toContain("<title>About</title>");
     expect(about).toContain("<strong>plain markdown</strong>");
     expect(about).toContain("<table>");
@@ -255,12 +256,20 @@ describe("kirigami dev", () => {
         (await fetch(new URL(path, url))).text();
       await new Promise((r) => setTimeout(r, 100));
 
+      expect(await get("/")).toContain("/__kirigami/client.js");
+      const events = await fetch(new URL("/__kirigami/events", url));
+      const reader = (events.body as ReadableStream<Uint8Array>).getReader();
+      const nextEvent = async () =>
+        new TextDecoder().decode((await reader.read()).value);
+
       await writeFile(join(dir, "index.md"), "# Brand new heading\n");
+      expect(await nextEvent()).toContain('"reload"');
       await vi.waitFor(async () =>
         expect(await get("/")).toContain("Brand new heading"),
       );
 
       await writeFile(join(dir, "site.yaml"), "nope: 1\n");
+      expect(await nextEvent()).toContain('"type":"error"');
       await vi.waitFor(() =>
         expect(io.lines.err.join("\n")).toContain(
           "Still serving the last good build",
@@ -272,6 +281,8 @@ describe("kirigami dev", () => {
       await vi.waitFor(() =>
         expect(io.lines.out.join("\n")).toContain("Fixed. Rebuilt"),
       );
+      expect(await nextEvent()).toContain('"reload"');
+      await reader.cancel();
     } finally {
       abort.abort();
     }

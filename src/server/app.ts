@@ -1,5 +1,13 @@
 import { Hono } from "hono";
+import { streamSSE } from "hono/streaming";
 import { type OutputFile, renderPage, STYLESHEET_PATH } from "../core/index.js";
+import {
+  CLIENT_SCRIPT,
+  CLIENT_SCRIPT_PATH,
+  EVENTS_PATH,
+  SCRIPT_TAG,
+} from "./client-script.js";
+import type { EventHub } from "./events.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -26,13 +34,48 @@ const contentTypeOf = (path: string): string => {
   );
 };
 
+/** Adds the live-reload script to a page, before `</body>` when there is one. */
+function withClientScript(html: string): string {
+  const end = html.lastIndexOf("</body>");
+  return end === -1
+    ? html + SCRIPT_TAG
+    : `${html.slice(0, end)}${SCRIPT_TAG}${html.slice(end)}`;
+}
+
+export interface SiteAppOptions {
+  /** When given, pages get the live-reload script and an event stream is served. */
+  hub?: EventHub;
+}
+
 /**
  * Serves built output files with clean URLs: `/about/` is `about/index.html`,
  * and `/about` redirects to `/about/`. `getFiles` is called on every request,
  * so a caller can swap in a fresh build without restarting.
  */
-export function createSiteApp(getFiles: () => readonly OutputFile[]) {
+export function createSiteApp(
+  getFiles: () => readonly OutputFile[],
+  { hub }: SiteAppOptions = {},
+) {
   const app = new Hono();
+  const page = (html: string): string => (hub ? withClientScript(html) : html);
+
+  if (hub) {
+    app.get(CLIENT_SCRIPT_PATH, (c) =>
+      c.body(CLIENT_SCRIPT, 200, {
+        "Content-Type": "text/javascript; charset=utf-8",
+      }),
+    );
+    app.get(EVENTS_PATH, (c) =>
+      streamSSE(c, async (stream) => {
+        const unsubscribe = hub.subscribe((event) => {
+          void stream.writeSSE({ data: JSON.stringify(event) });
+        });
+        stream.onAbort(unsubscribe);
+        // Keep the handler open until the tab goes away.
+        await new Promise<void>((resolve) => stream.onAbort(resolve));
+      }),
+    );
+  }
 
   app.all("*", (c) => {
     if (c.req.method !== "GET" && c.req.method !== "HEAD") {
@@ -43,7 +86,7 @@ export function createSiteApp(getFiles: () => readonly OutputFile[]) {
     try {
       urlPath = decodeURIComponent(c.req.path);
     } catch {
-      return c.html(notFoundPage(), 404);
+      return c.html(page(notFoundPage()), 404);
     }
 
     const files = new Map(getFiles().map((f) => [f.path, f.content]));
@@ -53,7 +96,14 @@ export function createSiteApp(getFiles: () => readonly OutputFile[]) {
     const target = wantsFolder ? `${relative}index.html` : relative;
     const content = files.get(target);
     if (content !== undefined) {
-      return c.body(content, 200, { "Content-Type": contentTypeOf(target) });
+      const type = contentTypeOf(target);
+      return c.body(
+        type.startsWith("text/html") ? page(content) : content,
+        200,
+        {
+          "Content-Type": type,
+        },
+      );
     }
 
     if (!wantsFolder && files.has(`${relative}/index.html`)) {
@@ -61,7 +111,7 @@ export function createSiteApp(getFiles: () => readonly OutputFile[]) {
       return c.redirect(`${c.req.path}/${search}`, 302);
     }
 
-    return c.html(notFoundPage(), 404);
+    return c.html(page(notFoundPage()), 404);
   });
 
   return app;
