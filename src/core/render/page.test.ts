@@ -5,6 +5,15 @@ const render = (source: string, path = "about.md") =>
   renderPage({ source, path, stylesheet: "style.css" });
 
 describe("renderPage", () => {
+  it("links a stylesheet that starts with / as is", () => {
+    const html = renderPage({
+      source: "# X\n",
+      path: "404.md",
+      stylesheet: "/style.css",
+    });
+    expect(html).toContain('<link rel="stylesheet" href="/style.css">');
+  });
+
   it("returns a complete HTML document", () => {
     const html = render("# About\n\nHello.\n");
     expect(html.startsWith("<!doctype html>\n")).toBe(true);

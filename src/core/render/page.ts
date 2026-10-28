@@ -6,7 +6,11 @@ export interface RenderPageInput {
   source: string;
   /** Store path of the page, e.g. `blog/hello.md`. */
   path: string;
-  /** Output path of the stylesheet, e.g. `style.css`. */
+  /**
+   * Output path of the stylesheet, e.g. `style.css`, linked relative to the
+   * page. A path starting with `/` is linked as is, for pages served at
+   * addresses that don't match their path (such as a 404).
+   */
   stylesheet: string;
 }
 
@@ -25,7 +29,9 @@ export function renderPage({
 }: RenderPageInput): string {
   const fileName = path.slice(path.lastIndexOf("/") + 1).replace(/\.md$/, "");
   const title = firstHeading(source) ?? fileName;
-  const href = relativeHref(outputPath(path), stylesheet);
+  const href = stylesheet.startsWith("/")
+    ? stylesheet
+    : relativeHref(outputPath(path), stylesheet);
 
   return `<!doctype html>
 <html lang="en">
