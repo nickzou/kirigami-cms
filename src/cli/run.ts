@@ -7,6 +7,7 @@ import {
   ConfigError,
   checkSite,
 } from "../core/index.js";
+import { PortInUseError, startDevServer } from "../server/dev.js";
 import { LocalFolderStore } from "../stores/local-folder.js";
 
 export interface Io {
@@ -18,6 +19,7 @@ export interface Io {
 const USAGE = `Usage:
   kirigami build <site> [--out <dir>]   Render the site to static HTML (default: <site>/dist)
   kirigami check <site>                 Validate the site without building it
+  kirigami dev <site> [--port <n>]      Preview the site locally (default port: 3000)
   kirigami --help
 
 Exit codes: 0 success, 1 the site has problems, 2 bad usage.`;
@@ -42,15 +44,26 @@ export async function run(argv: string[], io: Io): Promise<number> {
 
   const [command, siteArg, ...extra] = positionals;
   if (
-    (command !== "build" && command !== "check") ||
+    (command !== "build" && command !== "check" && command !== "dev") ||
     !siteArg ||
     extra.length > 0
   ) {
-    io.err(`Expected "build <site>" or "check <site>".\n\n${USAGE}`);
+    io.err(
+      `Expected "build <site>", "check <site>" or "dev <site>".\n\n${USAGE}`,
+    );
     return 2;
   }
-  if (command === "check" && values.out !== undefined) {
+  if (command !== "build" && values.out !== undefined) {
     io.err(`--out only applies to "build".\n\n${USAGE}`);
+    return 2;
+  }
+  if (command !== "dev" && values.port !== undefined) {
+    io.err(`--port only applies to "dev".\n\n${USAGE}`);
+    return 2;
+  }
+  const port = values.port === undefined ? 3000 : Number(values.port);
+  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+    io.err(`--port must be a number from 0 to 65535.\n\n${USAGE}`);
     return 2;
   }
 
@@ -73,9 +86,14 @@ export async function run(argv: string[], io: Io): Promise<number> {
 
   try {
     if (command === "check") return await check(store, io);
+    if (command === "dev") return await dev(store, port, io);
     return await build(store, outDir, io);
   } catch (error) {
-    if (error instanceof ConfigError || error instanceof BuildError) {
+    if (
+      error instanceof ConfigError ||
+      error instanceof BuildError ||
+      error instanceof PortInUseError
+    ) {
       io.err(error.message);
       return 1;
     }
@@ -89,6 +107,7 @@ function parse(argv: string[]) {
     allowPositionals: true,
     options: {
       out: { type: "string" },
+      port: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -138,5 +157,17 @@ async function build(
   );
   const pages = files.length - 1;
   io.out(`Built ${pages} page${pages === 1 ? "" : "s"} to ${outDir}`);
+  return 0;
+}
+
+/** Builds once and serves it. Returns once listening; the server keeps the process alive. */
+async function dev(
+  store: LocalFolderStore,
+  port: number,
+  io: Io,
+): Promise<number> {
+  const files = await buildSite(store);
+  const server = await startDevServer(() => files, port);
+  io.out(`Serving at ${server.url} (press Ctrl+C to stop)`);
   return 0;
 }

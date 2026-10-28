@@ -218,3 +218,28 @@ describe("usage", () => {
     expect(io.lines.err.join("\n")).toContain("Usage:");
   });
 });
+
+describe("kirigami dev", () => {
+  it("rejects a port that is not a number in range", async () => {
+    const dir = await site();
+    for (const port of ["abc", "-1", "70000", "3.5"]) {
+      const io = capture(dir);
+      expect(await run(["dev", dir, `--port=${port}`], io), port).toBe(2);
+      expect(io.lines.err.join("\n")).toContain("--port must be");
+    }
+  });
+
+  it("only accepts --port for dev and --out for build", async () => {
+    const dir = await site();
+    expect(await run(["build", dir, "--port", "1"], capture(dir))).toBe(2);
+    expect(await run(["dev", dir, "--out", "x"], capture(dir))).toBe(2);
+  });
+
+  it("exits 1 with the config problem instead of serving a broken site", async () => {
+    const dir = await site();
+    await writeFile(join(dir, "site.yaml"), "nope: 1\n");
+    const io = capture(dir);
+    expect(await run(["dev", dir, "--port", "0"], io)).toBe(1);
+    expect(io.lines.err.join("\n")).toContain("site.yaml");
+  });
+});
