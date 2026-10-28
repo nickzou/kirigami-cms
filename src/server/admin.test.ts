@@ -20,6 +20,8 @@ async function built() {
   await writeFile(join(dir, "index.html"), "<h1>Admin</h1>");
   await writeFile(join(dir, "assets/app.js"), "console.log(1)");
   await writeFile(join(dir, "assets/app.css"), "body{}");
+  await writeFile(join(dir, "assets/f.woff2"), "font");
+  await writeFile(join(dir, "Amiko-OFL.txt"), "license");
   await writeFile(join(root, "secret.txt"), "top secret");
   return { root, dir };
 }
@@ -52,6 +54,18 @@ describe("createAdminApp", () => {
     expect(
       (await get(app, "/admin/assets/app.css")).headers.get("content-type"),
     ).toBe("text/css; charset=utf-8");
+  });
+
+  it("serves fonts and the font license with the right types", async () => {
+    const app = createAdminApp((await built()).dir);
+    expect(
+      (await get(app, "/admin/assets/f.woff2")).headers.get("content-type"),
+    ).toBe("font/woff2");
+    const license = await get(app, "/admin/Amiko-OFL.txt");
+    expect(license.headers.get("content-type")).toBe(
+      "text/plain; charset=utf-8",
+    );
+    expect(await license.text()).toBe("license");
   });
 
   it("gives deep links the app, so a reload on /admin/pages/x.md works", async () => {

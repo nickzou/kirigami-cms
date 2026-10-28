@@ -32,3 +32,7 @@ Raw HTML in markdown is left out of the output. See [`test/fixtures/basic-site`]
 ## License
 
 [MIT](LICENSE)
+
+## Third-party
+
+The admin ships the [Amiko](https://fonts.google.com/specimen/Amiko) font, served from the app itself rather than a CDN, under the SIL Open Font License 1.1. The license is included at `/admin/Amiko-OFL.txt`.

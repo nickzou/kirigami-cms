@@ -6,7 +6,7 @@
   --border: #d1d9e0;
   --link: #0b57d0;
   --focus: #0b57d0;
-  font-family: system-ui, sans-serif;
+  font-family: Amiko, system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {

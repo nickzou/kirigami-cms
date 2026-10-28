@@ -109,6 +109,9 @@ importers:
 
   .:
     dependencies:
+      '@fontsource/amiko':
+        specifier: 5.3.0
+        version: 5.3.0
       '@hono/node-server':
         specifier: ^2.1.5
         version: 2.1.5(hono@4.13.14)
@@ -339,6 +342,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource/amiko@5.3.0':
+    resolution: {integrity: sha512-klUyLnSSpX7eL8Azby2ovbyFpSw6DvBWkUndOcBB5B/yzfcZkGJc0zV/lSdq8Qb8UcCn50PqvRPcIO644OTOIA==}
 
   '@hono/node-server@2.1.5':
     resolution: {integrity: sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q==}
@@ -1516,6 +1522,8 @@ snapshots:
   '@csstools/css-tokenizer@4.0.2': {}
 
   '@exodus/bytes@1.16.0': {}
+
+  '@fontsource/amiko@5.3.0': {}
 
   '@hono/node-server@2.1.5(hono@4.13.14)':
     dependencies:
