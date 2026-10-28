@@ -54,6 +54,11 @@ async function readConfig(store: ContentStore): Promise<SiteConfig> {
   }
 }
 
+/** Whether a file is one that `buildSite` reads: a markdown page or the config. */
+export function isSourcePath(path: string): boolean {
+  return path === SITE_CONFIG_PATH || path.endsWith(".md");
+}
+
 async function pagePaths(store: ContentStore): Promise<string[]> {
   return (await store.list())
     .map((e) => e.path)

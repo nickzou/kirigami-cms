@@ -6,14 +6,19 @@ import {
   buildSite,
   ConfigError,
   checkSite,
+  isSourcePath,
 } from "../core/index.js";
 import { PortInUseError, startDevServer } from "../server/dev.js";
+import { createLiveSite } from "../server/live-site.js";
+import { watchFolder } from "../server/watch.js";
 import { LocalFolderStore } from "../stores/local-folder.js";
 
 export interface Io {
   cwd: string;
   out: (line: string) => void;
   err: (line: string) => void;
+  /** Stops a running `dev` server. Without it, `dev` runs until the process ends. */
+  signal?: AbortSignal;
 }
 
 const USAGE = `Usage:
@@ -86,7 +91,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
 
   try {
     if (command === "check") return await check(store, io);
-    if (command === "dev") return await dev(store, port, io);
+    if (command === "dev") return await dev(store, site, ignore, port, io);
     return await build(store, outDir, io);
   } catch (error) {
     if (
@@ -160,14 +165,42 @@ async function build(
   return 0;
 }
 
-/** Builds once and serves it. Returns once listening; the server keeps the process alive. */
+/**
+ * Serves the site and rebuilds it when pages or `site.yaml` change. Returns
+ * once listening; the server and watcher keep the process alive.
+ */
 async function dev(
   store: LocalFolderStore,
+  site: string,
+  ignore: string[],
   port: number,
   io: Io,
 ): Promise<number> {
-  const files = await buildSite(store);
-  const server = await startDevServer(() => files, port);
+  const live = await createLiveSite(store, {
+    onBuilt: (files, recovered) => {
+      const pages = files.length - 1;
+      io.out(
+        `${recovered ? "Fixed. " : ""}Rebuilt ${pages} page${pages === 1 ? "" : "s"}`,
+      );
+    },
+    onProblem: (message) =>
+      io.err(`${message}\nStill serving the last good build.`),
+  });
+  const server = await startDevServer(live.files, port);
+  const watcher = watchFolder(site, {
+    ignore,
+    relevant: isSourcePath,
+    onChange: () => void live.rebuild(),
+    onError: (error) => io.err(`Cannot watch ${site}: ${error.message}`),
+  });
   io.out(`Serving at ${server.url} (press Ctrl+C to stop)`);
+  io.signal?.addEventListener(
+    "abort",
+    () => {
+      watcher.close();
+      void server.close();
+    },
+    { once: true },
+  );
   return 0;
 }

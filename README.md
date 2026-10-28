@@ -24,7 +24,7 @@ my-site/
 pnpm build
 node dist/cli/main.js build my-site     # writes my-site/dist
 node dist/cli/main.js check my-site     # validates without building
-node dist/cli/main.js dev my-site       # preview at http://localhost:3000 (built once; restart to see edits)
+node dist/cli/main.js dev my-site       # preview at http://localhost:3000, rebuilds when you save
 ```
 
 Raw HTML in markdown is left out of the output. See [`test/fixtures/basic-site`](test/fixtures/basic-site) for an example, and [`schema/site.schema.json`](schema/site.schema.json) for editor autocomplete in `site.yaml`.
