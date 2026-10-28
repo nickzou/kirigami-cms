@@ -8,56 +8,18 @@ import {
   NotFoundError,
   VersionConflictError,
 } from "../core/index.js";
+import {
+  ConflictBody,
+  ErrorBody,
+  PageSchema,
+  PageSummarySchema,
+  PathParam,
+  Saved,
+  SaveRequest,
+} from "./api-schemas.js";
 
 const MAX_BODY_BYTES = 10 * 1024 * 1024;
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
-
-const ErrorBody = z
-  .object({ error: z.object({ code: z.string(), message: z.string() }) })
-  .openapi("Error");
-
-const ConflictBody = z
-  .object({
-    error: z.object({ code: z.string(), message: z.string() }),
-    currentVersion: z.string().nullable().openapi({
-      description: "The page's version now, or null if it is gone.",
-    }),
-  })
-  .openapi("Conflict");
-
-const PathParam = z.string().openapi({
-  param: { name: "path", in: "path" },
-  description:
-    "The page's path in the site, URL-encoded so that slashes become %2F.",
-  example: "blog%2Fhello.md",
-});
-
-const Version = z.string().openapi({
-  description:
-    "Identifies one state of a page. Send back the one you last read.",
-});
-
-const PageSummary = z
-  .object({ path: z.string(), title: z.string(), version: Version })
-  .openapi("PageSummary");
-
-const Page = z
-  .object({ path: z.string(), content: z.string(), version: Version })
-  .openapi("Page");
-
-const Saved = z.object({ path: z.string(), version: Version }).openapi("Saved");
-
-const SaveRequest = z
-  .object({
-    content: z
-      .string()
-      .openapi({ description: "The page's markdown, exactly." }),
-    version: Version.nullable().openapi({
-      description:
-        "The version you last read, or null to create a page that must not exist yet.",
-    }),
-  })
-  .openapi("SaveRequest");
 
 const errorResponse = (description: string) => ({
   description,
@@ -73,7 +35,7 @@ const listPages = createRoute({
       description: "Every markdown page in the site.",
       content: {
         "application/json": {
-          schema: z.object({ pages: z.array(PageSummary) }),
+          schema: z.object({ pages: z.array(PageSummarySchema) }),
         },
       },
     },
@@ -88,7 +50,7 @@ const getPage = createRoute({
   responses: {
     200: {
       description: "The page.",
-      content: { "application/json": { schema: Page } },
+      content: { "application/json": { schema: PageSchema } },
     },
     400: errorResponse("The path is not a valid page path."),
     404: errorResponse("There is no such page."),

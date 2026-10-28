@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import {
   BuildError,
@@ -8,6 +9,7 @@ import {
   checkSite,
   isSourcePath,
 } from "../core/index.js";
+import { createAdminApp } from "../server/admin.js";
 import { createApiApp } from "../server/api.js";
 import { PortInUseError, startDevServer } from "../server/dev.js";
 import { createEventHub } from "../server/events.js";
@@ -15,6 +17,9 @@ import { createLiveSite } from "../server/live-site.js";
 import { findShadowedPages } from "../server/reserved.js";
 import { watchFolder } from "../server/watch.js";
 import { LocalFolderStore } from "../stores/local-folder.js";
+
+/** Where `pnpm build` puts the admin app, next to the compiled CLI. */
+const ADMIN_DIR = fileURLToPath(new URL("../admin", import.meta.url));
 
 export interface Io {
   cwd: string;
@@ -205,6 +210,7 @@ async function dev(
   const server = await startDevServer(live.files, port, {
     hub,
     api: createApiApp(store),
+    admin: createAdminApp(ADMIN_DIR),
   });
   const watcher = watchFolder(site, {
     ignore,

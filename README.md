@@ -24,7 +24,7 @@ my-site/
 pnpm build
 node dist/cli/main.js build my-site     # writes my-site/dist
 node dist/cli/main.js check my-site     # validates without building
-node dist/cli/main.js dev my-site       # preview at http://localhost:3000, reloads the browser when you save; JSON API at /api (OpenAPI: /api/openapi.json)
+node dist/cli/main.js dev my-site       # preview at http://localhost:3000, reloads the browser when you save; admin at /admin, JSON API at /api (OpenAPI: /api/openapi.json)
 ```
 
 Raw HTML in markdown is left out of the output. See [`test/fixtures/basic-site`](test/fixtures/basic-site) for an example, and [`schema/site.schema.json`](schema/site.schema.json) for editor autocomplete in `site.yaml`.
@@ -32,3 +32,7 @@ Raw HTML in markdown is left out of the output. See [`test/fixtures/basic-site`]
 ## License
 
 [MIT](LICENSE)
+
+## Third-party
+
+The admin ships the [Amiko](https://fonts.google.com/specimen/Amiko) font, served from the app itself rather than a CDN, under the SIL Open Font License 1.1. The license is included at `/admin/Amiko-OFL.txt`.
