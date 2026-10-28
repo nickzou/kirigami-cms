@@ -8,9 +8,8 @@ import {
 } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MemoryStore } from "../../src/core/index.js";
-import { createApiApp } from "../../src/server/api.js";
 import { App } from "./App.js";
+import { createFakeApi, type FetchLike } from "./fake-api.js";
 
 afterEach(() => {
   cleanup();
@@ -18,17 +17,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
-
 /** The real pages API over an in-memory store, as `fetch` for the app. */
-function serve(files: Record<string, string>, wrap?: (real: Fetch) => Fetch) {
-  const store = new MemoryStore(files);
-  const api = createApiApp(store);
-  const real: Fetch = (input, init) =>
-    Promise.resolve(
-      api.request(new Request(new URL(input, "http://localhost"), init)),
-    );
-  vi.stubGlobal("fetch", wrap ? wrap(real) : real);
+function serve(
+  files: Record<string, string>,
+  wrap?: (real: FetchLike) => FetchLike,
+) {
+  const { store, fetch } = createFakeApi(files, wrap);
+  vi.stubGlobal("fetch", fetch);
   return store;
 }
 

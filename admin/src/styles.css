@@ -108,36 +108,41 @@ main {
   resize: vertical;
 }
 
-.editor-actions {
+.actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
 }
 
-.editor-state,
-.editor-status {
+.muted {
   color: var(--muted);
 }
 
-.editor-status {
+.save-status {
   min-height: 1.5em;
 }
 
-.editor-problem,
-.notice {
+.alert {
   margin: 0.5rem 0;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
-  border-left: 4px solid #d1242f;
   border-radius: 0.5rem;
 }
 
-.notice {
-  border-left-color: #bf8700;
+.alert > :first-child {
+  margin-top: 0;
 }
 
-button {
+.alert--error {
+  border-left: 4px solid #d1242f;
+}
+
+.alert--warning {
+  border-left: 4px solid #bf8700;
+}
+
+.button {
   padding: 0.4rem 0.9rem;
   border: 1px solid var(--border);
   border-radius: 0.375rem;
@@ -147,7 +152,7 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+.button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }

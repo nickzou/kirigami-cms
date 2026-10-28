@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
 import { listPages, type PageSummary } from "./api.js";
+import { ErrorPanel } from "./components/ErrorPanel.js";
+import { LoadingMessage } from "./components/LoadingMessage.js";
+import { PageListView } from "./components/PageListView.js";
 
 type State =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; pages: PageSummary[] };
 
-export const pageHref = (path: string): string =>
-  `/pages/${path.split("/").map(encodeURIComponent).join("/")}`;
-
+/** Loads the site's pages and shows them. */
 export function PageList() {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -31,33 +31,16 @@ export function PageList() {
     return () => controller.abort();
   }, [attempt]);
 
-  if (state.status === "loading") return <p role="status">Loading pages…</p>;
-
+  if (state.status === "loading") {
+    return <LoadingMessage>Loading pages…</LoadingMessage>;
+  }
   if (state.status === "error") {
     return (
-      <div role="alert">
-        <p>Could not load the pages: {state.message}</p>
-        <button type="button" onClick={() => setAttempt(attempt + 1)}>
-          Try again
-        </button>
-      </div>
+      <ErrorPanel
+        message={`Could not load the pages: ${state.message}`}
+        onRetry={() => setAttempt(attempt + 1)}
+      />
     );
   }
-
-  if (state.pages.length === 0) {
-    return <p>This site has no pages yet.</p>;
-  }
-
-  return (
-    <ul className="page-list">
-      {state.pages.map((page) => (
-        <li key={page.path}>
-          <Link to={pageHref(page.path)}>
-            <strong>{page.title}</strong>
-            <span className="path">{page.path}</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
+  return <PageListView pages={state.pages} />;
 }

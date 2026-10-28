@@ -21,3 +21,4 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm check:boundaries
+      - run: pnpm build:storybook
