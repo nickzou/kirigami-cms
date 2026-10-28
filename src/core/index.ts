@@ -1,3 +1,16 @@
+export { generateStylesheet } from "./config/css.js";
+export {
+  ConfigError,
+  type ConfigProblem,
+  defaultSiteConfig,
+  parseSiteConfig,
+} from "./config/load.js";
+export {
+  type SiteConfig,
+  siteConfigSchema,
+  type Theme,
+  themeSchema,
+} from "./config/schema.js";
 export { type Page, type Section, splitSections } from "./markdown/sections.js";
 export { firstHeading, renderMarkdown } from "./render/markdown.js";
 export { type RenderPageInput, renderPage } from "./render/page.js";
