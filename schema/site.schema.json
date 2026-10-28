@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "default": {},
+  "type": "object",
+  "properties": {
+    "theme": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "colors": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "background": {
+              "default": "#ffffff",
+              "type": "string",
+              "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
+            },
+            "text": {
+              "default": "#1a1a1a",
+              "type": "string",
+              "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
+            },
+            "muted": {
+              "default": "#5c5c5c",
+              "type": "string",
+              "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
+            },
+            "link": {
+              "default": "#0b57d0",
+              "type": "string",
+              "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
+            },
+            "border": {
+              "default": "#d9d9d9",
+              "type": "string",
+              "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
+            },
+            "codeBackground": {
+              "default": "#f4f4f5",
+              "type": "string",
+              "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "fonts": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "body": {
+              "default": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+              "type": "string",
+              "minLength": 1
+            },
+            "heading": {
+              "default": "inherit",
+              "type": "string",
+              "minLength": 1
+            },
+            "mono": {
+              "default": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "type": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "baseSize": {
+              "default": "1.125rem",
+              "type": "string",
+              "pattern": "^(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%)$"
+            },
+            "scale": {
+              "default": 1.25,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 2
+            },
+            "lineHeight": {
+              "default": 1.6,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 3
+            }
+          },
+          "additionalProperties": false
+        },
+        "spacing": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "unit": {
+              "default": "1rem",
+              "type": "string",
+              "pattern": "^(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%)$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "layout": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "maxWidth": {
+              "default": "44rem",
+              "type": "string",
+              "pattern": "^(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%)$"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
