@@ -44,6 +44,19 @@ Squash-merge only, then delete the branch. The maintainer merges.
 - Zod schemas are the source of truth for config and API shapes.
 - Tests: Vitest. Don't mock the file system; use in-memory stores in unit tests.
 
+## Working on the admin
+
+The admin app (React 19 + Vite) lives in `admin/` and is built into `dist/admin` by `pnpm build`. `kirigami dev` serves it at `/admin`.
+
+To work on it with hot reloading, run a site in one terminal and Vite in another:
+
+```sh
+node dist/cli/main.js dev path/to/my-site   # serves the API on port 3000
+pnpm admin:dev                              # admin on http://localhost:5173/admin/, proxying /api
+```
+
+If the site runs on another port, set `KIRIGAMI_DEV_URL` (for example `KIRIGAMI_DEV_URL=http://localhost:4000 pnpm admin:dev`). The admin imports only types from `src/server/api-schemas.ts`, so its request and response shapes cannot drift from the API.
+
 ## Issues
 
 Issues are tracked in the project's issue tracker (currently ClickUp). See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).

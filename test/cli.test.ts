@@ -76,6 +76,8 @@ describe("kirigami build", () => {
     await run(["build", dir], capture(dir));
     const about = await readFile(join(dir, "dist/about/index.html"), "utf8");
     expect(about).not.toContain("__kirigami");
+    expect(await exists(join(dir, "dist/admin/index.html"))).toBe(false);
+    expect(await exists(join(dir, "dist/api"))).toBe(false);
     expect(about).toContain("<title>About</title>");
     expect(about).toContain("<strong>plain markdown</strong>");
     expect(about).toContain("<table>");

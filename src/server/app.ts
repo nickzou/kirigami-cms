@@ -48,6 +48,8 @@ export interface SiteAppOptions {
   hub?: EventHub;
   /** When given, its routes are served ahead of the site (they live under `/api`). */
   api?: ReturnType<typeof createApiApp>;
+  /** When given, its routes (the admin app, under `/admin`) are served ahead of the site. */
+  admin?: Hono;
 }
 
 /**
@@ -57,7 +59,7 @@ export interface SiteAppOptions {
  */
 export function createSiteApp(
   getFiles: () => readonly OutputFile[],
-  { hub, api }: SiteAppOptions = {},
+  { hub, api, admin }: SiteAppOptions = {},
 ) {
   const app = new Hono();
   const page = (html: string): string => (hub ? withClientScript(html) : html);
@@ -81,6 +83,7 @@ export function createSiteApp(
   }
 
   if (api) app.route("/", api);
+  if (admin) app.route("/", admin);
 
   app.all("*", (c) => {
     if (api && (c.req.path === "/api" || c.req.path.startsWith("/api/"))) {
