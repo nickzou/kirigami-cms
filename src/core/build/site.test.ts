@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ConfigError } from "../config/load.js";
 import { MemoryStore } from "../store/memory.js";
-import { BuildError, buildSite, checkSite } from "./site.js";
+import { BuildError, buildSite, checkSite, isSourcePath } from "./site.js";
 
 const byPath = (files: { path: string; content: string }[]) =>
   Object.fromEntries(files.map((f) => [f.path, f.content]));
@@ -148,5 +148,17 @@ describe("checkSite", () => {
     const before = await store.list();
     await checkSite(store);
     expect(await store.list()).toEqual(before);
+  });
+});
+
+describe("isSourcePath", () => {
+  it("is true for markdown pages and the site config only", () => {
+    expect(isSourcePath("index.md")).toBe(true);
+    expect(isSourcePath("blog/hello.md")).toBe(true);
+    expect(isSourcePath("site.yaml")).toBe(true);
+    expect(isSourcePath("blog/site.yaml")).toBe(false);
+    expect(isSourcePath("index.md~")).toBe(false);
+    expect(isSourcePath(".index.md.swp")).toBe(false);
+    expect(isSourcePath("logo.png")).toBe(false);
   });
 });

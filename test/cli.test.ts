@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { run } from "../src/cli/run.js";
 
 const fixture = fileURLToPath(
@@ -241,5 +241,39 @@ describe("kirigami dev", () => {
     const io = capture(dir);
     expect(await run(["dev", dir, "--port", "0"], io)).toBe(1);
     expect(io.lines.err.join("\n")).toContain("site.yaml");
+  });
+
+  it("serves the site, rebuilds on edits, and survives a broken config", async () => {
+    const dir = await site();
+    const abort = new AbortController();
+    const io = { ...capture(dir), signal: abort.signal };
+    try {
+      expect(await run(["dev", dir, "--port=0"], io)).toBe(0);
+      const url = /http:\/\/localhost:\d+\//.exec(io.lines.out.join("\n"))?.[0];
+      expect(url).toBeDefined();
+      const get = async (path: string) =>
+        (await fetch(new URL(path, url))).text();
+      await new Promise((r) => setTimeout(r, 100));
+
+      await writeFile(join(dir, "index.md"), "# Brand new heading\n");
+      await vi.waitFor(async () =>
+        expect(await get("/")).toContain("Brand new heading"),
+      );
+
+      await writeFile(join(dir, "site.yaml"), "nope: 1\n");
+      await vi.waitFor(() =>
+        expect(io.lines.err.join("\n")).toContain(
+          "Still serving the last good build",
+        ),
+      );
+      expect(await get("/")).toContain("Brand new heading");
+
+      await writeFile(join(dir, "site.yaml"), "");
+      await vi.waitFor(() =>
+        expect(io.lines.out.join("\n")).toContain("Fixed. Rebuilt"),
+      );
+    } finally {
+      abort.abort();
+    }
   });
 });

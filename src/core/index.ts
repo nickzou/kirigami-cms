@@ -2,6 +2,7 @@ export {
   BuildError,
   buildSite,
   checkSite,
+  isSourcePath,
   type OutputFile,
   SITE_CONFIG_PATH,
   type SiteProblem,
