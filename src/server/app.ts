@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { type OutputFile, renderPage, STYLESHEET_PATH } from "../core/index.js";
+import type { createApiApp } from "./api.js";
 import {
   CLIENT_SCRIPT,
   CLIENT_SCRIPT_PATH,
@@ -45,6 +46,8 @@ function withClientScript(html: string): string {
 export interface SiteAppOptions {
   /** When given, pages get the live-reload script and an event stream is served. */
   hub?: EventHub;
+  /** When given, its routes are served ahead of the site (they live under `/api`). */
+  api?: ReturnType<typeof createApiApp>;
 }
 
 /**
@@ -54,7 +57,7 @@ export interface SiteAppOptions {
  */
 export function createSiteApp(
   getFiles: () => readonly OutputFile[],
-  { hub }: SiteAppOptions = {},
+  { hub, api }: SiteAppOptions = {},
 ) {
   const app = new Hono();
   const page = (html: string): string => (hub ? withClientScript(html) : html);
@@ -77,7 +80,15 @@ export function createSiteApp(
     );
   }
 
+  if (api) app.route("/", api);
+
   app.all("*", (c) => {
+    if (api && (c.req.path === "/api" || c.req.path.startsWith("/api/"))) {
+      return c.json(
+        { error: { code: "not_found", message: "No such API route." } },
+        404,
+      );
+    }
     if (c.req.method !== "GET" && c.req.method !== "HEAD") {
       return c.text("Method not allowed", 405);
     }

@@ -8,9 +8,11 @@ import {
   checkSite,
   isSourcePath,
 } from "../core/index.js";
+import { createApiApp } from "../server/api.js";
 import { PortInUseError, startDevServer } from "../server/dev.js";
 import { createEventHub } from "../server/events.js";
 import { createLiveSite } from "../server/live-site.js";
+import { findShadowedPages } from "../server/reserved.js";
 import { watchFolder } from "../server/watch.js";
 import { LocalFolderStore } from "../stores/local-folder.js";
 
@@ -178,9 +180,17 @@ async function dev(
   io: Io,
 ): Promise<number> {
   const hub = createEventHub();
+  const warnShadowed = (files: Parameters<typeof findShadowedPages>[0]) => {
+    for (const url of findShadowedPages(files)) {
+      io.err(
+        `Warning: ${url} is reserved by the dev server, so this page is hidden here. It works in the built site.`,
+      );
+    }
+  };
   const live = await createLiveSite(store, {
     onBuilt: (files, recovered) => {
       hub.publish({ type: "reload" });
+      warnShadowed(files);
       const pages = files.length - 1;
       io.out(
         `${recovered ? "Fixed. " : ""}Rebuilt ${pages} page${pages === 1 ? "" : "s"}`,
@@ -191,7 +201,11 @@ async function dev(
       io.err(`${message}\nStill serving the last good build.`);
     },
   });
-  const server = await startDevServer(live.files, port, hub);
+  warnShadowed(live.files());
+  const server = await startDevServer(live.files, port, {
+    hub,
+    api: createApiApp(store),
+  });
   const watcher = watchFolder(site, {
     ignore,
     relevant: isSourcePath,
