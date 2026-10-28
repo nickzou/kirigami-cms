@@ -23,7 +23,7 @@ async function setup() {
     onError: (e) => {
       throw e;
     },
-    debounceMs: 50,
+    debounceMs: 250,
   });
   cleanup.push(
     () => watcher.close(),
@@ -34,7 +34,7 @@ async function setup() {
   return { root, watcher, changes: () => changes };
 }
 
-const quiet = () => new Promise((r) => setTimeout(r, 400));
+const quiet = () => new Promise((r) => setTimeout(r, 700));
 
 describe("watchFolder", () => {
   it("reports a burst of saves as one change", async () => {

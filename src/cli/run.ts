@@ -9,6 +9,7 @@ import {
   isSourcePath,
 } from "../core/index.js";
 import { PortInUseError, startDevServer } from "../server/dev.js";
+import { createEventHub } from "../server/events.js";
 import { createLiveSite } from "../server/live-site.js";
 import { watchFolder } from "../server/watch.js";
 import { LocalFolderStore } from "../stores/local-folder.js";
@@ -176,17 +177,21 @@ async function dev(
   port: number,
   io: Io,
 ): Promise<number> {
+  const hub = createEventHub();
   const live = await createLiveSite(store, {
     onBuilt: (files, recovered) => {
+      hub.publish({ type: "reload" });
       const pages = files.length - 1;
       io.out(
         `${recovered ? "Fixed. " : ""}Rebuilt ${pages} page${pages === 1 ? "" : "s"}`,
       );
     },
-    onProblem: (message) =>
-      io.err(`${message}\nStill serving the last good build.`),
+    onProblem: (message) => {
+      hub.publish({ type: "error", message });
+      io.err(`${message}\nStill serving the last good build.`);
+    },
   });
-  const server = await startDevServer(live.files, port);
+  const server = await startDevServer(live.files, port, hub);
   const watcher = watchFolder(site, {
     ignore,
     relevant: isSourcePath,
