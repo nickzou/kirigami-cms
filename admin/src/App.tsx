@@ -1,4 +1,5 @@
 import { Link, Route, Routes, useParams } from "react-router";
+import { Editor } from "./Editor.js";
 import { PageList } from "./PageList.js";
 
 function PagesScreen() {
@@ -10,18 +11,10 @@ function PagesScreen() {
   );
 }
 
-// The editor arrives in its own ticket; this keeps list links working.
-function EditorPlaceholder() {
+function EditorScreen() {
   const path = useParams()["*"] ?? "";
-  return (
-    <>
-      <h1>{path}</h1>
-      <p>The editor is not built yet.</p>
-      <p>
-        <Link to="/">Back to all pages</Link>
-      </p>
-    </>
-  );
+  // `key` gives each page its own editor state when moving between pages.
+  return <Editor key={path} path={path} />;
 }
 
 export function App() {
@@ -35,7 +28,7 @@ export function App() {
       <main>
         <Routes>
           <Route path="/" element={<PagesScreen />} />
-          <Route path="/pages/*" element={<EditorPlaceholder />} />
+          <Route path="/pages/*" element={<EditorScreen />} />
           <Route path="*" element={<p>There is nothing at this address.</p>} />
         </Routes>
       </main>
