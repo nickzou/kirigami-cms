@@ -1,5 +1,9 @@
-import { ConfigError, defaultSiteConfig, parseSiteConfig } from "../config/load.js";
 import { generateStylesheet } from "../config/css.js";
+import {
+  ConfigError,
+  defaultSiteConfig,
+  parseSiteConfig,
+} from "../config/load.js";
 import type { SiteConfig } from "../config/schema.js";
 import { renderPage } from "../render/page.js";
 import { outputPath } from "../render/paths.js";
@@ -31,7 +35,9 @@ export class BuildError extends Error {
     super(
       [
         "Cannot build the site:",
-        ...problems.map((p) => `  ${p.file}${p.path ? ` (${p.path})` : ""}: ${p.message}`),
+        ...problems.map(
+          (p) => `  ${p.file}${p.path ? ` (${p.path})` : ""}: ${p.message}`,
+        ),
       ].join("\n"),
     );
     this.name = "BuildError";
@@ -49,7 +55,9 @@ async function readConfig(store: ContentStore): Promise<SiteConfig> {
 }
 
 async function pagePaths(store: ContentStore): Promise<string[]> {
-  return (await store.list()).map((e) => e.path).filter((path) => path.endsWith(".md"));
+  return (await store.list())
+    .map((e) => e.path)
+    .filter((path) => path.endsWith(".md"));
 }
 
 /** Two pages that would be written to the same output file. */
@@ -84,14 +92,19 @@ export async function buildSite(store: ContentStore): Promise<OutputFile[]> {
       const { content } = await store.read(path);
       return {
         path: outputPath(path),
-        content: renderPage({ source: content, path, stylesheet: STYLESHEET_PATH }),
+        content: renderPage({
+          source: content,
+          path,
+          stylesheet: STYLESHEET_PATH,
+        }),
       };
     }),
   );
 
-  return [...html, { path: STYLESHEET_PATH, content: generateStylesheet(config.theme) }].sort(
-    (a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0),
-  );
+  return [
+    ...html,
+    { path: STYLESHEET_PATH, content: generateStylesheet(config.theme) },
+  ].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
 /**
@@ -107,7 +120,13 @@ export async function checkSite(
     await readConfig(store);
   } catch (error) {
     if (!(error instanceof ConfigError)) throw error;
-    problems.push(...error.problems.map((p) => ({ file: error.file, path: p.path, message: p.message })));
+    problems.push(
+      ...error.problems.map((p) => ({
+        file: error.file,
+        path: p.path,
+        message: p.message,
+      })),
+    );
   }
 
   const pages = await pagePaths(store);

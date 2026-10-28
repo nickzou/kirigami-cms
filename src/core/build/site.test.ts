@@ -25,19 +25,31 @@ describe("buildSite", () => {
   });
 
   it("links each page to the stylesheet relative to itself", async () => {
-    const store = new MemoryStore({ "index.md": "# H\n", "blog/hello.md": "# B\n" });
+    const store = new MemoryStore({
+      "index.md": "# H\n",
+      "blog/hello.md": "# B\n",
+    });
     const out = byPath(await buildSite(store));
     expect(out["index.html"]).toContain('href="style.css"');
     expect(out["blog/hello/index.html"]).toContain('href="../../style.css"');
   });
 
   it("ignores files that are not markdown", async () => {
-    const store = new MemoryStore({ "index.md": "# H\n", "notes.txt": "x", "site.yaml": "" });
-    expect((await buildSite(store)).map((f) => f.path)).toEqual(["index.html", "style.css"]);
+    const store = new MemoryStore({
+      "index.md": "# H\n",
+      "notes.txt": "x",
+      "site.yaml": "",
+    });
+    expect((await buildSite(store)).map((f) => f.path)).toEqual([
+      "index.html",
+      "style.css",
+    ]);
   });
 
   it("builds a site with no pages: just the stylesheet", async () => {
-    expect((await buildSite(new MemoryStore())).map((f) => f.path)).toEqual(["style.css"]);
+    expect((await buildSite(new MemoryStore())).map((f) => f.path)).toEqual([
+      "style.css",
+    ]);
   });
 
   it("styles the site from site.yaml", async () => {
@@ -45,16 +57,22 @@ describe("buildSite", () => {
       "index.md": "# H\n",
       "site.yaml": "theme:\n  colors:\n    link: '#123456'\n",
     });
-    expect(byPath(await buildSite(store))["style.css"]).toContain("--k-color-link: #123456;");
+    expect(byPath(await buildSite(store))["style.css"]).toContain(
+      "--k-color-link: #123456;",
+    );
   });
 
   it("uses the default theme when there is no site.yaml", async () => {
-    const out = byPath(await buildSite(new MemoryStore({ "index.md": "# H\n" })));
+    const out = byPath(
+      await buildSite(new MemoryStore({ "index.md": "# H\n" })),
+    );
     expect(out["style.css"]).toContain("--k-color-link: #0b57d0;");
   });
 
   it("never changes the markdown source", async () => {
-    const store = new MemoryStore({ "index.md": "# H\r\n\r\n<b>raw</b>  \r\n" });
+    const store = new MemoryStore({
+      "index.md": "# H\r\n\r\n<b>raw</b>  \r\n",
+    });
     const before = await store.read("index.md");
     await buildSite(store);
     expect(await store.read("index.md")).toEqual(before);
@@ -69,7 +87,10 @@ describe("buildSite", () => {
   });
 
   it("throws BuildError when two pages would write the same file", async () => {
-    const store = new MemoryStore({ "about.md": "# A\n", "about/index.md": "# B\n" });
+    const store = new MemoryStore({
+      "about.md": "# A\n",
+      "about/index.md": "# B\n",
+    });
     const error = await buildSite(store).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(BuildError);
     expect((error as BuildError).message).toContain("about.md");
@@ -80,12 +101,18 @@ describe("buildSite", () => {
 
 describe("checkSite", () => {
   it("reports no problems for a valid site and counts its pages", async () => {
-    const store = new MemoryStore({ "index.md": "# H\n", "a.md": "# A\n", "site.yaml": "" });
+    const store = new MemoryStore({
+      "index.md": "# H\n",
+      "a.md": "# A\n",
+      "site.yaml": "",
+    });
     expect(await checkSite(store)).toEqual({ pages: 2, problems: [] });
   });
 
   it("accepts a site with no site.yaml", async () => {
-    expect((await checkSite(new MemoryStore({ "index.md": "x" }))).problems).toEqual([]);
+    expect(
+      (await checkSite(new MemoryStore({ "index.md": "x" }))).problems,
+    ).toEqual([]);
   });
 
   it("reports each config problem with its file and field", async () => {
