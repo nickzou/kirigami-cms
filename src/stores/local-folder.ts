@@ -22,7 +22,14 @@ const hasCode = (error: unknown, code: string): boolean =>
  * its content, so edits made outside the CMS change the version too.
  */
 export class LocalFolderStore implements ContentStore {
-  constructor(private readonly root: string) {}
+  /**
+   * `ignore` names folders that `list` skips wherever they appear. Reading and
+   * writing a path inside one still works.
+   */
+  constructor(
+    private readonly root: string,
+    private readonly ignore: readonly string[] = [".git", "node_modules"],
+  ) {}
 
   async list(prefix = ""): Promise<Entry[]> {
     const paths = await this.walk("");
@@ -103,7 +110,9 @@ export class LocalFolderStore implements ContentStore {
       names.map((entry) => {
         const path = dir === "" ? entry.name : `${dir}/${entry.name}`;
         return entry.isDirectory()
-          ? this.walk(path)
+          ? this.ignore.includes(entry.name)
+            ? []
+            : this.walk(path)
           : entry.isFile()
             ? [path]
             : [];

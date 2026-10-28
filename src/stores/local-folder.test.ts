@@ -26,6 +26,27 @@ describeContentStore(
 );
 
 describe("LocalFolderStore", () => {
+  it("skips .git and node_modules when listing by default", async () => {
+    const folder = await tempFolder();
+    const store = new LocalFolderStore(folder);
+    await store.write("a.md", "a", null);
+    await store.write("node_modules/pkg/readme.md", "x", null);
+    await store.write("sub/.git/config", "x", null);
+    expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
+  });
+
+  it("skips the folders named in ignore, and only those", async () => {
+    const folder = await tempFolder();
+    const store = new LocalFolderStore(folder, ["dist"]);
+    await store.write("a.md", "a", null);
+    await store.write("dist/out.html", "x", null);
+    await store.write("node_modules/p.md", "x", null);
+    expect((await store.list()).map((e) => e.path)).toEqual([
+      "a.md",
+      "node_modules/p.md",
+    ]);
+  });
+
   it("lists nothing when the folder does not exist yet", async () => {
     const store = new LocalFolderStore(join(await tempFolder(), "not-created"));
     expect(await store.list()).toEqual([]);
