@@ -45,6 +45,14 @@ describe("createSiteApp", () => {
     }
   });
 
+  it("styles the 404 page with the site stylesheet, from any depth", async () => {
+    for (const path of ["/nope", "/a/b/c/nope"]) {
+      expect(await (await get(path)).text()).toContain(
+        '<link rel="stylesheet" href="/style.css">',
+      );
+    }
+  });
+
   it("does not expose index.html under a doubled path", async () => {
     expect((await get("/index.html")).status).toBe(200);
     expect((await get("/about/index.html/")).status).toBe(404);

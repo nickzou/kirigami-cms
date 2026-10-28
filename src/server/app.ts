@@ -1,17 +1,22 @@
 import { Hono } from "hono";
-import type { OutputFile } from "../core/index.js";
+import { type OutputFile, renderPage, STYLESHEET_PATH } from "../core/index.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
 };
 
-const NOT_FOUND_PAGE = `<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Not found</title></head>
-<body><h1>Not found</h1><p>There is no page at this address.</p></body>
-</html>
+const NOT_FOUND_SOURCE = `# Not found
+
+There is no page at this address.
 `;
+
+const notFoundPage = (): string =>
+  renderPage({
+    source: NOT_FOUND_SOURCE,
+    path: "404.md",
+    stylesheet: `/${STYLESHEET_PATH}`,
+  });
 
 const contentTypeOf = (path: string): string => {
   const dot = path.lastIndexOf(".");
@@ -38,7 +43,7 @@ export function createSiteApp(getFiles: () => readonly OutputFile[]) {
     try {
       urlPath = decodeURIComponent(c.req.path);
     } catch {
-      return c.html(NOT_FOUND_PAGE, 404);
+      return c.html(notFoundPage(), 404);
     }
 
     const files = new Map(getFiles().map((f) => [f.path, f.content]));
@@ -56,7 +61,7 @@ export function createSiteApp(getFiles: () => readonly OutputFile[]) {
       return c.redirect(`${c.req.path}/${search}`, 302);
     }
 
-    return c.html(NOT_FOUND_PAGE, 404);
+    return c.html(notFoundPage(), 404);
   });
 
   return app;
