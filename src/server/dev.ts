@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
 import type { OutputFile } from "../core/index.js";
+import type { SiteAppOptions } from "./app.js";
 import { createSiteApp } from "./app.js";
-import type { EventHub } from "./events.js";
 
 export interface DevServer {
   url: string;
@@ -21,12 +21,12 @@ export class PortInUseError extends Error {
 export function startDevServer(
   getFiles: () => readonly OutputFile[],
   port: number,
-  hub?: EventHub,
+  options: SiteAppOptions = {},
 ): Promise<DevServer> {
   return new Promise((resolve, reject) => {
     const server = serve(
       {
-        fetch: createSiteApp(getFiles, { hub }).fetch,
+        fetch: createSiteApp(getFiles, options).fetch,
         port,
         hostname: "127.0.0.1",
       },

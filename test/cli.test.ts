@@ -287,4 +287,41 @@ describe("kirigami dev", () => {
       abort.abort();
     }
   });
+
+  it("saves a page through the API, rebuilds it, and warns about hidden pages", async () => {
+    const dir = await site();
+    await writeFile(join(dir, "api.md"), "# Mine\n");
+    const abort = new AbortController();
+    const io = { ...capture(dir), signal: abort.signal };
+    try {
+      expect(await run(["dev", dir, "--port=0"], io)).toBe(0);
+      expect(io.lines.err.join("\n")).toContain("/api/ is reserved");
+      const url =
+        /http:\/\/localhost:\d+\//.exec(io.lines.out.join("\n"))?.[0] ?? "";
+
+      const page = await (
+        await fetch(new URL("/api/pages/about.md", url))
+      ).json();
+      const res = await fetch(new URL("/api/pages/about.md", url), {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          content: "# Edited in the API\r\n",
+          version: (page as { version: string }).version,
+        }),
+      });
+      expect(res.status).toBe(200);
+      expect(await readFile(join(dir, "about.md"), "utf8")).toBe(
+        "# Edited in the API\r\n",
+      );
+      await vi.waitFor(async () =>
+        expect(await (await fetch(new URL("/about/", url))).text()).toContain(
+          "Edited in the API",
+        ),
+      );
+      expect((await fetch(new URL("/api/nope", url))).status).toBe(404);
+    } finally {
+      abort.abort();
+    }
+  });
 });
