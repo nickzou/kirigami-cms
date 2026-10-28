@@ -1,0 +1,382 @@
+// @vitest-environment jsdom
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { createMemoryRouter, RouterProvider } from "react-router";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { MemoryStore } from "../../src/core/index.js";
+import { createApiApp } from "../../src/server/api.js";
+import { App } from "./App.js";
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
+
+/** The real pages API over an in-memory store, as `fetch` for the app. */
+function serve(files: Record<string, string>, wrap?: (real: Fetch) => Fetch) {
+  const store = new MemoryStore(files);
+  const api = createApiApp(store);
+  const real: Fetch = (input, init) =>
+    Promise.resolve(
+      api.request(new Request(new URL(input, "http://localhost"), init)),
+    );
+  vi.stubGlobal("fetch", wrap ? wrap(real) : real);
+  return store;
+}
+
+function open(path: string) {
+  const router = createMemoryRouter([{ path: "*", element: <App /> }], {
+    initialEntries: [path],
+  });
+  render(<RouterProvider router={router} />);
+}
+
+const editor = () =>
+  screen.findByLabelText("Markdown") as Promise<HTMLTextAreaElement>;
+const type = (box: HTMLTextAreaElement, value: string) =>
+  fireEvent.change(box, { target: { value } });
+const saveButton = () =>
+  screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+
+describe("Editor: loading", () => {
+  it("shows the page's markdown in a labelled textarea, with nothing to save", async () => {
+    serve({ "blog/hello.md": "# Hello\n\nText\n" });
+    open("/pages/blog/hello.md");
+    expect((await editor()).value).toBe("# Hello\n\nText\n");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "blog/hello.md",
+    );
+    expect(saveButton().disabled).toBe(true);
+    expect(screen.getByText("No changes")).toBeDefined();
+  });
+
+  it("opens a page whose name has a space", async () => {
+    serve({ "my post.md": "# Mine\n" });
+    open("/pages/my%20post.md");
+    expect((await editor()).value).toBe("# Mine\n");
+  });
+
+  it("says so when the page does not exist, with no retry button", async () => {
+    serve({});
+    open("/pages/nope.md");
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "does not exist",
+    );
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Back to all pages" }),
+    ).toBeDefined();
+  });
+
+  it("shows a server error and retries on request", async () => {
+    let fail = true;
+    serve(
+      { "a.md": "# A\n" },
+      (real) => (input, init) =>
+        fail
+          ? Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: { code: "x", message: "Disk on fire" },
+                }),
+                {
+                  status: 500,
+                },
+              ),
+            )
+          : real(input, init),
+    );
+    open("/pages/a.md");
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Disk on fire",
+    );
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect((await editor()).value).toBe("# A\n");
+  });
+});
+
+describe("Editor: saving", () => {
+  it("enables Save once the text changes, saves it, and says so", async () => {
+    const store = serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    const box = await editor();
+
+    type(box, "# A\n\nMore\n");
+    expect(saveButton().disabled).toBe(false);
+    expect(screen.getByText("Unsaved changes")).toBeDefined();
+
+    fireEvent.click(saveButton());
+    expect(
+      (await screen.findByRole("status", { name: "" })).textContent,
+    ).toContain("Saved.");
+    expect((await store.read("a.md")).content).toBe("# A\n\nMore\n");
+    expect(saveButton().disabled).toBe(true);
+    expect(screen.getByText("No changes")).toBeDefined();
+  });
+
+  it("uses the new version for the next save", async () => {
+    const store = serve({ "a.md": "one" });
+    open("/pages/a.md");
+    const box = await editor();
+
+    type(box, "two");
+    fireEvent.click(saveButton());
+    await waitFor(async () =>
+      expect((await store.read("a.md")).content).toBe("two"),
+    );
+    await screen.findByText("Saved.");
+
+    type(box, "three");
+    fireEvent.click(saveButton());
+    await waitFor(async () =>
+      expect((await store.read("a.md")).content).toBe("three"),
+    );
+  });
+
+  it("saves with Ctrl+S and with Cmd+S", async () => {
+    const store = serve({ "a.md": "one" });
+    open("/pages/a.md");
+    const box = await editor();
+
+    type(box, "two");
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+    await waitFor(async () =>
+      expect((await store.read("a.md")).content).toBe("two"),
+    );
+    await screen.findByText("Saved.");
+
+    type(box, "three");
+    fireEvent.keyDown(window, { key: "S", metaKey: true });
+    await waitFor(async () =>
+      expect((await store.read("a.md")).content).toBe("three"),
+    );
+  });
+
+  it("keeps the text and offers another try when saving fails", async () => {
+    let offline = true;
+    const store = serve(
+      { "a.md": "one" },
+      (real) => (input, init) =>
+        offline && init?.method === "PUT"
+          ? Promise.reject(new TypeError("Failed to fetch"))
+          : real(input, init),
+    );
+    open("/pages/a.md");
+    const box = await editor();
+
+    type(box, "two");
+    fireEvent.click(saveButton());
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Could not save: Failed to fetch",
+    );
+    expect(box.value).toBe("two");
+    expect((await store.read("a.md")).content).toBe("one");
+
+    offline = false;
+    fireEvent.click(saveButton());
+    await waitFor(async () =>
+      expect((await store.read("a.md")).content).toBe("two"),
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("Editor: markdown stays byte-for-byte", () => {
+  const crlf = "# Title  \r\n\r\n<b>raw</b>  \r\n\ttabbed\r\n";
+
+  it("does not offer to save a CRLF page nobody touched", async () => {
+    const store = serve({ "a.md": crlf });
+    open("/pages/a.md");
+    await editor();
+    expect(saveButton().disabled).toBe(true);
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+    expect((await store.read("a.md")).content).toBe(crlf);
+  });
+
+  it("keeps CRLF, trailing spaces, tabs and raw HTML when a character changes", async () => {
+    const store = serve({ "a.md": crlf });
+    open("/pages/a.md");
+    const box = await editor();
+    type(box, box.value.replace("Title", "Titles"));
+    fireEvent.click(saveButton());
+    await screen.findByText("Saved.");
+    expect((await store.read("a.md")).content).toBe(
+      crlf.replace("Title", "Titles"),
+    );
+  });
+
+  it("keeps LF pages as LF", async () => {
+    const store = serve({ "a.md": "a  \nb\n" });
+    open("/pages/a.md");
+    const box = await editor();
+    type(box, "a  \nb\nc\n");
+    fireEvent.click(saveButton());
+    await screen.findByText("Saved.");
+    expect((await store.read("a.md")).content).toBe("a  \nb\nc\n");
+  });
+
+  it("warns when a page mixes line endings, naming what saving will use", async () => {
+    serve({ "a.md": "a\r\nb\nc\r\n" });
+    open("/pages/a.md");
+    await editor();
+    expect(screen.getByText(/mixes line endings/).textContent).toContain(
+      "Windows (CRLF)",
+    );
+  });
+});
+
+describe("Editor: conflicts", () => {
+  async function conflicted() {
+    const store = serve({ "a.md": "v1" });
+    open("/pages/a.md");
+    const box = await editor();
+    const { version } = await store.read("a.md");
+    await store.write("a.md", "changed elsewhere", version);
+    type(box, "my edit");
+    fireEvent.click(saveButton());
+    await screen.findByRole("alert");
+    return { store, box };
+  }
+
+  it("writes nothing, keeps my text, and says what happened", async () => {
+    const { store, box } = await conflicted();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "changed since you opened it",
+    );
+    expect(box.value).toBe("my edit");
+    expect((await store.read("a.md")).content).toBe("changed elsewhere");
+  });
+
+  it("loads the latest version and discards my changes on request", async () => {
+    await conflicted();
+    fireEvent.click(screen.getByRole("button", { name: /Load the latest/ }));
+    await waitFor(async () =>
+      expect(((await editor()) as HTMLTextAreaElement).value).toBe(
+        "changed elsewhere",
+      ),
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it("lets me keep editing, and a later save still cannot overwrite", async () => {
+    const { store, box } = await conflicted();
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(box.value).toBe("my edit");
+
+    fireEvent.click(saveButton());
+    await screen.findByRole("alert");
+    expect((await store.read("a.md")).content).toBe("changed elsewhere");
+  });
+
+  it("selects my text for copying when the clipboard is unavailable", async () => {
+    const { box } = await conflicted();
+    const select = vi.spyOn(box, "select");
+    fireEvent.click(screen.getByRole("button", { name: "Copy my text" }));
+    await waitFor(() => expect(select).toHaveBeenCalled());
+  });
+
+  it("explains a deleted page and offers no reload", async () => {
+    serve(
+      { "a.md": "v1" },
+      (real) => (input, init) =>
+        init?.method === "PUT"
+          ? Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: { code: "conflict", message: "gone" },
+                  currentVersion: null,
+                }),
+                { status: 409 },
+              ),
+            )
+          : real(input, init),
+    );
+    open("/pages/a.md");
+    type(await editor(), "my edit");
+    fireEvent.click(saveButton());
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "deleted or renamed",
+    );
+    expect(
+      screen.queryByRole("button", { name: /Load the latest/ }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy my text" })).toBeDefined();
+  });
+});
+
+describe("Editor: unsaved changes guard", () => {
+  it("asks before leaving, and stays when I say no", async () => {
+    serve({ "a.md": "one" });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    open("/pages/a.md");
+    const box = await editor();
+    type(box, "two");
+
+    fireEvent.click(screen.getByRole("link", { name: "Back to all pages" }));
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("a.md");
+    expect(box.value).toBe("two");
+  });
+
+  it("leaves when I say yes", async () => {
+    serve({ "a.md": "one" });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    open("/pages/a.md");
+    type(await editor(), "two");
+
+    fireEvent.click(screen.getByRole("link", { name: "Back to all pages" }));
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        "Pages",
+      ),
+    );
+  });
+
+  it("does not ask when nothing changed, or after saving", async () => {
+    serve({ "a.md": "one" });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    open("/pages/a.md");
+    const box = await editor();
+
+    type(box, "two");
+    fireEvent.click(saveButton());
+    await screen.findByText("Saved.");
+
+    fireEvent.click(screen.getByRole("link", { name: "Back to all pages" }));
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        "Pages",
+      ),
+    );
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("asks the browser to confirm closing the tab only while there are unsaved changes", async () => {
+    serve({ "a.md": "one" });
+    open("/pages/a.md");
+    const box = await editor();
+    const closing = () => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+
+    expect(closing()).toBe(false);
+    type(box, "two");
+    await waitFor(() => expect(closing()).toBe(true));
+    fireEvent.click(saveButton());
+    await screen.findByText("Saved.");
+    expect(closing()).toBe(false);
+  });
+});

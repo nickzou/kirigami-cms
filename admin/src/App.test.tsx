@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
 
@@ -9,23 +9,29 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const json = (body: unknown) =>
+  Promise.resolve(
+    new Response(JSON.stringify(body), {
+      headers: { "content-type": "application/json" },
+    }),
+  );
+
 const stubPages = () =>
-  vi.stubGlobal("fetch", () =>
-    Promise.resolve(
-      new Response(
-        JSON.stringify({
+  vi.stubGlobal("fetch", (url: string) =>
+    url === "/api/pages"
+      ? json({
           pages: [{ path: "blog/hello.md", title: "Hello", version: "v" }],
-        }),
-        { headers: { "content-type": "application/json" } },
-      ),
-    ),
+        })
+      : json({ path: "blog/hello.md", content: "# Hello\n", version: "v" }),
   );
 
 const open = (path: string) =>
   render(
-    <MemoryRouter initialEntries={[path]}>
-      <App />
-    </MemoryRouter>,
+    <RouterProvider
+      router={createMemoryRouter([{ path: "*", element: <App /> }], {
+        initialEntries: [path],
+      })}
+    />,
   );
 
 describe("App", () => {
@@ -45,16 +51,18 @@ describe("App", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
       "blog/hello.md",
     );
+    await screen.findByLabelText("Markdown");
     fireEvent.click(screen.getByRole("link", { name: "Back to all pages" }));
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Pages");
   });
 
-  it("opens a page's route directly, as on a reload", () => {
+  it("opens a page's route directly, as on a reload", async () => {
     stubPages();
     open("/pages/blog/hello.md");
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
       "blog/hello.md",
     );
+    await screen.findByLabelText("Markdown");
   });
 
   it("says when an address is unknown", () => {
