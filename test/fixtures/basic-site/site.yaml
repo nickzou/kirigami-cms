@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=../../../schema/site.schema.json
+theme:
+  colors:
+    link: "#9c27b0"
+  layout:
+    maxWidth: 40rem

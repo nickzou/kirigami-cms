@@ -1,3 +1,12 @@
+export {
+  BuildError,
+  buildSite,
+  checkSite,
+  type OutputFile,
+  SITE_CONFIG_PATH,
+  type SiteProblem,
+  STYLESHEET_PATH,
+} from "./build/site.js";
 export { generateStylesheet } from "./config/css.js";
 export {
   ConfigError,
