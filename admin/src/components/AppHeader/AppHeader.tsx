@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { Logo } from "../Logo/Logo.js";
 
 /** The banner at the top of every screen: the product name, linking home. */
 export function AppHeader() {
@@ -8,10 +9,7 @@ export function AppHeader() {
         to="/"
         className=":uno: inline-flex items-center gap-2 text-lg font-bold tracking-tight text-text no-underline"
       >
-        <span
-          aria-hidden="true"
-          className=":uno: inline-block h-5 w-5 rotate-45 rounded-sm bg-accent"
-        />
+        <Logo className=":uno: h-6 w-auto" />
         Kirigami
       </Link>
     </header>
