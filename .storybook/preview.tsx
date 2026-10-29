@@ -8,7 +8,9 @@ import "./docs.css";
 import { ThemedDocsContainer } from "./DocsContainer.js";
 
 const preview: Preview = {
-  initialGlobals: { theme: "system" },
+  // A fixed start, so everyone opens Storybook looking at the same thing.
+  // "System" is still in the toolbar for anyone who wants it.
+  initialGlobals: { theme: "light" },
   globalTypes: {
     theme: {
       description: "Light or dark colors for the admin",

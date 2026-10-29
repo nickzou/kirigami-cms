@@ -3,33 +3,7 @@ import {
   type DocsContainerProps,
 } from "@storybook/addon-docs/blocks";
 import { type PropsWithChildren, useEffect, useState } from "react";
-import { create } from "storybook/theming";
-
-// The admin's own colors (see admin/src/styles.css), so the Docs pages match
-// the components shown on them.
-const light = create({
-  base: "light",
-  appBg: "#f6f8fb",
-  appContentBg: "#f6f8fb",
-  appPreviewBg: "#f6f8fb",
-  appBorderColor: "#d5dde8",
-  textColor: "#0f172a",
-  textMutedColor: "#536174",
-  barBg: "#ffffff",
-  barTextColor: "#536174",
-});
-
-const dark = create({
-  base: "dark",
-  appBg: "#0b1020",
-  appContentBg: "#0b1020",
-  appPreviewBg: "#0b1020",
-  appBorderColor: "#2b3856",
-  textColor: "#e6ebf5",
-  textMutedColor: "#9aa7bd",
-  barBg: "#121a2e",
-  barTextColor: "#9aa7bd",
-});
+import { create, type ThemeVars } from "storybook/theming";
 
 const systemDark = () => window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -39,14 +13,35 @@ function isDark(): boolean {
   return chosen ? chosen === "dark" : systemDark().matches;
 }
 
+/**
+ * Builds the Docs theme from the admin's own CSS variables (admin/src/styles.css),
+ * as they are right now, so the Docs pages can never drift from the components
+ * shown on them. Changing the palette there changes it here.
+ */
+function themeFromPage(): ThemeVars {
+  const style = getComputedStyle(document.documentElement);
+  const color = (name: string) => style.getPropertyValue(name).trim();
+  return create({
+    base: isDark() ? "dark" : "light",
+    appBg: color("--bg"),
+    appContentBg: color("--bg"),
+    appPreviewBg: color("--bg"),
+    appBorderColor: color("--border"),
+    textColor: color("--text"),
+    textMutedColor: color("--muted"),
+    barBg: color("--surface"),
+    barTextColor: color("--muted"),
+  });
+}
+
 /** The Docs page, themed to follow the toolbar's Theme toggle. */
 export function ThemedDocsContainer(
   props: PropsWithChildren<DocsContainerProps>,
 ) {
-  const [dark_, setDark] = useState(isDark);
+  const [theme, setTheme] = useState(themeFromPage);
 
   useEffect(() => {
-    const update = () => setDark(isDark());
+    const update = () => setTheme(themeFromPage());
     update();
     // The toolbar sets data-theme on <html>; the system setting can change too.
     const observer = new MutationObserver(update);
@@ -62,5 +57,5 @@ export function ThemedDocsContainer(
     };
   }, []);
 
-  return <DocsContainer {...props} theme={dark_ ? dark : light} />;
+  return <DocsContainer {...props} theme={theme} />;
 }
