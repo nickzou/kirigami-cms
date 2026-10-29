@@ -15,3 +15,15 @@ export const Failure: Story = {
 export const Warning: Story = {
   args: { tone: "warning", children: <p>Heads up: this is only a warning.</p> },
 };
+
+export const WithActions: Story = {
+  args: {
+    tone: "error",
+    children: (
+      <>
+        <p>This page changed since you opened it, so nothing was saved.</p>
+        <p>Your changes are still in the editor.</p>
+      </>
+    ),
+  },
+};
