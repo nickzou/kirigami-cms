@@ -21,17 +21,17 @@
    or "dark" on <html> wins (Storybook's toolbar uses this). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b1020;
-    --surface: #121a2e;
-    --subtle: #1a2440;
-    --text: #e6ebf5;
-    --muted: #9aa7bd;
-    --border: #2b3856;
-    --accent: #8b93ff;
-    --accent-hover: #a5abff;
-    --accent-soft: #1d2447;
-    --on-accent: #0b1020;
-    --danger: #ff9a8f;
+    --bg: #111113;
+    --surface: #1a1a1d;
+    --subtle: #242428;
+    --text: #ededf0;
+    --muted: #a0a0aa;
+    --border: #2e2e34;
+    --accent: #2dd4bf;
+    --accent-hover: #5eead4;
+    --accent-soft: #12302c;
+    --on-accent: #04201c;
+    --danger: #f87171;
     --warning: #fbbf24;
     --shadow: 0 1px 2px rgb(0 0 0 / 30%);
     --shadow-lg: 0 4px 12px rgb(0 0 0 / 40%);
@@ -39,17 +39,17 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #0b1020;
-  --surface: #121a2e;
-  --subtle: #1a2440;
-  --text: #e6ebf5;
-  --muted: #9aa7bd;
-  --border: #2b3856;
-  --accent: #8b93ff;
-  --accent-hover: #a5abff;
-  --accent-soft: #1d2447;
-  --on-accent: #0b1020;
-  --danger: #ff9a8f;
+  --bg: #111113;
+  --surface: #1a1a1d;
+  --subtle: #242428;
+  --text: #ededf0;
+  --muted: #a0a0aa;
+  --border: #2e2e34;
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-soft: #12302c;
+  --on-accent: #04201c;
+  --danger: #f87171;
   --warning: #fbbf24;
   --shadow: 0 1px 2px rgb(0 0 0 / 30%);
   --shadow-lg: 0 4px 12px rgb(0 0 0 / 40%);
