@@ -14,7 +14,7 @@ export function PageListView({ pages }: { pages: readonly PageSummary[] }) {
       {pages.map((page) => (
         <li
           key={page.path}
-          className=":uno: [&:not(:first-child)]:border-t [&:not(:first-child)]:border-solid [&:not(:first-child)]:border-line"
+          className=":uno: [&:not(:first-child)]:[border-top:1px_solid_var(--border)]"
         >
           <Link
             to={pageHref(page.path)}
