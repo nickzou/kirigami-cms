@@ -93,12 +93,17 @@ export const MissingPage: Story = {
   beforeEach: () => installFakeApi(hello).restore,
 };
 
+/** Picks the Preview view, as a user does. */
+async function showPreview(canvas: ReturnType<typeof within>) {
+  await userEvent.click(await canvas.findByRole("radio", { name: "Preview" }));
+  return canvas.findByTitle("Preview of blog/hello.md");
+}
+
 export const PreviewReloadsAfterABuild: Story = {
   beforeEach: () => installFakeApi(hello).restore,
-  parameters: { viewport: { defaultViewport: "laptop" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const before = await canvas.findByTitle("Preview of blog/hello.md");
+    const before = await showPreview(canvas);
     await waitFor(() => expect(events.listeners()).toBe(1));
     events.reload();
     await waitFor(async () =>
@@ -111,10 +116,9 @@ export const PreviewReloadsAfterABuild: Story = {
 
 export const BuildFailed: Story = {
   beforeEach: () => installFakeApi(hello).restore,
-  parameters: { viewport: { defaultViewport: "laptop" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByTitle("Preview of blog/hello.md");
+    await showPreview(canvas);
     await waitFor(() => expect(events.listeners()).toBe(1));
     events.fail(
       "Cannot build the site:\n  site.yaml (theme.colours): unknown field",
@@ -125,30 +129,32 @@ export const BuildFailed: Story = {
   },
 };
 
-export const PreviewHidden: Story = {
+/** The control picks one view at a time, on a laptop and on a phone alike. */
+export const SwitchesViews: Story = {
   beforeEach: () => installFakeApi(hello).restore,
   parameters: { viewport: { defaultViewport: "laptop" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByTitle("Preview of blog/hello.md");
-    await userEvent.click(canvas.getByRole("button", { name: "Preview" }));
+    await expect(await canvas.findByLabelText("Markdown")).toBeVisible();
+    await expect(
+      canvas.queryByTitle("Preview of blog/hello.md"),
+    ).not.toBeInTheDocument();
+    await expect(await showPreview(canvas)).toBeVisible();
+    await userEvent.click(canvas.getByRole("radio", { name: "Editor" }));
+    await expect(canvas.getByLabelText("Markdown")).toBeVisible();
     await expect(
       canvas.queryByTitle("Preview of blog/hello.md"),
     ).not.toBeInTheDocument();
   },
 };
 
-/** On a phone one view shows at a time, and the control at the bottom switches. */
 export const SwitchesViewsOnAPhone: Story = {
   beforeEach: () => installFakeApi(hello).restore,
   parameters: { viewport: { defaultViewport: "phone" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByLabelText("Markdown");
-    await userEvent.click(canvas.getByRole("radio", { name: "Preview" }));
-    await expect(
-      await canvas.findByTitle("Preview of blog/hello.md"),
-    ).toBeInTheDocument();
+    await expect(await showPreview(canvas)).toBeVisible();
     await userEvent.click(canvas.getByRole("radio", { name: "Editor" }));
     await expect(canvas.getByLabelText("Markdown")).toBeVisible();
   },

@@ -33,6 +33,10 @@ function open(path: string, files: Record<string, string>) {
   render(<RouterProvider router={router} />);
 }
 
+/** The editor shows first; the preview is one choice of the control away. */
+const showPreview = async () =>
+  fireEvent.click(await screen.findByRole("radio", { name: "Preview" }));
+
 const frame = () =>
   screen.findByTitle("Preview of blog/hello.md") as Promise<HTMLIFrameElement>;
 const hello = { "blog/hello.md": "# Hello\n" };
@@ -40,6 +44,7 @@ const hello = { "blog/hello.md": "# Hello\n" };
 describe("Editor: preview", () => {
   it("shows the page's real address in a fully sandboxed frame", async () => {
     open("/pages/blog/hello.md", hello);
+    await showPreview();
     const iframe = await frame();
     expect(iframe.getAttribute("src")).toBe("/blog/hello/");
     // An empty sandbox: no scripts, so the dev live-reload script cannot run.
@@ -48,6 +53,7 @@ describe("Editor: preview", () => {
 
   it("uses / for the home page", async () => {
     open("/pages/index.md", { "index.md": "# Home\n" });
+    await showPreview();
     expect(
       (await screen.findByTitle("Preview of index.md")).getAttribute("src"),
     ).toBe("/");
@@ -55,6 +61,7 @@ describe("Editor: preview", () => {
 
   it("loads the preview again, as a new frame, after a good build", async () => {
     open("/pages/blog/hello.md", hello);
+    await showPreview();
     const before = await frame();
     await waitFor(() => expect(events.listeners()).toBe(1));
     act(() => events.reload());
@@ -77,6 +84,7 @@ describe("Editor: preview", () => {
 
   it("shows a failed build and leaves the preview as it was", async () => {
     open("/pages/blog/hello.md", hello);
+    await showPreview();
     const before = await frame();
     await waitFor(() => expect(events.listeners()).toBe(1));
     act(() => events.fail("site.yaml (theme.colours): unknown field"));
@@ -89,6 +97,7 @@ describe("Editor: preview", () => {
 
   it("clears the error when the next build is good, and reloads the preview", async () => {
     open("/pages/blog/hello.md", hello);
+    await showPreview();
     const before = await frame();
     await waitFor(() => expect(events.listeners()).toBe(1));
     act(() => events.fail("bad"));
@@ -98,36 +107,31 @@ describe("Editor: preview", () => {
     expect(await frame()).not.toBe(before);
   });
 
-  it("hides and shows the preview with the toggle", async () => {
+  it("shows the editor first and switches views with the segmented control", async () => {
     open("/pages/blog/hello.md", hello);
-    await frame();
-    const toggle = screen.getByRole("button", { name: "Preview" });
-    expect(toggle.getAttribute("aria-pressed")).toBe("true");
-
-    fireEvent.click(toggle);
+    const choice = async (name: string) =>
+      (await screen.findByRole("radio", { name })) as HTMLInputElement;
+    expect((await choice("Editor")).checked).toBe(true);
     expect(screen.queryByTitle("Preview of blog/hello.md")).toBeNull();
-    expect(toggle.getAttribute("aria-pressed")).toBe("false");
 
-    fireEvent.click(toggle);
+    fireEvent.click(await choice("Preview"));
     expect(await frame()).toBeDefined();
+    expect((await choice("Preview")).checked).toBe(true);
+
+    fireEvent.click(await choice("Editor"));
+    expect(screen.queryByTitle("Preview of blog/hello.md")).toBeNull();
   });
 
-  it("switches views with the segmented control, even with the toggle off", async () => {
+  it("keeps the text box, and what was typed in it, while the preview shows", async () => {
     open("/pages/blog/hello.md", hello);
+    const box = (await screen.findByLabelText(
+      "Markdown",
+    )) as HTMLTextAreaElement;
+    fireEvent.change(box, { target: { value: "# Hello\n\nMore" } });
+    await showPreview();
     await frame();
-    expect(
-      screen.getByRole<HTMLInputElement>("radio", { name: "Editor" }).checked,
-    ).toBe(true);
-
-    // The toggle is for wide screens; the control still reaches the preview.
-    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
-    expect(screen.queryByTitle("Preview of blog/hello.md")).toBeNull();
-
-    fireEvent.click(screen.getByRole("radio", { name: "Preview" }));
-    expect(await frame()).toBeDefined();
-
-    fireEvent.click(screen.getByRole("radio", { name: "Editor" }));
-    expect(screen.queryByTitle("Preview of blog/hello.md")).toBeNull();
+    expect(box.isConnected).toBe(true);
+    expect(box.value).toBe("# Hello\n\nMore");
   });
 });
 
