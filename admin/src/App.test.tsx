@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
@@ -54,6 +60,17 @@ describe("App", () => {
     await screen.findByLabelText("Markdown");
     fireEvent.click(screen.getByRole("link", { name: "Back to all pages" }));
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Pages");
+  });
+
+  it("puts Save in the banner when editing a page", async () => {
+    stubPages();
+    open("/pages/blog/hello.md");
+    await screen.findByLabelText("Markdown");
+    const banner = screen.getByRole("banner");
+    expect(within(banner).getByRole("button", { name: "Save" })).toBeDefined();
+    expect(
+      within(screen.getByRole("main")).queryByRole("button", { name: "Save" }),
+    ).toBeNull();
   });
 
   it("opens a page's route directly, as on a reload", async () => {

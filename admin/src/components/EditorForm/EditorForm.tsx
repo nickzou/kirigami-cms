@@ -1,30 +1,31 @@
 import type { ReactNode, Ref } from "react";
-import { Button } from "../Button/Button.js";
+
+/** The `id` of the form, so a Save button elsewhere on the page can submit it. */
+export const EDITOR_FORM_ID = "page-editor";
 
 export interface EditorFormProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
-  /** Whether the text differs from what was last saved. */
-  dirty: boolean;
-  saving: boolean;
   textareaRef?: Ref<HTMLTextAreaElement>;
-  /** Shown between the text box and the Save button. */
+  /** Shown under the text box. */
   notice?: ReactNode;
 }
 
-/** The text box and Save button. It holds no state of its own. */
+/**
+ * The text box. It holds no state of its own, and has no Save button: that
+ * lives in the header (see `SaveControls`) and submits this form.
+ */
 export function EditorForm({
   value,
   onChange,
   onSubmit,
-  dirty,
-  saving,
   textareaRef,
   notice,
 }: EditorFormProps) {
   return (
     <form
+      id={EDITOR_FORM_ID}
       className=":uno: grid gap-2"
       onSubmit={(event) => {
         event.preventDefault();
@@ -43,14 +44,6 @@ export function EditorForm({
         onChange={(event) => onChange(event.target.value)}
       />
       {notice}
-      <div className=":uno: flex flex-wrap items-center gap-3">
-        <Button type="submit" variant="primary" disabled={!dirty || saving}>
-          {saving ? "Saving…" : "Save"}
-        </Button>
-        <span className=":uno: text-muted">
-          {dirty ? "Unsaved changes" : "No changes"}
-        </span>
-      </div>
     </form>
   );
 }

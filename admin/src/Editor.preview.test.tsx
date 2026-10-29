@@ -111,6 +111,24 @@ describe("Editor: preview", () => {
     fireEvent.click(toggle);
     expect(await frame()).toBeDefined();
   });
+
+  it("switches views with the segmented control, even with the toggle off", async () => {
+    open("/pages/blog/hello.md", hello);
+    await frame();
+    expect(
+      screen.getByRole<HTMLInputElement>("radio", { name: "Editor" }).checked,
+    ).toBe(true);
+
+    // The toggle is for wide screens; the control still reaches the preview.
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    expect(screen.queryByTitle("Preview of blog/hello.md")).toBeNull();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Preview" }));
+    expect(await frame()).toBeDefined();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Editor" }));
+    expect(screen.queryByTitle("Preview of blog/hello.md")).toBeNull();
+  });
 });
 
 describe("Editor: preview without a dev server", () => {

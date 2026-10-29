@@ -137,3 +137,19 @@ export const PreviewHidden: Story = {
     ).not.toBeInTheDocument();
   },
 };
+
+/** On a phone one view shows at a time, and the control at the bottom switches. */
+export const SwitchesViewsOnAPhone: Story = {
+  beforeEach: () => installFakeApi(hello).restore,
+  parameters: { viewport: { defaultViewport: "phone" } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByLabelText("Markdown");
+    await userEvent.click(canvas.getByRole("radio", { name: "Preview" }));
+    await expect(
+      await canvas.findByTitle("Preview of blog/hello.md"),
+    ).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("radio", { name: "Editor" }));
+    await expect(canvas.getByLabelText("Markdown")).toBeVisible();
+  },
+};
