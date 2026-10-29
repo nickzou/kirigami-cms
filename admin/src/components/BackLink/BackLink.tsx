@@ -1,11 +1,14 @@
-import { Link } from "react-router";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "../Button/Button.js";
 
+/** A link back to the page list, styled as a button. */
 export function BackLink() {
   return (
     <p className=":uno: mt-0">
-      <Link to="/" className=":uno: font-bold">
+      <Button to="/">
+        <ArrowLeft size={16} aria-hidden="true" />
         Back to all pages
-      </Link>
+      </Button>
     </p>
   );
 }
