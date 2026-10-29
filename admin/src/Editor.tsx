@@ -11,7 +11,6 @@ import { HeaderActions } from "./components/HeaderActions/HeaderActions.js";
 import { LineEndingsNotice } from "./components/LineEndingsNotice/LineEndingsNotice.js";
 import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
 import { PreviewFrame } from "./components/PreviewFrame/PreviewFrame.js";
-import { PreviewToggle } from "./components/PreviewToggle/PreviewToggle.js";
 import { SaveControls } from "./components/SaveControls/SaveControls.js";
 import { SaveFailedPanel } from "./components/SaveFailedPanel/SaveFailedPanel.js";
 import { SaveStatus } from "./components/SaveStatus/SaveStatus.js";
@@ -26,13 +25,6 @@ const views = [
   { value: "preview", label: "Preview" },
 ];
 
-// Whole class strings, so UnoCSS can find them. On narrow screens the preview
-// shows only when chosen; from `md` up it follows the Preview toggle.
-const previewPane = {
-  editor: { on: ":uno: hidden md:block", off: ":uno: hidden" },
-  preview: { on: ":uno: block", off: ":uno: block md:hidden" },
-} as const;
-
 /** The screen for editing one page. The work is in `usePageEditor`. */
 export function Editor({ path }: { path: string }) {
   const editor = usePageEditor(path);
@@ -40,9 +32,7 @@ export function Editor({ path }: { path: string }) {
   useUnsavedChangesGuard(editor.dirty);
 
   const build = useBuildEvents();
-  // Wide screens show both side by side (the toggle hides the preview). Narrow
-  // screens show one at a time, chosen with the segmented control.
-  const [showPreview, setShowPreview] = useState(true);
+  // One view at a time, chosen with the segmented control.
   const [view, setView] = useState<"editor" | "preview">("editor");
 
   const { load, save } = editor;
@@ -73,27 +63,46 @@ export function Editor({ path }: { path: string }) {
     );
   }
 
+  // A click on the bare sheet (not on a control) puts the cursor in the text.
+  const focusText = () => {
+    const box = editor.textareaRef.current;
+    box?.focus();
+    box?.setSelectionRange(box.value.length, box.value.length);
+  };
+
   return (
     <>
-      <h1>{path}</h1>
-      <div className=":uno: mb-4 flex items-center justify-between gap-3 [&>p]:m-0">
-        <BackLink />
-        {/* The preview needs room, so it is for tablet widths and up. */}
-        {editor.url && (
-          <span className=":uno: hidden md:block">
-            <PreviewToggle shown={showPreview} onChange={setShowPreview} />
-          </span>
-        )}
-      </div>
-      {build.error !== null && <BuildProblem message={build.error} />}
+      {/* The sheet: the page as one long piece of paper, with no bottom edge. */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: a shortcut for the mouse; the text box is already reachable by keyboard. */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: as above. */}
       <div
-        className={
-          showPreview && editor.url
-            ? ":uno: grid gap-4 md:grid-cols-2 md:items-start"
-            : ""
-        }
+        onClick={(event) => {
+          if (event.target === event.currentTarget) focusText();
+        }}
+        className=":uno: -mx-4 min-h-[calc(100vh-5rem)] px-4 pt-4 pb-28 md:mx-auto md:max-w-[55rem] md:rounded-t-lg md:px-12 md:pt-8"
       >
-        <div className={view === "editor" ? "" : ":uno: hidden md:block"}>
+        <BackLink />
+        <h1>{path}</h1>
+        {build.error !== null && <BuildProblem message={build.error} />}
+        <HeaderActions>
+          <SaveControls
+            dirty={editor.dirty}
+            saving={editor.saving}
+            formId={EDITOR_FORM_ID}
+          />
+        </HeaderActions>
+        <SaveStatus saved={save.status === "saved"} />
+        {save.status === "error" && <SaveFailedPanel message={save.message} />}
+        {save.status === "conflict" && (
+          <ConflictPanel
+            gone={save.gone}
+            onLoadLatest={editor.reload}
+            onCopy={editor.copyDraft}
+            onKeepEditing={editor.dismissSave}
+          />
+        )}
+        {/* Kept in the page while the preview shows, so the text box keeps its cursor and scroll. */}
+        <div className={view === "editor" ? "" : ":uno: hidden"}>
           <EditorForm
             value={editor.draft}
             onChange={editor.setDraft}
@@ -105,51 +114,27 @@ export function Editor({ path }: { path: string }) {
               )
             }
           />
-          <HeaderActions>
-            <SaveControls
-              dirty={editor.dirty}
-              saving={editor.saving}
-              formId={EDITOR_FORM_ID}
-            />
-          </HeaderActions>
-          <SaveStatus saved={save.status === "saved"} />
-          {save.status === "error" && (
-            <SaveFailedPanel message={save.message} />
-          )}
-          {save.status === "conflict" && (
-            <ConflictPanel
-              gone={save.gone}
-              onLoadLatest={editor.reload}
-              onCopy={editor.copyDraft}
-              onKeepEditing={editor.dismissSave}
-            />
-          )}
         </div>
-        {editor.url && (showPreview || view === "preview") && (
-          <div className={previewPane[view][showPreview ? "on" : "off"]}>
-            <PreviewFrame
-              url={editor.url}
-              version={build.reloads}
-              title={`Preview of ${path}`}
-            />
-          </div>
+        {editor.url && view === "preview" && (
+          <PreviewFrame
+            url={editor.url}
+            version={build.reloads}
+            title={`Preview of ${path}`}
+          />
         )}
       </div>
       {editor.url && (
-        <>
-          {/* Room for the control below, so it never covers the text. */}
-          <div className=":uno: h-16 md:hidden" aria-hidden="true" />
-          <div className=":uno: fixed inset-x-4 bottom-4 z-10 md:hidden">
-            <SegmentedControl
-              label="View"
-              options={views}
-              value={view}
-              onChange={(next) =>
-                setView(next === "preview" ? "preview" : "editor")
-              }
-            />
-          </div>
-        </>
+        // Fixed to the bottom centre at every size, over the page as it scrolls.
+        <div className=":uno: fixed bottom-4 left-1/2 z-10 w-[min(22.5rem,calc(100%-2rem))] -translate-x-1/2">
+          <SegmentedControl
+            label="View"
+            options={views}
+            value={view}
+            onChange={(next) =>
+              setView(next === "preview" ? "preview" : "editor")
+            }
+          />
+        </div>
       )}
     </>
   );
