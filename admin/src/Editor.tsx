@@ -63,39 +63,27 @@ export function Editor({ path }: { path: string }) {
     );
   }
 
+  // A click on the bare sheet (not on a control) puts the cursor in the text.
+  const focusText = () => {
+    const box = editor.textareaRef.current;
+    box?.focus();
+    box?.setSelectionRange(box.value.length, box.value.length);
+  };
+
   return (
     <>
-      <h1>{path}</h1>
-      <div className=":uno: mb-4 flex items-center justify-between gap-3 [&>p]:m-0">
+      {/* The sheet: the page as one long piece of paper, with no bottom edge. */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: a shortcut for the mouse; the text box is already reachable by keyboard. */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: as above. */}
+      <div
+        onClick={(event) => {
+          if (event.target === event.currentTarget) focusText();
+        }}
+        className=":uno: -mx-4 min-h-[calc(100vh-5rem)] px-4 pt-4 pb-28 md:mx-auto md:max-w-[55rem] md:rounded-t-lg md:px-12 md:pt-8"
+      >
         <BackLink />
-        {editor.url && (
-          // Pinned to the bottom on phones, in the toolbar from `md` up.
-          <div className=":uno: fixed inset-x-4 bottom-4 z-10 md:static md:w-72">
-            <SegmentedControl
-              label="View"
-              options={views}
-              value={view}
-              onChange={(next) =>
-                setView(next === "preview" ? "preview" : "editor")
-              }
-            />
-          </div>
-        )}
-      </div>
-      {build.error !== null && <BuildProblem message={build.error} />}
-      {/* Kept in the page while the preview shows, so the text box keeps its cursor and scroll. */}
-      <div className={view === "editor" ? "" : ":uno: hidden"}>
-        <EditorForm
-          value={editor.draft}
-          onChange={editor.setDraft}
-          onSubmit={editor.submit}
-          textareaRef={editor.textareaRef}
-          notice={
-            editor.endings?.mixed && (
-              <LineEndingsNotice eol={editor.endings.eol} />
-            )
-          }
-        />
+        <h1>{path}</h1>
+        {build.error !== null && <BuildProblem message={build.error} />}
         <HeaderActions>
           <SaveControls
             dirty={editor.dirty}
@@ -113,17 +101,40 @@ export function Editor({ path }: { path: string }) {
             onKeepEditing={editor.dismissSave}
           />
         )}
+        {/* Kept in the page while the preview shows, so the text box keeps its cursor and scroll. */}
+        <div className={view === "editor" ? "" : ":uno: hidden"}>
+          <EditorForm
+            value={editor.draft}
+            onChange={editor.setDraft}
+            onSubmit={editor.submit}
+            textareaRef={editor.textareaRef}
+            notice={
+              editor.endings?.mixed && (
+                <LineEndingsNotice eol={editor.endings.eol} />
+              )
+            }
+          />
+        </div>
+        {editor.url && view === "preview" && (
+          <PreviewFrame
+            url={editor.url}
+            version={build.reloads}
+            title={`Preview of ${path}`}
+          />
+        )}
       </div>
-      {editor.url && view === "preview" && (
-        <PreviewFrame
-          url={editor.url}
-          version={build.reloads}
-          title={`Preview of ${path}`}
-        />
-      )}
       {editor.url && (
-        // Room for the pinned control on phones, so it never covers the text.
-        <div className=":uno: h-16 md:hidden" aria-hidden="true" />
+        // Fixed to the bottom centre at every size, over the page as it scrolls.
+        <div className=":uno: fixed bottom-4 left-1/2 z-10 w-[min(22.5rem,calc(100%-2rem))] -translate-x-1/2">
+          <SegmentedControl
+            label="View"
+            options={views}
+            value={view}
+            onChange={(next) =>
+              setView(next === "preview" ? "preview" : "editor")
+            }
+          />
+        </div>
       )}
     </>
   );

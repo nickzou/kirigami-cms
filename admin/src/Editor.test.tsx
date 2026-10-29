@@ -53,6 +53,28 @@ describe("Editor: loading", () => {
     expect(screen.getByText("No changes")).toBeDefined();
   });
 
+  it("puts the cursor in the text when the bare sheet is clicked", async () => {
+    serve({ "blog/hello.md": "# Hello\n" });
+    open("/pages/blog/hello.md");
+    const box = await editor();
+    expect(document.activeElement).not.toBe(box);
+
+    // The sheet is the page the heading sits on; a click on it, not on a control.
+    fireEvent.click(
+      screen.getByRole("heading", { level: 1 }).parentElement as HTMLElement,
+    );
+    expect(document.activeElement).toBe(box);
+    expect(box.selectionStart).toBe(box.value.length);
+  });
+
+  it("does not take the focus when a control on the sheet is clicked", async () => {
+    serve({ "blog/hello.md": "# Hello\n" });
+    open("/pages/blog/hello.md");
+    const box = await editor();
+    fireEvent.click(screen.getByRole("link", { name: "Back to all pages" }));
+    expect(document.activeElement).not.toBe(box);
+  });
+
   it("opens a page whose name has a space", async () => {
     serve({ "my post.md": "# Mine\n" });
     open("/pages/my%20post.md");
