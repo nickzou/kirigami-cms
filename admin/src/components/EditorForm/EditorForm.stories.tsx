@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, fn, userEvent, within } from "storybook/test";
+import { LineEndingsNotice } from "../LineEndingsNotice/LineEndingsNotice.js";
 import { EditorForm } from "./EditorForm.js";
-import { LineEndingsNotice } from "./LineEndingsNotice.js";
 
 const meta = {
   title: "Components/EditorForm",

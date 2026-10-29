@@ -1,5 +1,5 @@
-import type { LineEndings } from "../line-endings.js";
-import { Alert } from "./Alert.js";
+import type { LineEndings } from "../../line-endings.js";
+import { Alert } from "../Alert/Alert.js";
 
 /** Warns that a page mixes line endings, which saving will make uniform. */
 export function LineEndingsNotice({ eol }: Pick<LineEndings, "eol">) {

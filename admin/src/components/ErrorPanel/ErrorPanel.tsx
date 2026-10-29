@@ -1,5 +1,5 @@
-import { Alert } from "./Alert.js";
-import { Button } from "./Button.js";
+import { Alert } from "../Alert/Alert.js";
+import { Button } from "../Button/Button.js";
 
 export interface ErrorPanelProps {
   message: string;

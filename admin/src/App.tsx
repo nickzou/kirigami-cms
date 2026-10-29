@@ -1,5 +1,5 @@
 import { Route, Routes, useParams } from "react-router";
-import { AppShell } from "./components/AppShell.js";
+import { AppShell } from "./components/AppShell/AppShell.js";
 import { Editor } from "./Editor.js";
 import { PageList } from "./PageList.js";
 

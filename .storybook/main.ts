@@ -11,7 +11,16 @@ const config: StorybookConfig = {
   addons: ["@storybook/addon-a11y", "@storybook/addon-docs"],
   // No usage data leaves contributors' machines.
   core: { disableTelemetry: true },
-  typescript: { reactDocgen: "react-docgen-typescript" },
+  typescript: {
+    reactDocgen: "react-docgen-typescript",
+    // The admin has its own tsconfig; the root one does not include admin/, so
+    // without this the props tables on the Docs pages are skipped.
+    reactDocgenTypescriptOptions: {
+      tsconfigPath: "admin/tsconfig.json",
+      // Only the admin components need prop tables, not Storybook's own config.
+      exclude: [".storybook/**"],
+    },
+  },
 };
 
 export default config;

@@ -10,17 +10,17 @@
   --accent-hover: #3730a3;
   --accent-soft: #eef0ff;
   --on-accent: #fff;
-  --danger: #b42318;
-  --danger-soft: #fef3f2;
-  --warning: #92400e;
-  --warning-soft: #fffbeb;
+  --danger: #dc2626;
+  --warning: #d97706;
   --shadow: 0 1px 2px rgb(15 23 42 / 6%), 0 1px 3px rgb(15 23 42 / 8%);
   --shadow-lg: 0 4px 12px rgb(15 23 42 / 10%), 0 2px 4px rgb(15 23 42 / 6%);
   font-family: Amiko, system-ui, sans-serif;
 }
 
+/* Dark follows the system unless the page says otherwise: data-theme="light"
+   or "dark" on <html> wins (Storybook's toolbar uses this). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0b1020;
     --surface: #121a2e;
     --subtle: #1a2440;
@@ -32,12 +32,35 @@
     --accent-soft: #1d2447;
     --on-accent: #0b1020;
     --danger: #ff9a8f;
-    --danger-soft: #3a1717;
     --warning: #fbbf24;
-    --warning-soft: #33260a;
     --shadow: 0 1px 2px rgb(0 0 0 / 30%);
     --shadow-lg: 0 4px 12px rgb(0 0 0 / 40%);
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b1020;
+  --surface: #121a2e;
+  --subtle: #1a2440;
+  --text: #e6ebf5;
+  --muted: #9aa7bd;
+  --border: #2b3856;
+  --accent: #8b93ff;
+  --accent-hover: #a5abff;
+  --accent-soft: #1d2447;
+  --on-accent: #0b1020;
+  --danger: #ff9a8f;
+  --warning: #fbbf24;
+  --shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-lg: 0 4px 12px rgb(0 0 0 / 40%);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 *,

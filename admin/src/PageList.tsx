@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { listPages, type PageSummary } from "./api.js";
-import { ErrorPanel } from "./components/ErrorPanel.js";
-import { LoadingMessage } from "./components/LoadingMessage.js";
-import { PageListView } from "./components/PageListView.js";
+import { ErrorPanel } from "./components/ErrorPanel/ErrorPanel.js";
+import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
+import { PageListView } from "./components/PageListView/PageListView.js";
 
 type State =
   | { status: "loading" }

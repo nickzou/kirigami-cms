@@ -1,0 +1,8 @@
+/* Make the Docs pages follow the admin's light/dark colors, not Storybook's
+   own light docs theme. */
+.sbdocs-wrapper,
+.sbdocs-content,
+.sbdocs.sbdocs-preview {
+  background: var(--bg);
+  color: var(--text);
+}

@@ -39,6 +39,8 @@ Squash-merge only, then delete the branch. The maintainer merges.
 
 ## Code rules
 
+An `.editorconfig` sets two-space indents, LF line endings and a final newline; most editors read it (Neovim does from 0.9). Biome is the formatter, so run `pnpm format` before committing if your editor does not.
+
 - `src/core` must not import Node builtins or anything from `src/server`, `src/cli`, or `admin`. CI enforces this.
 - Don't add syntax extensions to markdown content (directives, MDX, shortcodes, inline layout comments).
 - Zod schemas are the source of truth for config and API shapes.
@@ -70,9 +72,11 @@ pnpm storybook         # http://localhost:6006
 pnpm build:storybook   # what CI runs
 ```
 
-- `admin/src/components`: presentational components. Props in, markup out; no fetching, no app state. Each has a `*.stories.tsx` next to it.
+- `admin/src/components`: presentational components. Props in, markup out; no fetching, no app state. Each lives in its own folder (`Alert/Alert.tsx`) with its `Alert.stories.tsx` beside it.
 - `admin/src/*.tsx` screens (`PageList`, `Editor`) fetch data and hold state; logic that is more than a few lines lives in `admin/src/hooks`.
 - Screen stories use `installFakeApi` from `admin/src/fake-api.ts`, which runs the real pages API over an in-memory store. Use `failures` there to make it misbehave.
+- The toolbar's Theme switch sets `data-theme` on the page (light, dark or system) and starts on light, so everyone begins with the same view. The Docs pages take their colors from the CSS variables in `admin/src/styles.css`, so there is no second copy of the palette to keep in step.
+- Use the toolbar's Viewport menu to check a component at phone, tablet, laptop and desktop widths (the sizes are set in `.storybook/preview.tsx`). It is built into Storybook, not an addon.
 - `admin/src/stories.test.tsx` renders every story (including `play` functions) as part of `pnpm test`. Add a story when you add a component or a state.
 
 See [ADR 0011](docs/adr/0011-storybook-for-the-admin.md).

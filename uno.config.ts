@@ -19,9 +19,7 @@ export default defineConfig({
       "accent-soft": "var(--accent-soft)",
       "on-accent": "var(--on-accent)",
       danger: "var(--danger)",
-      "danger-soft": "var(--danger-soft)",
       warning: "var(--warning)",
-      "warning-soft": "var(--warning-soft)",
     },
     borderRadius: { DEFAULT: "0.5rem", lg: "0.75rem" },
     boxShadow: {
