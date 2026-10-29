@@ -5,6 +5,7 @@ import "@fontsource/amiko/400.css";
 import "@fontsource/amiko/700.css";
 import "../admin/src/styles.css";
 import "./docs.css";
+import { ThemedDocsContainer } from "./DocsContainer.js";
 
 const preview: Preview = {
   initialGlobals: { theme: "system" },
@@ -27,6 +28,7 @@ const preview: Preview = {
     layout: "padded",
     controls: { expanded: true },
     a11y: { test: "error" },
+    docs: { container: ThemedDocsContainer },
   },
   decorators: [
     // "system" leaves the choice to the browser's own setting.
