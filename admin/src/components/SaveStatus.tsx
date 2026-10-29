@@ -4,7 +4,7 @@
  */
 export function SaveStatus({ saved }: { saved: boolean }) {
   return (
-    <div role="status" className="muted save-status">
+    <div role="status" className=":uno: min-h-6 text-muted">
       {saved && "Saved."}
     </div>
   );

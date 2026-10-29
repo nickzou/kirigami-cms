@@ -1,4 +1,5 @@
 import react from "@vitejs/plugin-react";
+import UnoCSS from "unocss/vite";
 import { defineConfig } from "vite";
 
 // The admin app lives in admin/ and is built into dist/admin, where the dev
@@ -9,7 +10,7 @@ const devServer = process.env.KIRIGAMI_DEV_URL ?? "http://localhost:3000";
 export default defineConfig({
   root: "admin",
   base: "/admin/",
-  plugins: [react()],
+  plugins: [UnoCSS(), react()],
   build: { outDir: "../dist/admin", emptyOutDir: true },
   server: {
     proxy: { "/api": devServer },

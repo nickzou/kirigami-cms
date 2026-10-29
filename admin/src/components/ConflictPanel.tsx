@@ -24,7 +24,7 @@ export function ConflictPanel({
           : "This page changed since you opened it, so nothing was saved."}{" "}
         Your changes are still in the editor.
       </p>
-      <div className="actions">
+      <div className=":uno: flex flex-wrap items-center gap-3">
         {!gone && (
           <Button onClick={onLoadLatest}>
             Load the latest and discard my changes

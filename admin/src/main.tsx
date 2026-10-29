@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { App } from "./App.js";
+import "virtual:uno.css";
 import "@fontsource/amiko/400.css";
 import "@fontsource/amiko/700.css";
 import "./styles.css";
