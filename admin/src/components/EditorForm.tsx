@@ -25,26 +25,29 @@ export function EditorForm({
 }: EditorFormProps) {
   return (
     <form
-      className="editor"
+      className=":uno: grid gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
     >
-      <label htmlFor="page-content">Markdown</label>
+      <label htmlFor="page-content" className=":uno: font-bold">
+        Markdown
+      </label>
       <textarea
         id="page-content"
         ref={textareaRef}
         value={value}
         spellCheck
+        className=":uno: block min-h-[60vh] w-full resize-y rounded-lg border border-solid border-line bg-surface p-3 font-mono text-[0.9375rem] leading-relaxed text-text shadow"
         onChange={(event) => onChange(event.target.value)}
       />
       {notice}
-      <div className="actions">
-        <Button type="submit" disabled={!dirty || saving}>
+      <div className=":uno: flex flex-wrap items-center gap-3">
+        <Button type="submit" variant="primary" disabled={!dirty || saving}>
           {saving ? "Saving…" : "Save"}
         </Button>
-        <span className="muted">
+        <span className=":uno: text-muted">
           {dirty ? "Unsaved changes" : "No changes"}
         </span>
       </div>

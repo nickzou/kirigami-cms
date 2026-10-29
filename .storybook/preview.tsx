@@ -1,5 +1,6 @@
 import type { Preview } from "@storybook/react-vite";
 import { createMemoryRouter, RouterProvider } from "react-router";
+import "virtual:uno.css";
 import "@fontsource/amiko/400.css";
 import "@fontsource/amiko/700.css";
 import "../admin/src/styles.css";

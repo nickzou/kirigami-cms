@@ -1,8 +1,9 @@
 import react from "@vitejs/plugin-react";
+import UnoCSS from "unocss/vite";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [UnoCSS(), react()],
   test: {
     include: [
       "src/**/*.test.ts",

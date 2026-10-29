@@ -4,5 +4,9 @@ export function LoadingMessage({
 }: {
   children?: string;
 }) {
-  return <p role="status">{children}</p>;
+  return (
+    <p role="status" className=":uno: text-muted">
+      {children}
+    </p>
+  );
 }
