@@ -76,6 +76,7 @@ pnpm build:storybook   # what CI runs
 - `admin/src/*.tsx` screens (`PageList`, `Editor`) fetch data and hold state; logic that is more than a few lines lives in `admin/src/hooks`.
 - Screen stories use `installFakeApi` from `admin/src/fake-api.ts`, which runs the real pages API over an in-memory store. Use `failures` there to make it misbehave.
 - The toolbar's Theme switch sets `data-theme` on the page (light, dark or system) and starts on light, so everyone begins with the same view. The Docs pages take their colors from the CSS variables in `admin/src/styles.css`, so there is no second copy of the palette to keep in step.
+- Use the toolbar's Viewport menu to check a component at phone, tablet, laptop and desktop widths (the sizes are set in `.storybook/preview.tsx`). It is built into Storybook, not an addon.
 - `admin/src/stories.test.tsx` renders every story (including `play` functions) as part of `pnpm test`. Add a story when you add a component or a state.
 
 See [ADR 0011](docs/adr/0011-storybook-for-the-admin.md).

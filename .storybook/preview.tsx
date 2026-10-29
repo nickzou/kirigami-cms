@@ -31,6 +31,31 @@ const preview: Preview = {
     controls: { expanded: true },
     a11y: { test: "error" },
     docs: { container: ThemedDocsContainer },
+    // The Viewport tool is built into Storybook; these are the sizes we check.
+    viewport: {
+      options: {
+        phone: {
+          name: "Phone (375 × 667)",
+          styles: { width: "375px", height: "667px" },
+          type: "mobile",
+        },
+        tablet: {
+          name: "Tablet (768 × 1024)",
+          styles: { width: "768px", height: "1024px" },
+          type: "tablet",
+        },
+        laptop: {
+          name: "Laptop (1280 × 800)",
+          styles: { width: "1280px", height: "800px" },
+          type: "desktop",
+        },
+        desktop: {
+          name: "Desktop (1440 × 900)",
+          styles: { width: "1440px", height: "900px" },
+          type: "desktop",
+        },
+      },
+    },
   },
   decorators: [
     // "system" leaves the choice to the browser's own setting.
