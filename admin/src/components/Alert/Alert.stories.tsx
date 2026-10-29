@@ -27,3 +27,22 @@ export const WithActions: Story = {
     ),
   },
 };
+
+export const SingleLine: Story = {
+  args: { tone: "warning", children: <p>One short line.</p> },
+};
+
+export const LongText: Story = {
+  args: {
+    tone: "error",
+    children: (
+      <p>
+        A long message that wraps onto several lines, to show the icon staying
+        beside the first line instead of floating in the middle. It keeps going
+        for a while so that it wraps even on a wide screen, and then a little
+        more for good measure, so there is no doubt about how many lines this
+        takes up when it is shown.
+      </p>
+    ),
+  },
+};
