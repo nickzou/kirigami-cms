@@ -12,13 +12,13 @@ export interface AlertProps {
 const tones = {
   error: {
     panel:
-      ":uno: my-2 flex items-start gap-3 rounded border border-solid border-line border-l-4 border-l-danger bg-surface px-4 py-3 shadow",
+      ":uno: my-2 flex items-start gap-3 rounded border border-solid border-line border-l-4 border-l-danger bg-surface px-4 py-3 text-sm shadow sm:text-base",
     icon: CircleAlert,
     iconClass: ":uno: shrink-0 text-danger",
   },
   warning: {
     panel:
-      ":uno: my-2 flex items-start gap-3 rounded border border-solid border-line border-l-4 border-l-warning bg-surface px-4 py-3 shadow",
+      ":uno: my-2 flex items-start gap-3 rounded border border-solid border-line border-l-4 border-l-warning bg-surface px-4 py-3 text-sm shadow sm:text-base",
     icon: TriangleAlert,
     iconClass: ":uno: shrink-0 text-warning",
   },
