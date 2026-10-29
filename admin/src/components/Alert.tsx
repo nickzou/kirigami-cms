@@ -8,9 +8,9 @@ export interface AlertProps {
 
 const tones = {
   error:
-    ":uno: my-2 rounded border border-solid border-line border-l-4 border-l-danger bg-danger-soft px-4 py-3 shadow [&>:first-child]:mt-0 [&>:last-child]:mb-0",
+    ":uno: my-2 rounded border border-solid border-l-4 border-danger bg-danger-soft px-4 py-3 shadow [&>:first-child]:mt-0 [&>:last-child]:mb-0",
   warning:
-    ":uno: my-2 rounded border border-solid border-line border-l-4 border-l-warning bg-warning-soft px-4 py-3 shadow [&>:first-child]:mt-0 [&>:last-child]:mb-0",
+    ":uno: my-2 rounded border border-solid border-l-4 border-warning bg-warning-soft px-4 py-3 shadow [&>:first-child]:mt-0 [&>:last-child]:mb-0",
 } as const;
 
 /** A boxed message the user should not miss. */
