@@ -57,6 +57,26 @@ pnpm admin:dev                              # admin on http://localhost:5173/adm
 
 If the site runs on another port, set `KIRIGAMI_DEV_URL` (for example `KIRIGAMI_DEV_URL=http://localhost:4000 pnpm admin:dev`). The admin imports only types from `src/server/api-schemas.ts`, so its request and response shapes cannot drift from the API.
 
+### Styling
+
+The admin uses UnoCSS (see ADR 0012). Write utilities in a class string that starts with `:uno:`; the build hashes each group into one class. Use the theme names from `uno.config.ts` (`bg-surface`, `text-muted`, `border-line`, `bg-accent`) rather than raw colors, so light and dark both work. Keep class strings literal and complete; choose between variants from a lookup of whole strings. Edit colors in `admin/src/styles.css`.
+
+### Storybook
+
+Every admin component has stories, so each state (loading, empty, error, conflict, and so on) can be seen and checked for accessibility in isolation.
+
+```sh
+pnpm storybook         # http://localhost:6006
+pnpm build:storybook   # what CI runs
+```
+
+- `admin/src/components`: presentational components. Props in, markup out; no fetching, no app state. Each has a `*.stories.tsx` next to it.
+- `admin/src/*.tsx` screens (`PageList`, `Editor`) fetch data and hold state; logic that is more than a few lines lives in `admin/src/hooks`.
+- Screen stories use `installFakeApi` from `admin/src/fake-api.ts`, which runs the real pages API over an in-memory store. Use `failures` there to make it misbehave.
+- `admin/src/stories.test.tsx` renders every story (including `play` functions) as part of `pnpm test`. Add a story when you add a component or a state.
+
+See [ADR 0011](docs/adr/0011-storybook-for-the-admin.md).
+
 ## Issues
 
 Issues are tracked in the project's issue tracker (currently ClickUp). See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).

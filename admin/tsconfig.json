@@ -8,5 +8,10 @@
     "types": ["vite/client"],
     "noEmit": true
   },
-  "include": ["src", "../src/server/api-schemas.ts"]
+  "include": [
+    "src",
+    "../.storybook",
+    "../src/server/api-schemas.ts",
+    "../src/server/api.ts"
+  ]
 }

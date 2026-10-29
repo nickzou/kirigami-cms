@@ -1,4 +1,5 @@
-import { Link, Route, Routes, useParams } from "react-router";
+import { Route, Routes, useParams } from "react-router";
+import { AppShell } from "./components/AppShell.js";
 import { Editor } from "./Editor.js";
 import { PageList } from "./PageList.js";
 
@@ -19,19 +20,12 @@ function EditorScreen() {
 
 export function App() {
   return (
-    <>
-      <header className="app-header">
-        <Link to="/" className="brand">
-          Kirigami
-        </Link>
-      </header>
-      <main>
-        <Routes>
-          <Route path="/" element={<PagesScreen />} />
-          <Route path="/pages/*" element={<EditorScreen />} />
-          <Route path="*" element={<p>There is nothing at this address.</p>} />
-        </Routes>
-      </main>
-    </>
+    <AppShell>
+      <Routes>
+        <Route path="/" element={<PagesScreen />} />
+        <Route path="/pages/*" element={<EditorScreen />} />
+        <Route path="*" element={<p>There is nothing at this address.</p>} />
+      </Routes>
+    </AppShell>
   );
 }
