@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from "react";
-import { Button } from "./Button.js";
+import { Button } from "../Button/Button.js";
 
 export interface EditorFormProps {
   value: string;

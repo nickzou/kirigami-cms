@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import type { PageSummary } from "../api.js";
+import type { PageSummary } from "../../api.js";
 
 /** The address of a page's editor, with each path segment encoded. */
 export const pageHref = (path: string): string =>

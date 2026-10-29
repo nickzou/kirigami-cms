@@ -70,7 +70,7 @@ pnpm storybook         # http://localhost:6006
 pnpm build:storybook   # what CI runs
 ```
 
-- `admin/src/components`: presentational components. Props in, markup out; no fetching, no app state. Each has a `*.stories.tsx` next to it.
+- `admin/src/components`: presentational components. Props in, markup out; no fetching, no app state. Each lives in its own folder (`Alert/Alert.tsx`) with its `Alert.stories.tsx` beside it.
 - `admin/src/*.tsx` screens (`PageList`, `Editor`) fetch data and hold state; logic that is more than a few lines lives in `admin/src/hooks`.
 - Screen stories use `installFakeApi` from `admin/src/fake-api.ts`, which runs the real pages API over an in-memory store. Use `failures` there to make it misbehave.
 - `admin/src/stories.test.tsx` renders every story (including `play` functions) as part of `pnpm test`. Add a story when you add a component or a state.

@@ -1,4 +1,4 @@
-import { Alert } from "./Alert.js";
+import { Alert } from "../Alert/Alert.js";
 
 export function SaveFailedPanel({ message }: { message: string }) {
   return (
