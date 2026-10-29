@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Editor } from "./Editor.js";
 import { failures, installFakeApi } from "./fake-api.js";
+import { events } from "./fake-events.js";
 
 const meta = {
   title: "Screens/Editor",
@@ -90,4 +91,49 @@ export const LoadFails: Story = {
 export const MissingPage: Story = {
   args: { path: "nope.md" },
   beforeEach: () => installFakeApi(hello).restore,
+};
+
+export const PreviewReloadsAfterABuild: Story = {
+  beforeEach: () => installFakeApi(hello).restore,
+  parameters: { viewport: { defaultViewport: "laptop" } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const before = await canvas.findByTitle("Preview of blog/hello.md");
+    await waitFor(() => expect(events.listeners()).toBe(1));
+    events.reload();
+    await waitFor(async () =>
+      expect(await canvas.findByTitle("Preview of blog/hello.md")).not.toBe(
+        before,
+      ),
+    );
+  },
+};
+
+export const BuildFailed: Story = {
+  beforeEach: () => installFakeApi(hello).restore,
+  parameters: { viewport: { defaultViewport: "laptop" } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByTitle("Preview of blog/hello.md");
+    await waitFor(() => expect(events.listeners()).toBe(1));
+    events.fail(
+      "Cannot build the site:\n  site.yaml (theme.colours): unknown field",
+    );
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "The site failed to build",
+    );
+  },
+};
+
+export const PreviewHidden: Story = {
+  beforeEach: () => installFakeApi(hello).restore,
+  parameters: { viewport: { defaultViewport: "laptop" } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByTitle("Preview of blog/hello.md");
+    await userEvent.click(canvas.getByRole("button", { name: "Preview" }));
+    await expect(
+      canvas.queryByTitle("Preview of blog/hello.md"),
+    ).not.toBeInTheDocument();
+  },
 };

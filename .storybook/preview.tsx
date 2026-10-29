@@ -5,9 +5,12 @@ import "@fontsource/amiko/400.css";
 import "@fontsource/amiko/700.css";
 import "../admin/src/styles.css";
 import "./docs.css";
+import { installFakeEvents } from "../admin/src/fake-events.js";
 import { ThemedDocsContainer } from "./DocsContainer.js";
 
 const preview: Preview = {
+  // The editor listens for build events; stories play the dev server's part.
+  beforeEach: () => installFakeEvents(),
   // A fixed start, so everyone opens Storybook looking at the same thing.
   // "System" is still in the toolbar for anyone who wants it.
   initialGlobals: { theme: "light" },

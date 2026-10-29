@@ -13,6 +13,8 @@ export default defineConfig({
   plugins: [UnoCSS(), react()],
   build: { outDir: "../dist/admin", emptyOutDir: true },
   server: {
-    proxy: { "/api": devServer },
+    // Everything outside /admin goes to `kirigami dev`: the API, the build
+    // events, and the site's own pages, which the editor shows in its preview.
+    proxy: { "^/(?!admin(/|$)).*": devServer },
   },
 });

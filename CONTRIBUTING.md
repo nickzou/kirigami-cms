@@ -57,7 +57,7 @@ node dist/cli/main.js dev path/to/my-site   # serves the API on port 3000
 pnpm admin:dev                              # admin on http://localhost:5173/admin/, proxying /api
 ```
 
-If the site runs on another port, set `KIRIGAMI_DEV_URL` (for example `KIRIGAMI_DEV_URL=http://localhost:4000 pnpm admin:dev`). The admin imports only types from `src/server/api-schemas.ts`, so its request and response shapes cannot drift from the API.
+The proxy sends everything outside `/admin` to `kirigami dev`: the API, the build events, and the site's own pages, which the editor's preview frame shows (see ADR 0013). If the site runs on another port, set `KIRIGAMI_DEV_URL` (for example `KIRIGAMI_DEV_URL=http://localhost:4000 pnpm admin:dev`). The admin imports only types from `src/server/api-schemas.ts`, so its request and response shapes cannot drift from the API.
 
 ### Styling
 
