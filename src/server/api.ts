@@ -6,6 +6,7 @@ import {
   firstHeading,
   InvalidPathError,
   NotFoundError,
+  pageUrl,
   VersionConflictError,
 } from "../core/index.js";
 import {
@@ -185,7 +186,7 @@ export function createApiApp(store: ContentStore) {
     }
     try {
       const { content, version } = await store.read(path);
-      return c.json({ path, content, version }, 200);
+      return c.json({ path, content, version, url: pageUrl(path) }, 200);
     } catch (error) {
       if (error instanceof NotFoundError) {
         return c.json(

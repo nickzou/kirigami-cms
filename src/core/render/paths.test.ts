@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { outputPath, relativeHref } from "./paths.js";
+import { outputPath, pageUrl, relativeHref } from "./paths.js";
 
 describe("outputPath", () => {
   it.each([
@@ -18,6 +18,22 @@ describe("outputPath", () => {
 
   it("rejects an invalid store path", () => {
     expect(() => outputPath("../x.md")).toThrow(/Invalid path/);
+  });
+});
+
+describe("pageUrl", () => {
+  it.each([
+    ["index.md", "/"],
+    ["about.md", "/about/"],
+    ["blog/index.md", "/blog/"],
+    ["blog/hello.md", "/blog/hello/"],
+    ["my post.md", "/my%20post/"],
+  ])("maps %s to %s", (source, expected) => {
+    expect(pageUrl(source)).toBe(expected);
+  });
+
+  it("rejects a file that is not markdown", () => {
+    expect(() => pageUrl("image.png")).toThrow(/\.md/);
   });
 });
 

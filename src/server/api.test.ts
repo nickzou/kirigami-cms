@@ -58,6 +58,7 @@ describe("GET /api/pages/{path}", () => {
       path: "blog/hello.md",
       content: "# Hi\n",
       version: (await store.read("blog/hello.md")).version,
+      url: "/blog/hello/",
     });
   });
 

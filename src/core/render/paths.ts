@@ -16,6 +16,15 @@ export function outputPath(sourcePath: string): string {
   return `${withoutExtension}/index.html`;
 }
 
+/**
+ * The address a page is served at, with clean URLs and each segment encoded:
+ * `index.md` is `/`, `blog/hello.md` is `/blog/hello/`.
+ */
+export function pageUrl(sourcePath: string): string {
+  const folder = outputPath(sourcePath).replace(/(^|\/)index\.html$/, "$1");
+  return `/${folder.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 /** The relative URL from one output file to another, e.g. `../style.css`. */
 export function relativeHref(fromFile: string, toFile: string): string {
   const from = fromFile.split("/").slice(0, -1);
