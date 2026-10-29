@@ -24,7 +24,7 @@ export {
 export { type Page, type Section, splitSections } from "./markdown/sections.js";
 export { firstHeading, renderMarkdown } from "./render/markdown.js";
 export { type RenderPageInput, renderPage } from "./render/page.js";
-export { outputPath, relativeHref } from "./render/paths.js";
+export { outputPath, pageUrl, relativeHref } from "./render/paths.js";
 export {
   InvalidPathError,
   NotFoundError,

@@ -30,6 +30,8 @@ interface Base {
   content: string;
   version: string;
   endings: LineEndings;
+  /** Where the dev server shows the page. */
+  url: string;
 }
 
 const describe = (error: unknown): string =>
@@ -52,6 +54,7 @@ export function usePageEditor(path: string) {
       content: page.content,
       version: page.version,
       endings: detectLineEndings(page.content),
+      url: page.url,
     });
     setDraftText(forDisplay(page.content));
     setSave({ status: "idle" });
@@ -124,6 +127,7 @@ export function usePageEditor(path: string) {
     dirty,
     saving,
     endings: base?.endings,
+    url: base?.url,
     ready: load.status === "ready" && base !== undefined,
     textareaRef,
     submit: useCallback(() => void submit(), [submit]),

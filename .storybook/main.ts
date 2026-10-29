@@ -7,6 +7,8 @@ const config: StorybookConfig = {
     // that only make sense for the real admin build.
     options: { builder: { viteConfigPath: ".storybook/vite.config.ts" } },
   },
+  // A tiny sample site (served at /blog/hello/) for the editor's preview stories.
+  staticDirs: ["./static"],
   stories: ["../admin/src/**/*.stories.@(ts|tsx)"],
   addons: ["@storybook/addon-a11y", "@storybook/addon-docs"],
   // No usage data leaves contributors' machines.

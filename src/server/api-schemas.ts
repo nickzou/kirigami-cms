@@ -33,7 +33,15 @@ export const PageSummarySchema = z
   .openapi("PageSummary");
 
 export const PageSchema = z
-  .object({ path: z.string(), content: z.string(), version: Version })
+  .object({
+    path: z.string(),
+    content: z.string(),
+    version: Version,
+    url: z.string().openapi({
+      description: "Where the dev server shows this page, e.g. /blog/hello/.",
+      example: "/blog/hello/",
+    }),
+  })
   .openapi("Page");
 
 export const Saved = z
