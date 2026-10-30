@@ -20,9 +20,22 @@ my-site/
     └── hello.md   # -> blog/hello/index.html
 ```
 
+A project can say where its content is in a `kirigami.config.yaml` in its root, so that `kirigami dev`, `build` and `check` need no folder (see [`schema/project.schema.json`](schema/project.schema.json) for editor autocomplete, and [ADR 0014](docs/adr/0014-project-configuration.md)):
+
+```yaml
+content:
+  store: local-folder   # the only store so far
+  path: ./content       # default
+build:
+  out: ./dist           # default
+```
+
+A folder given on the command line wins over it, and with neither, `./content` is used.
+
 ```sh
 pnpm build
 node dist/cli/main.js build my-site     # writes my-site/dist
+node dist/cli/main.js build             # the content kirigami.config.yaml names, or ./content
 node dist/cli/main.js check my-site     # validates without building
 node dist/cli/main.js dev my-site       # preview at http://localhost:3000, reloads the browser when you save; admin at /admin, JSON API at /api (OpenAPI: /api/openapi.json)
 ```

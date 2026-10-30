@@ -58,7 +58,7 @@ pnpm dev path/to/my-site    # the same, for a site of your own
 pnpm dev --port 4000
 ```
 
-It compiles the server and CLI when `src/` changes, rebuilds the admin when `admin/` changes, and runs `kirigami dev` on the site, restarting it when the compiled code changes. Edits to the site's pages are rebuilt by `kirigami dev` as usual. Each line is labelled `tsc`, `admin` or `dev`. Ctrl+C stops all three. With no site it uses `.dev-site/` (ignored by git), copied from the test fixture the first time, so trying things in the admin never changes the fixtures the tests use. Refresh the browser after a change to the admin; the server's own pages reload by themselves.
+It compiles the server and CLI when `src/` changes, rebuilds the admin when `admin/` changes, and runs `kirigami dev` on the site, restarting it when the compiled code changes. Edits to the site's pages are rebuilt by `kirigami dev` as usual. Each line is labelled `tsc`, `admin` or `dev`. Ctrl+C stops all three. With no site it uses the content `kirigami.config.yaml` names, if the project root has one (see [ADR 0014](docs/adr/0014-project-configuration.md)), and otherwise `.dev-site/` (ignored by git), copied from the test fixture the first time, so trying things in the admin never changes the fixtures the tests use. Refresh the browser after a change to the admin; the server's own pages reload by themselves.
 
 To work on the admin with hot reloading instead, run a site in one terminal and Vite in another:
 
