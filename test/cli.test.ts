@@ -5,6 +5,7 @@ import {
   readdir,
   readFile,
   rm,
+  stat,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -204,13 +205,11 @@ describe("usage", () => {
   it("prints help and exits 0 for --help", async () => {
     const io = capture("/");
     expect(await run(["--help"], io)).toBe(0);
-    expect(io.lines.out.join("\n")).toContain("kirigami build <site>");
+    expect(io.lines.out.join("\n")).toContain("kirigami build [site]");
   });
 
   it.each([
     [[]],
-    [["build"]],
-    [["check"]],
     [["deploy", "x"]],
     [["build", "a", "b"]],
     [["check", "x", "--out", "y"]],
@@ -219,6 +218,138 @@ describe("usage", () => {
     const io = capture("/");
     expect(await run(argv, io)).toBe(2);
     expect(io.lines.err.join("\n")).toContain("Usage:");
+  });
+});
+
+describe("project configuration (kirigami.config.yaml)", () => {
+  const page = "# From the config\n";
+
+  /** A project: a config file in its root, and pages where the config says. */
+  async function project(config: string, pages = "pages") {
+    const root = await scratch();
+    await writeFile(join(root, "kirigami.config.yaml"), config);
+    await mkdir(join(root, pages), { recursive: true });
+    await writeFile(join(root, pages, "index.md"), page);
+    return root;
+  }
+
+  it("builds the content the config names, into the folder it names", async () => {
+    const root = await project(
+      "content:\n  store: local-folder\n  path: ./pages\nbuild:\n  out: ./public\n",
+    );
+    const io = capture(root);
+    expect(await run(["build"], io)).toBe(0);
+    expect(await readFile(join(root, "public/index.html"), "utf8")).toContain(
+      "From the config",
+    );
+    // It says where the content came from, so it is never a surprise.
+    expect(io.lines.out.join("\n")).toContain("Content: pages");
+    expect(io.lines.out.join("\n")).toContain("kirigami.config.yaml");
+  });
+
+  it("is found from a folder inside the project", async () => {
+    const root = await project(
+      "content:\n  store: local-folder\n  path: ./pages\n",
+    );
+    const inside = join(root, "pages");
+    expect(await run(["check"], capture(inside))).toBe(0);
+    expect(await run(["build"], capture(inside))).toBe(0);
+    // The output folder is relative to the config file, not to where it was run.
+    expect(await exists(join(root, "dist/index.html"))).toBe(true);
+  });
+
+  it("uses ./pages-style defaults: ./content and ./dist when the config says nothing", async () => {
+    const root = await project("{}\n", "content");
+    expect(await run(["build"], capture(root))).toBe(0);
+    expect(await exists(join(root, "dist/index.html"))).toBe(true);
+  });
+
+  it("lets a site folder on the command line win, and builds it into <site>/dist as before", async () => {
+    const root = await project(
+      "content:\n  store: local-folder\n  path: ./pages\n",
+    );
+    const other = join(root, "other");
+    await mkdir(other);
+    await writeFile(join(other, "index.md"), "# Other\n");
+    expect(await run(["build", "other"], capture(root))).toBe(0);
+    expect(await readFile(join(other, "dist/index.html"), "utf8")).toContain(
+      "Other",
+    );
+    expect(await exists(join(root, "dist/index.html"))).toBe(false);
+  });
+
+  it("lets --out override the config, resolved from the working directory", async () => {
+    const root = await project(
+      "content:\n  store: local-folder\n  path: ./pages\n",
+    );
+    expect(await run(["build", "--out", "elsewhere"], capture(root))).toBe(0);
+    expect(await exists(join(root, "elsewhere/index.html"))).toBe(true);
+    expect(await exists(join(root, "dist/index.html"))).toBe(false);
+  });
+
+  it("uses ./content when there is no config and no site", async () => {
+    const root = await scratch();
+    await mkdir(join(root, "content"));
+    await writeFile(join(root, "content/index.md"), "# Default\n");
+    const io = capture(root);
+    expect(await run(["build"], io)).toBe(0);
+    expect(await exists(join(root, "content/dist/index.html"))).toBe(true);
+    expect(io.lines.out.join("\n")).toContain("the default");
+  });
+
+  it("says which store it does not know, and exits 1 without building", async () => {
+    const root = await project("content:\n  store: google-drive\n");
+    const io = capture(root);
+    expect(await run(["build"], io)).toBe(1);
+    const message = io.lines.err.join("\n");
+    expect(message).toContain("kirigami.config.yaml");
+    expect(message).toContain("content.store");
+    expect(message).toContain("local-folder");
+    expect(await exists(join(root, "dist"))).toBe(false);
+  });
+
+  it("exits 1 on an unknown key in the config", async () => {
+    const root = await project("nope: 1\n");
+    const io = capture(root);
+    expect(await run(["check"], io)).toBe(1);
+    expect(io.lines.err.join("\n")).toContain('Unknown key "nope"');
+  });
+
+  it("serves the content the config names, with the admin API over it", async () => {
+    const root = await project(
+      "content:\n  store: local-folder\n  path: ./pages\n",
+    );
+    const abort = new AbortController();
+    const io = { ...capture(root), signal: abort.signal };
+    try {
+      expect(await run(["dev", "--port=0"], io)).toBe(0);
+      const url = /http:\/\/localhost:\d+\//.exec(io.lines.out.join("\n"))?.[0];
+      expect(url).toBeDefined();
+      expect(await (await fetch(new URL("/", url))).text()).toContain(
+        "From the config",
+      );
+      const pages = (await (
+        await fetch(new URL("/api/pages", url))
+      ).json()) as {
+        pages: { path: string }[];
+      };
+      expect(pages.pages.map((p) => p.path)).toEqual(["index.md"]);
+    } finally {
+      abort.abort();
+    }
+  });
+
+  it("makes the default ./content when serving and it does not exist yet", async () => {
+    const root = await scratch();
+    const abort = new AbortController();
+    const io = { ...capture(root), signal: abort.signal };
+    try {
+      expect(await run(["dev", "--port=0"], io)).toBe(0);
+      expect(io.lines.out.join("\n")).toContain("Made content");
+      expect((await stat(join(root, "content"))).isDirectory()).toBe(true);
+    } finally {
+      abort.abort();
+    }
   });
 });
 
