@@ -8,10 +8,13 @@ import { Logo } from "../Logo/Logo.js";
 export function BrandLink({
   compact = false,
   onDark = false,
+  markOnPhone = false,
 }: {
   compact?: boolean;
   /** For the dark sidebar: the light text color instead of the page's. */
   onDark?: boolean;
+  /** Under 640px wide, show only the logo, to leave room for a title. */
+  markOnPhone?: boolean;
 }) {
   return (
     <Link
@@ -29,7 +32,9 @@ export function BrandLink({
         className={
           compact
             ? ":uno: whitespace-nowrap opacity-0 transition-opacity duration-200 ease-[ease-in-out] motion-reduce:transition-none"
-            : ":uno: whitespace-nowrap opacity-100 transition-opacity duration-200 ease-[ease-in-out] motion-reduce:transition-none"
+            : markOnPhone
+              ? ":uno: whitespace-nowrap opacity-100 transition-opacity duration-200 ease-[ease-in-out] max-sm:sr-only motion-reduce:transition-none"
+              : ":uno: whitespace-nowrap opacity-100 transition-opacity duration-200 ease-[ease-in-out] motion-reduce:transition-none"
         }
       >
         Kirigami

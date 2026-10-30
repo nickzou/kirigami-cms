@@ -60,9 +60,9 @@ describe("Editor: loading", () => {
     const box = await editor();
     expect(document.activeElement).not.toBe(box);
 
-    // The sheet is the page the heading sits on; a click on it, not on a control.
+    // The sheet is the page the text sits on; a click on it, not on a control.
     fireEvent.click(
-      screen.getByRole("heading", { level: 1 }).parentElement as HTMLElement,
+      box.closest("form")?.parentElement?.parentElement as HTMLElement,
     );
     expect(document.activeElement).toBe(box);
     expect(box.selectionStart).toBe(box.value.length);

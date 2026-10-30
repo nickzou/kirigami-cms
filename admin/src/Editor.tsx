@@ -12,6 +12,7 @@ import {
 } from "./components/EditorForm/EditorForm.js";
 import { ErrorPanel } from "./components/ErrorPanel/ErrorPanel.js";
 import { HeaderActions } from "./components/HeaderActions/HeaderActions.js";
+import { HeaderTitle } from "./components/HeaderTitle/HeaderTitle.js";
 import { LineEndingsNotice } from "./components/LineEndingsNotice/LineEndingsNotice.js";
 import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
 import { pageHref } from "./components/PageListView/PageListView.js";
@@ -61,7 +62,7 @@ export function Editor({ path }: { path: string }) {
   if (load.status === "loading") {
     return (
       <>
-        <h1>{path}</h1>
+        <HeaderTitle>{path}</HeaderTitle>
         <LoadingMessage />
       </>
     );
@@ -70,7 +71,7 @@ export function Editor({ path }: { path: string }) {
   if (load.status === "error") {
     return (
       <>
-        <h1>{path}</h1>
+        <HeaderTitle>{path}</HeaderTitle>
         <ErrorPanel
           message={
             load.missing
@@ -125,7 +126,7 @@ export function Editor({ path }: { path: string }) {
             </div>
           )}
         </div>
-        <h1>{path}</h1>
+        <HeaderTitle>{path}</HeaderTitle>
         {build.error !== null && <BuildProblem message={build.error} />}
         <HeaderActions>
           <SaveControls
