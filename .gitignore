@@ -18,7 +18,11 @@ node_modules/
 /build/
 /coverage/
 
-# The site that `pnpm dev` uses when none is given
+# Your own project config and content for `pnpm dev` (copy kirigami.config.example.yaml)
+/kirigami.config.yaml
+/content/
+
+# The site that `pnpm dev` uses when there is no config and none is given
 /.dev-site/
 
 # Logs

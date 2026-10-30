@@ -1,11 +1,12 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { mkdir, stat, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import {
   BuildError,
   buildSite,
   ConfigError,
+  type ContentStore,
   checkSite,
   isSourcePath,
 } from "../core/index.js";
@@ -16,7 +17,8 @@ import { createEventHub } from "../server/events.js";
 import { createLiveSite } from "../server/live-site.js";
 import { findShadowedPages } from "../server/reserved.js";
 import { watchFolder } from "../server/watch.js";
-import { LocalFolderStore } from "../stores/local-folder.js";
+import { type OpenedContent, openContent } from "../stores/open.js";
+import { resolveProject } from "./project.js";
 
 /** Where `pnpm build` puts the admin app, next to the compiled CLI. */
 const ADMIN_DIR = fileURLToPath(new URL("../admin", import.meta.url));
@@ -30,10 +32,15 @@ export interface Io {
 }
 
 const USAGE = `Usage:
-  kirigami build <site> [--out <dir>]   Render the site to static HTML (default: <site>/dist)
-  kirigami check <site>                 Validate the site without building it
-  kirigami dev <site> [--port <n>]      Preview the site locally (default port: 3000)
+  kirigami build [site] [--out <dir>]   Render the site to static HTML
+  kirigami check [site]                 Validate the site without building it
+  kirigami dev [site] [--port <n>]      Preview the site locally (default port: 3000)
   kirigami --help
+
+[site] is the folder of markdown files. Without it, the content is where
+kirigami.config.yaml says (found in this folder or one above it), or ./content
+when there is no such file. With it, the build goes to <site>/dist unless --out
+says otherwise.
 
 Exit codes: 0 success, 1 the site has problems, 2 bad usage.`;
 
@@ -58,11 +65,10 @@ export async function run(argv: string[], io: Io): Promise<number> {
   const [command, siteArg, ...extra] = positionals;
   if (
     (command !== "build" && command !== "check" && command !== "dev") ||
-    !siteArg ||
     extra.length > 0
   ) {
     io.err(
-      `Expected "build <site>", "check <site>" or "dev <site>".\n\n${USAGE}`,
+      `Expected "build [site]", "check [site]" or "dev [site]".\n\n${USAGE}`,
     );
     return 2;
   }
@@ -80,27 +86,27 @@ export async function run(argv: string[], io: Io): Promise<number> {
     return 2;
   }
 
-  const site = resolve(io.cwd, siteArg);
-  const outDir = resolve(io.cwd, values.out ?? join(siteArg, "dist"));
-  const unsafe = checkOutDir(site, outDir);
-  if (command === "build" && unsafe) {
-    io.err(unsafe);
-    return 2;
-  }
-
-  // Skip the output folder when it sits directly inside the site.
-  const outName = relative(site, outDir);
-  const ignore = [
-    ".git",
-    "node_modules",
-    ...(outName && !outName.includes(sep) ? [outName] : []),
-  ];
-  const store = new LocalFolderStore(site, ignore);
-
   try {
-    if (command === "check") return await check(store, io);
-    if (command === "dev") return await dev(store, site, ignore, port, io);
-    return await build(store, outDir, io);
+    const project = await resolveProject(io.cwd, siteArg, values.out);
+    const content = openContent(
+      project.content,
+      project.baseDir,
+      project.outDir,
+    );
+    const unsafe = checkOutDir(content.dir, project.outDir);
+    if (command === "build" && unsafe) {
+      io.err(unsafe);
+      return 2;
+    }
+    if (project.source) {
+      io.out(
+        `Content: ${relative(io.cwd, content.dir) || "."} (${project.source})`,
+      );
+    }
+    if (command === "check") return await check(content.store, io);
+    if (command === "dev")
+      return await dev(content, project.source !== undefined, port, io);
+    return await build(content.store, project.outDir, io);
   } catch (error) {
     if (
       error instanceof ConfigError ||
@@ -138,7 +144,7 @@ function checkOutDir(site: string, outDir: string): string | undefined {
   return undefined;
 }
 
-async function check(store: LocalFolderStore, io: Io): Promise<number> {
+async function check(store: ContentStore, io: Io): Promise<number> {
   const { pages, problems } = await checkSite(store);
   if (problems.length === 0) {
     io.out(`OK: ${pages} page${pages === 1 ? "" : "s"}, config valid.`);
@@ -156,7 +162,7 @@ async function check(store: LocalFolderStore, io: Io): Promise<number> {
 }
 
 async function build(
-  store: LocalFolderStore,
+  store: ContentStore,
   outDir: string,
   io: Io,
 ): Promise<number> {
@@ -178,12 +184,25 @@ async function build(
  * once listening; the server and watcher keep the process alive.
  */
 async function dev(
-  store: LocalFolderStore,
-  site: string,
-  ignore: string[],
+  content: OpenedContent,
+  chosen: boolean,
   port: number,
   io: Io,
 ): Promise<number> {
+  const { store, dir: site, ignore } = content;
+  // A folder named on the command line that is not there is a mistake worth
+  // seeing. One chosen by the config (or the default) is made, since the admin
+  // creates the first page in it.
+  if (
+    chosen &&
+    !(await stat(site).then(
+      (s) => s.isDirectory(),
+      () => false,
+    ))
+  ) {
+    await mkdir(site, { recursive: true });
+    io.out(`Made ${relative(io.cwd, site) || "."}, which did not exist yet.`);
+  }
   const hub = createEventHub();
   const warnShadowed = (files: Parameters<typeof findShadowedPages>[0]) => {
     for (const url of findShadowedPages(files)) {

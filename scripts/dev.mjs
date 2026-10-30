@@ -6,9 +6,10 @@
 //   dev    runs `kirigami dev <site>`, and restarts it when the compiled code changes
 // Edits to the site's pages and site.yaml are rebuilt by `kirigami dev` itself.
 //
-// With no site, it uses .dev-site/ (ignored by git), copied from the test
-// fixture the first time, so trying things in the admin never changes the
-// fixture the tests depend on.
+// With no site it uses the content named by kirigami.config.yaml, if the
+// project has one. Otherwise it uses .dev-site/ (ignored by git), copied from
+// the test fixture the first time, so trying things in the admin never
+// changes the fixture the tests depend on.
 import { spawn } from "node:child_process";
 import { cpSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -21,8 +22,9 @@ const args = process.argv.slice(2);
 if (args.includes("--help") || args.includes("-h")) {
   console.log(`Usage: pnpm dev [site] [--port <n>]
 
-Watches and serves a site for working on Kirigami. With no site it uses
-.dev-site/, a copy of the test fixture.`);
+Watches and serves a site for working on Kirigami. With no site it uses the
+content kirigami.config.yaml names, or else .dev-site/, a copy of the test
+fixture.`);
   process.exit(0);
 }
 
@@ -33,8 +35,15 @@ for (let i = 0; i < args.length && siteIndex === -1; i += 1) {
   if (args[i] === "--port") i += 1;
   else if (!args[i].startsWith("-")) siteIndex = i;
 }
+// With none, `kirigami dev` finds the project config itself. Without one, use
+// a copy of the fixture, so the fixture stays as the tests expect it.
+const configured = existsSync(join(root, "kirigami.config.yaml"));
 const site =
-  siteIndex === -1 ? join(root, ".dev-site") : args.splice(siteIndex, 1)[0];
+  siteIndex !== -1
+    ? args.splice(siteIndex, 1)[0]
+    : configured
+      ? undefined
+      : join(root, ".dev-site");
 // Only to say where to open the admin; `kirigami dev` reads the flag itself.
 const portArg = args.findIndex((arg) => arg.startsWith("--port"));
 const port =
@@ -46,7 +55,7 @@ const port =
           : args[portArg + 1],
       );
 
-if (siteIndex === -1 && !existsSync(site)) {
+if (site !== undefined && siteIndex === -1 && !existsSync(site)) {
   cpSync(join(root, "test/fixtures/basic-site"), site, { recursive: true });
   console.log("Made .dev-site/ from the test fixture (it is ignored by git).");
 }
@@ -114,7 +123,7 @@ function startServerWhenReady() {
     "--watch-preserve-output",
     "dist/cli/main.js",
     "dev",
-    site,
+    ...(site === undefined ? [] : [site]),
     ...args,
   ]);
 }
