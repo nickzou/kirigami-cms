@@ -14,10 +14,10 @@
   --warning: #d97706;
   --shadow: 0 1px 2px rgb(15 23 42 / 6%), 0 1px 3px rgb(15 23 42 / 8%);
   --shadow-lg: 0 4px 12px rgb(15 23 42 / 10%), 0 2px 4px rgb(15 23 42 / 6%);
-  --side-bg: #0f172a;
-  --side-text: #e2e8f0;
-  --side-muted: #94a3b8;
-  --side-hover: #1e293b;
+  --side-bg: #1f2023;
+  --side-text: #ededf0;
+  --side-muted: #a0a0aa;
+  --side-hover: #2c2d31;
   font-family: Amiko, system-ui, sans-serif;
 }
 
