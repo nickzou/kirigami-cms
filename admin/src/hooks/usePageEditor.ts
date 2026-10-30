@@ -128,6 +128,8 @@ export function usePageEditor(path: string) {
     saving,
     endings: base?.endings,
     url: base?.url,
+    /** The version last read or saved, which rename and delete must send back. */
+    version: base?.version,
     ready: load.status === "ready" && base !== undefined,
     textareaRef,
     submit: useCallback(() => void submit(), [submit]),

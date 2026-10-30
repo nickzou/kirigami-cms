@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { PageListView } from "./PageListView.js";
 
 const meta = {
@@ -32,5 +33,29 @@ export const AwkwardPaths: Story = {
         version: "2",
       },
     ],
+  },
+};
+
+/** Given handlers, each row has Rename and Delete buttons beside its link. */
+export const WithActions: Story = {
+  args: {
+    ...Default.args,
+    onRename: fn(),
+    onDelete: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Rename about.md" }),
+    );
+    await expect(args.onRename).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "about.md" }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Delete blog/hello.md" }),
+    );
+    await expect(args.onDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "blog/hello.md" }),
+    );
   },
 };

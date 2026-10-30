@@ -12,6 +12,10 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 export const Primary: Story = { args: { variant: "primary" } };
+export const Danger: Story = {
+  args: { variant: "danger", children: "Delete page" },
+};
+export const Small: Story = { args: { size: "small", children: "Rename" } };
 export const Disabled: Story = { args: { disabled: true } };
 export const Busy: Story = { args: { children: "Saving…", disabled: true } };
 

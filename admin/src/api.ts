@@ -13,6 +13,8 @@ export class ApiRequestError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** The API's error code, e.g. `exists` or `collision`, when it gave one. */
+    readonly code?: string,
   ) {
     super(message);
     this.name = "ApiRequestError";
@@ -34,10 +36,18 @@ export class ConflictError extends ApiRequestError {
 async function failure(response: Response): Promise<ApiRequestError> {
   try {
     const body = (await response.json()) as ApiError | Conflict;
-    if (response.status === 409 && "currentVersion" in body) {
+    if (
+      response.status === 409 &&
+      "currentVersion" in body &&
+      body.error.code === "conflict"
+    ) {
       return new ConflictError(body.error.message, body.currentVersion);
     }
-    return new ApiRequestError(body.error.message, response.status);
+    return new ApiRequestError(
+      body.error.message,
+      response.status,
+      body.error.code,
+    );
   } catch {
     return new ApiRequestError(
       `The server answered ${response.status}.`,
@@ -74,6 +84,34 @@ export async function savePage(
     method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ content, version }),
+  });
+  if (!response.ok) throw await failure(response);
+  return (await response.json()) as Saved;
+}
+
+/** Creates a page that must not exist yet. */
+export const createPage = (path: string, content: string): Promise<Saved> =>
+  savePage(path, content, null);
+
+/** Deletes a page. `version` is the one last read. */
+export async function deletePage(path: string, version: string): Promise<void> {
+  const response = await fetch(
+    `${pageUrl(path)}?version=${encodeURIComponent(version)}`,
+    { method: "DELETE" },
+  );
+  if (!response.ok) throw await failure(response);
+}
+
+/** Moves a page to a new path. Never overwrites. Returns the new path. */
+export async function renamePage(
+  path: string,
+  to: string,
+  version: string,
+): Promise<Saved> {
+  const response = await fetch(`${pageUrl(path)}/rename`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ to, version }),
   });
   if (!response.ok) throw await failure(response);
   return (await response.json()) as Saved;

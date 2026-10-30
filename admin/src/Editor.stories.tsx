@@ -159,3 +159,41 @@ export const SwitchesViewsOnAPhone: Story = {
     await expect(canvas.getByLabelText("Markdown")).toBeVisible();
   },
 };
+
+/** Rename and Delete sit beside the back link; each opens a dialog. */
+export const RenameDialogOpen: Story = {
+  beforeEach: () => installFakeApi(hello).restore,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Rename" }),
+    );
+    await expect(
+      await canvas.findByRole("dialog", { name: "Rename blog/hello.md" }),
+    ).toBeVisible();
+  },
+};
+
+export const DeleteDialogOpen: Story = {
+  beforeEach: () => installFakeApi(hello).restore,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Delete" }),
+    );
+    await expect(
+      await canvas.findByRole("dialog", { name: "Delete blog/hello.md?" }),
+    ).toBeVisible();
+  },
+};
+
+/** Moving or deleting a page with an unsaved draft would lose it, so both wait. */
+export const RenameAndDeleteWaitForASave: Story = {
+  beforeEach: () => installFakeApi(hello).restore,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(await canvas.findByLabelText("Markdown"), " more");
+    await expect(canvas.getByRole("button", { name: "Rename" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "Delete" })).toBeDisabled();
+  },
+};
