@@ -41,7 +41,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             className=":uno: mt-auto flex min-h-10 cursor-pointer items-center gap-3 rounded border-0 bg-transparent px-3 py-2 text-left text-muted [font:inherit] whitespace-nowrap transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle hover:text-text motion-reduce:transition-none"
           >
             <Toggle size={18} aria-hidden="true" className=":uno: shrink-0" />
-            <span className={thin ? ":uno: sr-only" : ""}>Thin</span>
           </button>
         </aside>
         <div className=":uno: min-w-0 flex-1">
