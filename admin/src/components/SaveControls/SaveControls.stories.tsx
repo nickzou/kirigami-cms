@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { SaveControls } from "./SaveControls.js";
 
 const meta = {
@@ -12,4 +13,12 @@ type Story = StoryObj<typeof meta>;
 
 export const Clean: Story = {};
 export const Unsaved: Story = { args: { dirty: true } };
-export const Saving: Story = { args: { dirty: true, saving: true } };
+/** The label changes to "Saving…" only if the save takes a while. */
+export const Saving: Story = {
+  args: { dirty: true, saving: true },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByRole("button", { name: "Saving…" }),
+    ).toBeDisabled();
+  },
+};
