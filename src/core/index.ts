@@ -36,6 +36,11 @@ export {
   type Theme,
   themeSchema,
 } from "./config/schema.js";
+export {
+  FONT_STACK_MESSAGE,
+  fontStackProblem,
+  hasNoBreakout,
+} from "./config/validate.js";
 export { type Page, type Section, splitSections } from "./markdown/sections.js";
 export { firstHeading, renderMarkdown } from "./render/markdown.js";
 export { type RenderPageInput, renderPage } from "./render/page.js";

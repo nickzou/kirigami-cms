@@ -1,13 +1,11 @@
 import { z } from "zod";
+import { FONT_STACK_MESSAGE, hasNoBreakout } from "./validate.js";
 
 /*
  * Values from the config end up inside a generated stylesheet, so each one is
  * checked to be a single CSS value that cannot end its declaration, open a
  * block, close a <style> tag, or pull in another resource.
  */
-
-const hasNoBreakout = (value: string) =>
-  !/[;{}<>\\]/.test(value) && !value.includes("/*");
 
 const COLOR =
   /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\([0-9a-zA-Z\s,./%+-]*\))$/;
@@ -43,10 +41,7 @@ const fontStack = (fallback: string, hint: Hint) =>
   z
     .string()
     .min(1)
-    .refine(
-      hasNoBreakout,
-      "Must be a font-family list without ; { } < > \\ or comments",
-    )
+    .refine(hasNoBreakout, FONT_STACK_MESSAGE)
     .default(fallback)
     .meta({ ...hint, widget: "font" });
 
