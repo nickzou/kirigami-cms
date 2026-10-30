@@ -46,5 +46,12 @@ export const Interactive: Story = {
     await expect(
       canvas.getByRole("radio", { name: "Editor" }),
     ).not.toBeChecked();
+    // The highlight moves to the second segment (it slides there, in a browser).
+    const highlight = canvasElement.querySelector<HTMLElement>(
+      '[aria-hidden="true"]',
+    );
+    await expect(highlight?.style.transform).toBe(
+      "translateX(calc(1 * (100% + 0.25rem)))",
+    );
   },
 };

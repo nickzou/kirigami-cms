@@ -4,7 +4,7 @@ import { Link, type LinkProps } from "react-router";
 // Full class strings (not built up piece by piece) so UnoCSS can find and hash them.
 // Hover is "not disabled" rather than "enabled" so it also applies to links.
 const base =
-  ":uno: inline-flex items-center justify-center gap-2 rounded text-sm font-bold no-underline cursor-pointer border border-solid transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+  ":uno: inline-flex items-center justify-center gap-2 rounded text-sm font-bold no-underline cursor-pointer border border-solid transition-[color,background-color,border-color,opacity] duration-200 ease-[ease-in-out] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-50";
 // Padding is by size, so a small button is not fighting the normal one's classes.
 const sizes = {
   normal: ":uno: px-4 py-2",
