@@ -1,23 +1,21 @@
 import { Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { Logo } from "../Logo/Logo.js";
+import { BrandLink } from "../BrandLink/BrandLink.js";
 
 /**
- * The banner at the top of every screen: the product name, linking home. What
+ * The banner at the top of every screen: the product name, linking home (on a phone; a tablet and up has it in the
+ * sidebar). What
  * is passed as `children` sits on the right, after the link to the settings
  * (see `HeaderActions`).
  */
 export function AppHeader({ children }: { children?: ReactNode }) {
   return (
     <header className=":uno:  flex justify-start items-center  bg-surface px-4 py-3 shadow">
-      <Link
-        to="/"
-        className=":uno: inline-flex items-center gap-2 text-lg font-bold tracking-widest text-text uppercase no-underline"
-      >
-        <Logo className=":uno: h-6 w-auto" />
-        Kirigami
-      </Link>
+      {/* From a tablet width the logo lives in the sidebar instead. */}
+      <div className=":uno: md:hidden">
+        <BrandLink />
+      </div>
       <div className=":uno: ml-auto flex items-center gap-3">
         <Link
           to="/settings"
