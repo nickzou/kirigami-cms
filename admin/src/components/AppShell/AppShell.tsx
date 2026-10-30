@@ -23,15 +23,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className=":uno: md:flex md:items-start">
         <aside
           id={sidebarId}
+          data-sidebar=""
           className={
             thin
-              ? ":uno: sticky top-0 hidden h-screen w-18 shrink-0 flex-col gap-2 overflow-hidden bg-surface p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
-              : ":uno: sticky top-0 hidden h-screen w-56 shrink-0 flex-col gap-2 overflow-hidden bg-surface p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
+              ? ":uno: sticky top-0 hidden h-screen w-18 shrink-0 flex-col gap-2 overflow-hidden bg-side p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
+              : ":uno: sticky top-0 hidden h-screen w-56 shrink-0 flex-col gap-2 overflow-hidden bg-side p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
           }
         >
           {/* As tall as the header, so the logo lines up with it. */}
           <div className=":uno: -mt-4 flex h-[60px] shrink-0 items-center">
-            <BrandLink compact={thin} />
+            <BrandLink compact={thin} onDark />
           </div>
           <MainMenu compact={thin} />
           <button
@@ -41,7 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-expanded={!thin}
             title={thin ? "Expand the sidebar" : "Thin the sidebar"}
             onClick={() => setThin(!thin)}
-            className=":uno: mt-auto flex min-h-10 cursor-pointer items-center gap-3 rounded border-0 bg-transparent px-[11px] py-2 text-left text-muted [font:inherit] whitespace-nowrap transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle hover:text-text motion-reduce:transition-none"
+            className=":uno: mt-auto flex min-h-10 cursor-pointer items-center gap-3 rounded border-0 bg-transparent px-[11px] py-2 text-left text-side-muted [font:inherit] whitespace-nowrap transition-colors duration-200 ease-[ease-in-out] hover:bg-side-hover hover:text-side-text motion-reduce:transition-none"
           >
             <Toggle size={18} aria-hidden="true" className=":uno: shrink-0" />
           </button>

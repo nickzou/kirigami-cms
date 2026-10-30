@@ -5,11 +5,22 @@ import { Logo } from "../Logo/Logo.js";
  * The logo and the product name, linking home. `compact` fades the name out,
  * leaving the logo (the name stays for screen readers).
  */
-export function BrandLink({ compact = false }: { compact?: boolean }) {
+export function BrandLink({
+  compact = false,
+  onDark = false,
+}: {
+  compact?: boolean;
+  /** For the dark sidebar: the light text color instead of the page's. */
+  onDark?: boolean;
+}) {
   return (
     <Link
       to="/"
-      className=":uno: inline-flex items-center gap-2 text-lg font-bold tracking-widest text-text uppercase no-underline"
+      className={
+        onDark
+          ? ":uno: inline-flex items-center gap-2 text-lg font-bold tracking-widest text-side-text uppercase no-underline"
+          : ":uno: inline-flex items-center gap-2 text-lg font-bold tracking-widest text-text uppercase no-underline"
+      }
     >
       <Logo className=":uno: h-6 w-auto shrink-0" />
       {/* Kept in place and faded, not removed, so it can ease out as the

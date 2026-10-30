@@ -27,7 +27,7 @@ const items: readonly MenuItem[] = [
 /**
  * The main menu: where in the admin you can go. It sits down the left side on
  * a tablet and wider (see `AppShell`); the item for the screen you are on is
- * marked as the current page. `compact` shows only the icons (the names stay
+ * marked as the current page. It is made for the dark sidebar. `compact` shows only the icons (the names stay
  * for screen readers, and as a tooltip).
  */
 export function MainMenu({ compact = false }: { compact?: boolean }) {
@@ -46,7 +46,7 @@ export function MainMenu({ compact = false }: { compact?: boolean }) {
                 className={
                   current
                     ? ":uno: flex min-h-10 items-center gap-3 rounded px-[11px] py-2 font-bold whitespace-nowrap text-on-accent no-underline bg-accent transition-colors duration-200 ease-[ease-in-out] motion-reduce:transition-none"
-                    : ":uno: flex min-h-10 items-center gap-3 rounded px-[11px] py-2 font-bold whitespace-nowrap text-text no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle motion-reduce:transition-none"
+                    : ":uno: flex min-h-10 items-center gap-3 rounded px-[11px] py-2 font-bold whitespace-nowrap text-side-text no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-side-hover motion-reduce:transition-none"
                 }
               >
                 <Icon size={18} aria-hidden="true" className=":uno: shrink-0" />

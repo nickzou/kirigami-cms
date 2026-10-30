@@ -9,7 +9,7 @@ const meta = {
   // The sidebar's width, so the stories show it as it sits in the shell.
   decorators: [
     (Story: () => React.JSX.Element) => (
-      <div className=":uno: w-56 p-4">
+      <div className=":uno: w-56 bg-side p-4">
         <Story />
       </div>
     ),
