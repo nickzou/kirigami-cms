@@ -403,6 +403,208 @@ describe("POST /api/pages/{path}/rename", () => {
   });
 });
 
+describe("/api/site-config", () => {
+  const put = (call: ReturnType<typeof setup>["call"], json: unknown) =>
+    call("/api/site-config", { method: "PUT", json });
+  const link = (value: string | null) => ({
+    path: ["theme", "colors", "link"],
+    value,
+  });
+  const FILE = [
+    "# a comment at the top",
+    "theme:",
+    "  colors:",
+    '    link: "#9c27b0" # brand',
+    "  layout:",
+    "    maxWidth: 40rem",
+    "",
+  ].join("\n");
+
+  describe("GET", () => {
+    it("says there is no file yet, with no values", async () => {
+      expect(await (await setup().call("/api/site-config")).json()).toEqual({
+        content: "",
+        version: null,
+        values: {},
+        error: null,
+      });
+    });
+
+    it("gives the text, version and only the values the file sets, not defaults", async () => {
+      const { store, call } = setup({ "site.yaml": FILE });
+      const body = await (await call("/api/site-config")).json();
+      expect(body).toEqual({
+        content: FILE,
+        version: (await store.read("site.yaml")).version,
+        values: {
+          theme: {
+            colors: { link: "#9c27b0" },
+            layout: { maxWidth: "40rem" },
+          },
+        },
+        error: null,
+      });
+    });
+
+    it("says why when the file is not valid, with no values", async () => {
+      const { call } = setup({ "site.yaml": "nope: 1\n" });
+      const body = (await (await call("/api/site-config")).json()) as {
+        values: unknown;
+        error: string;
+        content: string;
+      };
+      expect(body.values).toBeNull();
+      expect(body.error).toContain('Unknown key "nope"');
+      expect(body.content).toBe("nope: 1\n");
+    });
+  });
+
+  describe("PUT", () => {
+    it("creates the file when there was none, and answers 200 with the new values", async () => {
+      const { store, call } = setup();
+      const res = await put(call, {
+        changes: [link("#112233")],
+        version: null,
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { content: string; version: string };
+      expect(body.content).toBe('theme:\n  colors:\n    link: "#112233"\n');
+      expect(await store.read("site.yaml")).toEqual({
+        content: body.content,
+        version: body.version,
+      });
+    });
+
+    it("changes a value and keeps the file's comments and the order of its keys", async () => {
+      const { store, call } = setup({ "site.yaml": FILE });
+      const version = (await store.read("site.yaml")).version;
+      const res = await put(call, { changes: [link("#112233")], version });
+      expect(res.status).toBe(200);
+      expect((await store.read("site.yaml")).content).toBe(
+        FILE.replace("#9c27b0", "#112233"),
+      );
+    });
+
+    it("removes a setting, and the section it empties, so the default applies", async () => {
+      const { store, call } = setup({ "site.yaml": FILE });
+      const version = (await store.read("site.yaml")).version;
+      const res = await put(call, {
+        changes: [{ path: ["theme", "layout", "maxWidth"], value: null }],
+        version,
+      });
+      expect(res.status).toBe(200);
+      expect((await store.read("site.yaml")).content).toBe(
+        [
+          "# a comment at the top",
+          "theme:",
+          "  colors:",
+          '    link: "#9c27b0" # brand',
+          "",
+        ].join("\n"),
+      );
+    });
+
+    it("refuses a value the build would refuse, with the field named, writing nothing", async () => {
+      const { store, call } = setup({ "site.yaml": FILE });
+      const version = (await store.read("site.yaml")).version;
+      const res = await put(call, { changes: [link("not a color!")], version });
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as {
+        error: { code: string; message: string };
+      };
+      expect(body.error.code).toBe("invalid_config");
+      expect(body.error.message).toContain("theme.colors.link");
+      expect((await store.read("site.yaml")).content).toBe(FILE);
+    });
+
+    it("refuses a setting that does not exist, and a value of the wrong kind", async () => {
+      const { store, call } = setup({ "site.yaml": FILE });
+      const version = (await store.read("site.yaml")).version;
+      for (const change of [
+        { path: ["theme", "colors", "bogus"], value: "#fff" },
+        { path: ["theme", "type", "scale"], value: 9 },
+        { path: ["nope"], value: "x" },
+      ]) {
+        expect((await put(call, { changes: [change], version })).status).toBe(
+          400,
+        );
+      }
+      expect((await store.read("site.yaml")).content).toBe(FILE);
+    });
+
+    it("answers 409 with the current version when the file changed since it was read", async () => {
+      const { store, call } = setup({ "site.yaml": FILE });
+      const stale = (await store.read("site.yaml")).version;
+      const { version: current } = await store.write(
+        "site.yaml",
+        "theme:\n  layout:\n    maxWidth: 30rem\n",
+        stale,
+      );
+      const res = await put(call, {
+        changes: [link("#112233")],
+        version: stale,
+      });
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as {
+        error: { code: string };
+        currentVersion: string | null;
+      };
+      expect(body.error.code).toBe("conflict");
+      expect(body.currentVersion).toBe(current);
+      expect((await store.read("site.yaml")).content).toContain("30rem");
+    });
+
+    it("answers 409 when it expected no file and there is one", async () => {
+      const { call } = setup({ "site.yaml": FILE });
+      const res = await put(call, {
+        changes: [link("#112233")],
+        version: null,
+      });
+      expect(res.status).toBe(409);
+    });
+
+    it("does not write when the changes leave the file as it is", async () => {
+      const { store, call } = setup({ "site.yaml": FILE });
+      const version = (await store.read("site.yaml")).version;
+      const res = await put(call, {
+        changes: [{ path: ["theme", "colors", "link"], value: "#9c27b0" }],
+        version,
+      });
+      expect(res.status).toBe(200);
+      expect(((await res.json()) as { version: string }).version).toBe(version);
+    });
+
+    it("answers 400 for a bad body, writing nothing", async () => {
+      const { store, call } = setup({ "site.yaml": FILE });
+      const version = (await store.read("site.yaml")).version;
+      for (const json of [
+        { version },
+        { changes: [{ path: [], value: "x" }], version },
+        { changes: [{ path: ["theme"], value: { a: 1 } }], version },
+        { changes: "no", version },
+      ]) {
+        expect((await put(call, json)).status).toBe(400);
+      }
+      expect((await store.read("site.yaml")).content).toBe(FILE);
+    });
+
+    it("cannot change a file that is not valid YAML, and says why", async () => {
+      const { call } = setup({ "site.yaml": "theme: [unclosed\n" });
+      const body = (await (await call("/api/site-config")).json()) as {
+        version: string;
+      };
+      const res = await put(call, {
+        changes: [link("#112233")],
+        version: body.version,
+      });
+      expect(res.status).toBe(400);
+      expect(
+        ((await res.json()) as { error: { message: string } }).error.message,
+      ).toContain("site.yaml");
+    });
+  });
+});
+
 describe("local-only guard", () => {
   it("refuses requests addressed to another host name", async () => {
     const { call } = setup({ "a.md": "x" });
@@ -463,6 +665,7 @@ describe("OpenAPI document", () => {
       "/api/pages",
       "/api/pages/{path}",
       "/api/pages/{path}/rename",
+      "/api/site-config",
     ]);
   });
 });

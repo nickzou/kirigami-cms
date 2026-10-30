@@ -79,6 +79,51 @@ export const DeleteQuery = z.object({
   }),
 });
 
+export const SiteConfigChangeSchema = z
+  .object({
+    path: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(8)
+      .openapi({
+        description: "Where, as keys from the top.",
+        example: ["theme", "colors", "link"],
+      }),
+    value: z.union([z.string(), z.number(), z.null()]).openapi({
+      description:
+        "The new value, or null to remove the key so the default applies.",
+    }),
+  })
+  .openapi("SiteConfigChange");
+
+export const SiteConfigSchema = z
+  .object({
+    content: z.string().openapi({
+      description:
+        "The text of site.yaml, exactly. Empty if there is no file yet.",
+    }),
+    version: Version.nullable().openapi({
+      description: "The file's version, or null if there is no file yet.",
+    }),
+    values: z.record(z.string(), z.unknown()).nullable().openapi({
+      description:
+        "What the file sets, as an object, before defaults. Null if the file is not valid (see error).",
+    }),
+    error: z.string().nullable().openapi({
+      description: "Why the file is not valid, or null.",
+    }),
+  })
+  .openapi("SiteConfig");
+
+export const SiteConfigSaveRequest = z
+  .object({
+    changes: z.array(SiteConfigChangeSchema).max(200),
+    version: Version.nullable().openapi({
+      description: "The version you last read, or null if there was no file.",
+    }),
+  })
+  .openapi("SiteConfigSaveRequest");
+
 export type ApiError = z.infer<typeof ErrorBody>;
 export type Conflict = z.infer<typeof ConflictBody>;
 export type PageSummary = z.infer<typeof PageSummarySchema>;
@@ -86,3 +131,6 @@ export type Page = z.infer<typeof PageSchema>;
 export type Saved = z.infer<typeof Saved>;
 export type SaveRequest = z.infer<typeof SaveRequest>;
 export type RenameRequest = z.infer<typeof RenameRequest>;
+export type SiteConfigChange = z.infer<typeof SiteConfigChangeSchema>;
+export type SiteConfig = z.infer<typeof SiteConfigSchema>;
+export type SiteConfigSaveRequest = z.infer<typeof SiteConfigSaveRequest>;
