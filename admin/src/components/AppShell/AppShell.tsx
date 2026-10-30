@@ -25,11 +25,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           id={sidebarId}
           className={
             thin
-              ? ":uno: sticky top-0 hidden h-screen w-20 shrink-0 flex-col gap-6 overflow-hidden bg-surface p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
-              : ":uno: sticky top-0 hidden h-screen w-56 shrink-0 flex-col gap-6 overflow-hidden bg-surface p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
+              ? ":uno: sticky top-0 hidden h-screen w-20 shrink-0 flex-col gap-2 overflow-hidden bg-surface p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
+              : ":uno: sticky top-0 hidden h-screen w-56 shrink-0 flex-col gap-2 overflow-hidden bg-surface p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
           }
         >
-          <BrandLink compact={thin} />
+          {/* As tall as the header, so the logo lines up with it. */}
+          <div className=":uno: -mt-4 flex h-[60px] shrink-0 items-center">
+            <BrandLink compact={thin} />
+          </div>
           <MainMenu compact={thin} />
           <button
             type="button"

@@ -11,7 +11,7 @@ import { BrandLink } from "../BrandLink/BrandLink.js";
  */
 export function AppHeader({ children }: { children?: ReactNode }) {
   return (
-    <header className=":uno:  flex justify-start items-center  bg-surface px-4 py-3 shadow">
+    <header className=":uno: flex h-[60px] items-center justify-start bg-surface px-4 shadow">
       {/* From a tablet width the logo lives in the sidebar instead. */}
       <div className=":uno: md:hidden">
         <BrandLink />
