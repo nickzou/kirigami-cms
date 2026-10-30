@@ -17,9 +17,17 @@ export { generateStylesheet } from "./config/css.js";
 export {
   ConfigError,
   type ConfigProblem,
+  defaultProjectConfig,
   defaultSiteConfig,
+  parseProjectConfig,
   parseSiteConfig,
 } from "./config/load.js";
+export {
+  type ContentConfig,
+  PROJECT_CONFIG_FILE,
+  type ProjectConfig,
+  projectConfigSchema,
+} from "./config/project-schema.js";
 export {
   type SiteConfig,
   siteConfigSchema,

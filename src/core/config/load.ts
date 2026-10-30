@@ -1,5 +1,6 @@
 import { parseDocument } from "yaml";
 import type { z } from "zod";
+import { type ProjectConfig, projectConfigSchema } from "./project-schema.js";
 import { type SiteConfig, siteConfigSchema } from "./schema.js";
 
 export interface ConfigProblem {
@@ -28,12 +29,17 @@ export class ConfigError extends Error {
 /** The config used when `site.yaml` is empty or absent. */
 export const defaultSiteConfig: SiteConfig = siteConfigSchema.parse({});
 
+/** The config used when `kirigami.config.yaml` is absent. */
+export const defaultProjectConfig: ProjectConfig = projectConfigSchema.parse(
+  {},
+);
+
 /**
- * Parses and validates the text of a site config file (YAML 1.2). Empty
- * input gives the defaults. Throws `ConfigError`, naming `file` and every
- * field that is wrong.
+ * Parses and validates the text of a config file (YAML 1.2) against `schema`.
+ * Empty input gives the defaults. Throws `ConfigError`, naming `file` and
+ * every field that is wrong.
  */
-export function parseSiteConfig(text: string, file: string): SiteConfig {
+function parseConfig<T>(text: string, file: string, schema: z.ZodType<T>): T {
   const document = parseDocument(text, { uniqueKeys: true });
 
   const [syntaxError] = document.errors;
@@ -46,10 +52,18 @@ export function parseSiteConfig(text: string, file: string): SiteConfig {
   }
 
   const data: unknown = document.toJS() ?? {};
-  const result = siteConfigSchema.safeParse(data);
+  const result = schema.safeParse(data);
   if (!result.success) throw new ConfigError(file, problemsFrom(result.error));
   return result.data;
 }
+
+/** Parses the text of `site.yaml`. */
+export const parseSiteConfig = (text: string, file: string): SiteConfig =>
+  parseConfig(text, file, siteConfigSchema);
+
+/** Parses the text of `kirigami.config.yaml`. */
+export const parseProjectConfig = (text: string, file: string): ProjectConfig =>
+  parseConfig(text, file, projectConfigSchema);
 
 function problemsFrom(error: z.ZodError): ConfigProblem[] {
   return error.issues.flatMap((issue): ConfigProblem[] => {

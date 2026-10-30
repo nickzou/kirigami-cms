@@ -35,6 +35,12 @@
     }
   ],
   "files": {
-    "includes": ["**", "!pnpm-lock.yaml", "!dist", "!**/*.md"]
+    "includes": [
+      "**",
+      "!pnpm-lock.yaml",
+      "!dist",
+      "!**/*.md",
+      "!schema/*.schema.json"
+    ]
   }
 }

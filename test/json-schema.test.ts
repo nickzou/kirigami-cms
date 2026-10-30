@@ -1,13 +1,19 @@
 import { readFile } from "node:fs/promises";
 import { expect, it } from "vitest";
 import { z } from "zod";
-import { siteConfigSchema } from "../src/core/index.js";
+import { projectConfigSchema, siteConfigSchema } from "../src/core/index.js";
 
-it("schema/site.schema.json is up to date (run `pnpm schema` to regenerate)", async () => {
-  const committed = await readFile(
-    new URL("../schema/site.schema.json", import.meta.url),
-    "utf8",
-  );
-  const expected = `${JSON.stringify(z.toJSONSchema(siteConfigSchema, { io: "input" }), null, 2)}\n`;
-  expect(committed).toBe(expected);
-});
+it.each([
+  ["site.schema.json", siteConfigSchema],
+  ["project.schema.json", projectConfigSchema],
+])(
+  "schema/%s is up to date (run `pnpm schema` to regenerate)",
+  async (file, schema) => {
+    const committed = await readFile(
+      new URL(`../schema/${file}`, import.meta.url),
+      "utf8",
+    );
+    const expected = `${JSON.stringify(z.toJSONSchema(schema, { io: "input" }), null, 2)}\n`;
+    expect(committed).toBe(expected);
+  },
+);
