@@ -26,12 +26,29 @@ export function SegmentedControl({
   onChange,
 }: SegmentedControlProps) {
   const name = useId();
+  const count = options.length;
+  const index = options.findIndex((option) => option.value === value);
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className=":uno: flex w-full gap-1 rounded-full border border-solid border-line bg-surface p-1 shadow"
+      className=":uno: relative isolate flex w-full gap-1 rounded-full border border-solid border-line bg-surface p-1 shadow"
     >
+      {/* The highlight: one shape that slides to the chosen segment. Its size
+          and place follow from how many segments there are and which is chosen
+          (each segment is an equal share, with a 0.25rem gap), so they are set
+          here. It sits behind the labels (-z-10) inside this control's own
+          stacking context (isolate). */}
+      {index >= 0 && (
+        <span
+          aria-hidden="true"
+          className=":uno: absolute top-1 bottom-1 left-1 -z-10 rounded-full bg-accent transition-transform duration-200 ease-[ease-in-out] motion-reduce:transition-none"
+          style={{
+            width: `calc((100% - 0.5rem - ${(count - 1) * 0.25}rem) / ${count})`,
+            transform: `translateX(calc(${index} * (100% + 0.25rem)))`,
+          }}
+        />
+      )}
       {options.map((option) => (
         <label key={option.value} className=":uno: flex-1">
           <input
@@ -43,7 +60,7 @@ export function SegmentedControl({
             className=":uno: peer sr-only"
           />
           {/* One whole string, so the checked and focus styles are found and hashed. */}
-          <span className=":uno: block cursor-pointer rounded-full px-4 py-2 text-center text-sm font-bold text-text transition-colors hover:bg-subtle peer-checked:bg-accent peer-checked:text-on-accent peer-checked:hover:bg-accent-hover peer-focus-visible:[outline:2px_solid_var(--accent)] peer-focus-visible:outline-offset-2">
+          <span className=":uno: block cursor-pointer rounded-full px-4 py-2 text-center text-sm font-bold text-text transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle peer-checked:text-on-accent peer-checked:hover:bg-transparent motion-reduce:transition-none peer-focus-visible:[outline:2px_solid_var(--accent)] peer-focus-visible:outline-offset-2">
             {option.label}
           </span>
         </label>
