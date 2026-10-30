@@ -9,9 +9,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const show = (props: { dirty: boolean; saving: boolean }) => (
-  <SaveControls {...props} formId="f" />
-);
+const show = (props: {
+  dirty: boolean;
+  saving: boolean;
+  blocked?: boolean;
+}) => <SaveControls {...props} formId="f" />;
 
 describe("SaveControls", () => {
   it("says Save, and disables it when there is nothing to save", () => {
@@ -27,6 +29,15 @@ describe("SaveControls", () => {
       (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
         .disabled,
     ).toBe(false);
+    expect(screen.getByText("Unsaved changes")).toBeDefined();
+  });
+
+  it("turns Save off, without saying there is nothing to save, when something blocks it", () => {
+    render(show({ dirty: true, saving: false, blocked: true }));
+    expect(
+      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
     expect(screen.getByText("Unsaved changes")).toBeDefined();
   });
 
