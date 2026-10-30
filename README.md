@@ -40,6 +40,8 @@ node dist/cli/main.js check my-site     # validates without building
 node dist/cli/main.js dev my-site       # preview at http://localhost:3000, reloads the browser when you save; admin at /admin, JSON API at /api (OpenAPI: /api/openapi.json)
 ```
 
+The admin has a **Settings** screen that edits the theme in `site.yaml` with a live preview, keeping the file's comments ([ADR 0015](docs/adr/0015-settings-form-from-the-schema.md)).
+
 Raw HTML in markdown is left out of the output. See [`test/fixtures/basic-site`](test/fixtures/basic-site) for an example, and [`schema/site.schema.json`](schema/site.schema.json) for editor autocomplete in `site.yaml`.
 
 ## License
