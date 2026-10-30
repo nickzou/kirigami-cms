@@ -10,7 +10,9 @@
 content:
   # Where the content comes from. Only "local-folder" exists so far.
   store: local-folder
-  # The folder of markdown files, relative to this file.
+  # The folder of markdown files: relative to this file, or an absolute path.
+  # It can be inside the project (./content) or anywhere else on this machine
+  # (../my-site, /Users/you/Sites/my-site). `~` is not expanded.
   path: ./content
 
 build:

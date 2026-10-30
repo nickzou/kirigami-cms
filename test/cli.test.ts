@@ -287,6 +287,29 @@ describe("project configuration (kirigami.config.yaml)", () => {
     expect(await exists(join(root, "dist/index.html"))).toBe(false);
   });
 
+  it("serves content in a folder outside the project, by a relative or an absolute path", async () => {
+    const parent = await scratch();
+    const elsewhere = join(parent, "elsewhere");
+    await mkdir(elsewhere);
+    await writeFile(join(elsewhere, "index.md"), "# Outside the project\n");
+    const root = join(parent, "project");
+    await mkdir(root);
+
+    for (const path of ["../elsewhere", elsewhere]) {
+      await writeFile(
+        join(root, "kirigami.config.yaml"),
+        `content:\n  store: local-folder\n  path: ${path}\n`,
+      );
+      const io = capture(root);
+      expect(await run(["check"], io), path).toBe(0);
+      expect(io.lines.out.join("\n")).toContain("1 page");
+      expect(await run(["build"], capture(root)), path).toBe(0);
+      // The site is built beside the config, not into the content folder.
+      expect(await exists(join(root, "dist/index.html")), path).toBe(true);
+      expect(await exists(join(elsewhere, "dist"))).toBe(false);
+    }
+  });
+
   it("uses ./content when there is no config and no site", async () => {
     const root = await scratch();
     await mkdir(join(root, "content"));
