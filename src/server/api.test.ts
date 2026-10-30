@@ -200,6 +200,209 @@ describe("PUT /api/pages/{path}", () => {
   });
 });
 
+describe("PUT /api/pages/{path}: pages that would share an address", () => {
+  it("refuses to create a page the build would refuse, writing nothing", async () => {
+    const { store, call } = setup({ "about/index.md": "# About\n" });
+    const res = await call(`/api/pages/${enc("about.md")}`, {
+      method: "PUT",
+      json: { content: "x", version: null },
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as {
+      error: { code: string; message: string };
+      currentVersion: string | null;
+    };
+    expect(body.error.code).toBe("collision");
+    expect(body.error.message).toContain("about/index.md");
+    expect(body.currentVersion).toBeNull();
+    expect((await store.list()).map((e) => e.path)).toEqual(["about/index.md"]);
+  });
+
+  it("still creates a page that shares nothing", async () => {
+    const { call } = setup({ "about/index.md": "# About\n" });
+    const res = await call(`/api/pages/${enc("contact.md")}`, {
+      method: "PUT",
+      json: { content: "x", version: null },
+    });
+    expect(res.status).toBe(201);
+  });
+});
+
+describe("DELETE /api/pages/{path}", () => {
+  it("deletes a page with its current version and answers 204", async () => {
+    const { store, call } = setup({
+      "a.md": "# A\n",
+      "b.md": "# B\n",
+    });
+    const version = (await store.read("a.md")).version;
+    const res = await call(
+      `/api/pages/${enc("a.md")}?version=${enc(version)}`,
+      {
+        method: "DELETE",
+      },
+    );
+    expect(res.status).toBe(204);
+    expect((await store.list()).map((e) => e.path)).toEqual(["b.md"]);
+    expect((await call(`/api/pages/${enc("a.md")}`)).status).toBe(404);
+  });
+
+  it("deletes a page in a folder", async () => {
+    const { store, call } = setup({ "blog/hello.md": "# Hi\n" });
+    const version = (await store.read("blog/hello.md")).version;
+    const res = await call(
+      `/api/pages/${enc("blog/hello.md")}?version=${enc(version)}`,
+      { method: "DELETE" },
+    );
+    expect(res.status).toBe(204);
+    expect(await store.list()).toEqual([]);
+  });
+
+  it("answers 409 with the current version and keeps the page when the version is stale", async () => {
+    const { store, call } = setup({ "a.md": "one" });
+    const stale = (await store.read("a.md")).version;
+    const { version: current } = await store.write("a.md", "two", stale);
+    const res = await call(`/api/pages/${enc("a.md")}?version=${enc(stale)}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as {
+      error: { code: string };
+      currentVersion: string | null;
+    };
+    expect(body.error.code).toBe("conflict");
+    expect(body.currentVersion).toBe(current);
+    expect((await store.read("a.md")).content).toBe("two");
+  });
+
+  it("answers 404 for a page that does not exist", async () => {
+    const res = await setup().call(`/api/pages/${enc("nope.md")}?version=1`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("answers 400 without a version, and for paths that are not pages, deleting nothing", async () => {
+    const { store, call } = setup({ "a.md": "x", "site.yaml": "y" });
+    const noVersion = await call(`/api/pages/${enc("a.md")}`, {
+      method: "DELETE",
+    });
+    expect(noVersion.status).toBe(400);
+    const notAPage = await call(`/api/pages/${enc("site.yaml")}?version=1`, {
+      method: "DELETE",
+    });
+    expect(notAPage.status).toBe(400);
+    const outside = await call(`/api/pages/${enc("../a.md")}?version=1`, {
+      method: "DELETE",
+    });
+    expect(outside.status).toBe(400);
+    expect((await store.list()).map((e) => e.path)).toEqual([
+      "a.md",
+      "site.yaml",
+    ]);
+  });
+});
+
+describe("POST /api/pages/{path}/rename", () => {
+  const rename = (
+    call: ReturnType<typeof setup>["call"],
+    from: string,
+    json: unknown,
+  ) => call(`/api/pages/${enc(from)}/rename`, { method: "POST", json });
+
+  it("moves a page to a new path, creating folders, and answers 200 with the new path", async () => {
+    const { store, call } = setup({ "a.md": "# A\n" });
+    const version = (await store.read("a.md")).version;
+    const res = await rename(call, "a.md", { to: "blog/2026/a.md", version });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ path: "blog/2026/a.md", version });
+    expect((await store.list()).map((e) => e.path)).toEqual(["blog/2026/a.md"]);
+    expect((await call(`/api/pages/${enc("a.md")}`)).status).toBe(404);
+    expect((await call(`/api/pages/${enc("blog/2026/a.md")}`)).status).toBe(
+      200,
+    );
+  });
+
+  it("answers 409 with code exists and moves nothing when a page is already there", async () => {
+    const { store, call } = setup({ "a.md": "a", "b.md": "b" });
+    const version = (await store.read("a.md")).version;
+    const res = await rename(call, "a.md", { to: "b.md", version });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as {
+      error: { code: string };
+      currentVersion: string | null;
+    };
+    expect(body.error.code).toBe("exists");
+    expect(body.currentVersion).toBe(version);
+    expect((await store.read("a.md")).content).toBe("a");
+    expect((await store.read("b.md")).content).toBe("b");
+  });
+
+  it("answers 409 with code conflict and moves nothing when the version is stale", async () => {
+    const { store, call } = setup({ "a.md": "one" });
+    const stale = (await store.read("a.md")).version;
+    await store.write("a.md", "two", stale);
+    const res = await rename(call, "a.md", { to: "b.md", version: stale });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
+      "conflict",
+    );
+    expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
+  });
+
+  it("answers 404 for a page that does not exist", async () => {
+    const res = await rename(setup().call, "nope.md", {
+      to: "b.md",
+      version: "1",
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("answers 400 for a bad new path or body, moving nothing", async () => {
+    const { store, call } = setup({ "a.md": "x" });
+    const version = (await store.read("a.md")).version;
+    for (const json of [
+      { to: "../b.md", version },
+      { to: "b.txt", version },
+      { to: "", version },
+      { to: "b.md" },
+      { version },
+    ]) {
+      expect((await rename(call, "a.md", json)).status).toBe(400);
+    }
+    expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
+  });
+
+  it("refuses a rename the build would refuse, with code collision", async () => {
+    const { store, call } = setup({
+      "about/index.md": "# About\n",
+      "team.md": "# Team\n",
+    });
+    const version = (await store.read("team.md")).version;
+    const res = await rename(call, "team.md", { to: "about.md", version });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as {
+      error: { code: string; message: string };
+    };
+    expect(body.error.code).toBe("collision");
+    expect(body.error.message).toContain("about/index.md");
+    expect((await store.list()).map((e) => e.path)).toEqual([
+      "about/index.md",
+      "team.md",
+    ]);
+  });
+
+  it("allows a rename that only looks like a collision with the page being moved", async () => {
+    const { store, call } = setup({ "about.md": "# About\n" });
+    const version = (await store.read("about.md")).version;
+    const res = await rename(call, "about.md", {
+      to: "about/index.md",
+      version,
+    });
+    expect(res.status).toBe(200);
+    expect((await store.list()).map((e) => e.path)).toEqual(["about/index.md"]);
+  });
+});
+
 describe("local-only guard", () => {
   it("refuses requests addressed to another host name", async () => {
     const { call } = setup({ "a.md": "x" });
@@ -259,6 +462,7 @@ describe("OpenAPI document", () => {
     expect(Object.keys(doc.paths).sort()).toEqual([
       "/api/pages",
       "/api/pages/{path}",
+      "/api/pages/{path}/rename",
     ]);
   });
 });

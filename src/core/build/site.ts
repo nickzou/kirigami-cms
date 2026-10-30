@@ -9,6 +9,7 @@ import { renderPage } from "../render/page.js";
 import { outputPath } from "../render/paths.js";
 import { NotFoundError } from "../store/errors.js";
 import type { ContentStore } from "../store/types.js";
+import { findCollisions } from "./collisions.js";
 
 /** Where a site keeps its config, relative to the site root. */
 export const SITE_CONFIG_PATH = "site.yaml";
@@ -65,19 +66,12 @@ async function pagePaths(store: ContentStore): Promise<string[]> {
     .filter((path) => path.endsWith(".md"));
 }
 
-/** Two pages that would be written to the same output file. */
-function findCollisions(pages: string[]): SiteProblem[] {
-  const bySource = new Map<string, string[]>();
-  for (const page of pages) {
-    const target = outputPath(page);
-    bySource.set(target, [...(bySource.get(target) ?? []), page]);
-  }
-  return [...bySource]
-    .filter(([, sources]) => sources.length > 1)
-    .map(([target, sources]) => ({
-      file: sources.join(" and "),
-      message: `these pages would both be written to ${target}`,
-    }));
+/** The build's problems for pages that would be written to the same output file. */
+function collisionProblems(pages: string[]): SiteProblem[] {
+  return findCollisions(pages).map(({ target, pages: sources }) => ({
+    file: sources.join(" and "),
+    message: `these pages would both be written to ${target}`,
+  }));
 }
 
 /**
@@ -89,7 +83,7 @@ export async function buildSite(store: ContentStore): Promise<OutputFile[]> {
   const config = await readConfig(store);
   const pages = await pagePaths(store);
 
-  const collisions = findCollisions(pages);
+  const collisions = collisionProblems(pages);
   if (collisions.length > 0) throw new BuildError(collisions);
 
   const html = await Promise.all(
@@ -135,6 +129,6 @@ export async function checkSite(
   }
 
   const pages = await pagePaths(store);
-  problems.push(...findCollisions(pages));
+  problems.push(...collisionProblems(pages));
   return { pages: pages.length, problems };
 }

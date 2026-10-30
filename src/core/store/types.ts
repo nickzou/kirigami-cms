@@ -37,4 +37,26 @@ export interface ContentStore {
     content: string,
     expectedVersion: Version | null,
   ): Promise<{ version: Version }>;
+
+  /**
+   * Deletes a file. `expectedVersion` is the version the caller last read.
+   * Throws `NotFoundError` if the file does not exist, and
+   * `VersionConflictError` (leaving the file) if it changed since.
+   */
+  delete(path: string, expectedVersion: Version): Promise<void>;
+
+  /**
+   * Moves a file to a new path, creating folders as needed, and returns its
+   * version (the content is unchanged, so it is the one that was read).
+   *
+   * Never overwrites: if `to` already exists (or is `from`) it throws
+   * `AlreadyExistsError`. Throws `NotFoundError` if `from` does not exist and
+   * `VersionConflictError` if `from` changed since `expectedVersion`. In every
+   * failure nothing has moved.
+   */
+  rename(
+    from: string,
+    to: string,
+    expectedVersion: Version,
+  ): Promise<{ version: Version }>;
 }

@@ -60,9 +60,29 @@ export const SaveRequest = z
   })
   .openapi("SaveRequest");
 
+export const RenameRequest = z
+  .object({
+    to: z.string().openapi({
+      description: "The page's new path, e.g. blog/renamed.md.",
+      example: "blog/renamed.md",
+    }),
+    version: Version.openapi({
+      description: "The version you last read of the page being renamed.",
+    }),
+  })
+  .openapi("RenameRequest");
+
+export const DeleteQuery = z.object({
+  version: Version.openapi({
+    param: { name: "version", in: "query" },
+    description: "The version you last read of the page being deleted.",
+  }),
+});
+
 export type ApiError = z.infer<typeof ErrorBody>;
 export type Conflict = z.infer<typeof ConflictBody>;
 export type PageSummary = z.infer<typeof PageSummarySchema>;
 export type Page = z.infer<typeof PageSchema>;
 export type Saved = z.infer<typeof Saved>;
 export type SaveRequest = z.infer<typeof SaveRequest>;
+export type RenameRequest = z.infer<typeof RenameRequest>;

@@ -1,4 +1,9 @@
 export {
+  type Collision,
+  findCollisions,
+  pagesCollidingWith,
+} from "./build/collisions.js";
+export {
   BuildError,
   buildSite,
   checkSite,
@@ -26,6 +31,7 @@ export { firstHeading, renderMarkdown } from "./render/markdown.js";
 export { type RenderPageInput, renderPage } from "./render/page.js";
 export { outputPath, pageUrl, relativeHref } from "./render/paths.js";
 export {
+  AlreadyExistsError,
   InvalidPathError,
   NotFoundError,
   VersionConflictError,

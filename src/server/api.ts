@@ -1,20 +1,24 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { bodyLimit } from "hono/body-limit";
 import {
+  AlreadyExistsError,
   assertValidPath,
   type ContentStore,
   firstHeading,
   InvalidPathError,
   NotFoundError,
+  pagesCollidingWith,
   pageUrl,
   VersionConflictError,
 } from "../core/index.js";
 import {
   ConflictBody,
+  DeleteQuery,
   ErrorBody,
   PageSchema,
   PageSummarySchema,
   PathParam,
+  RenameRequest,
   Saved,
   SaveRequest,
 } from "./api-schemas.js";
@@ -87,6 +91,53 @@ const savePage = createRoute({
   },
 });
 
+const deletePage = createRoute({
+  method: "delete",
+  path: "/api/pages/{path}",
+  summary: "Delete a page",
+  request: {
+    params: z.object({ path: PathParam }),
+    query: DeleteQuery,
+  },
+  responses: {
+    204: { description: "The page was deleted." },
+    400: errorResponse("The path is not a valid page path."),
+    404: errorResponse("There is no such page."),
+    409: {
+      description: "The page changed since you read it. Nothing was deleted.",
+      content: { "application/json": { schema: ConflictBody } },
+    },
+  },
+});
+
+const renamePage = createRoute({
+  method: "post",
+  path: "/api/pages/{path}/rename",
+  summary: "Rename (move) a page",
+  description:
+    "Never overwrites a page. Links in other pages are not rewritten.",
+  request: {
+    params: z.object({ path: PathParam }),
+    body: {
+      required: true,
+      content: { "application/json": { schema: RenameRequest } },
+    },
+  },
+  responses: {
+    200: {
+      description: "The page was moved. `path` is its new path.",
+      content: { "application/json": { schema: Saved } },
+    },
+    400: errorResponse("A path or the request body is not valid."),
+    404: errorResponse("There is no such page."),
+    409: {
+      description:
+        "Nothing was moved. The error code says why: `conflict` (the page changed since you read it), `exists` (a page is already at the new path) or `collision` (the build would refuse the result, because two pages would share an address).",
+      content: { "application/json": { schema: ConflictBody } },
+    },
+  },
+});
+
 /** Returns a message if `path` is not something the API serves. */
 function pathProblem(path: string): string | undefined {
   try {
@@ -98,6 +149,11 @@ function pathProblem(path: string): string | undefined {
   return path.endsWith(".md")
     ? undefined
     : `Invalid path "${path}": pages are markdown files ending in .md`;
+}
+
+/** What the build would refuse: another page that would share this page's address. */
+function collisionMessage(path: string, clashes: string[]): string {
+  return `${path} would be shown at the same address as ${clashes.join(" and ")}, so the site would not build. Pick a different path.`;
 }
 
 const titleOf = (path: string, content: string): string =>
@@ -198,12 +254,40 @@ export function createApiApp(store: ContentStore) {
     }
   });
 
+  /** The page's version now, or null if there is no such page. */
+  const versionNow = (path: string): Promise<string | null> =>
+    store.read(path).then(
+      (page) => page.version,
+      (error: unknown) => {
+        if (error instanceof NotFoundError) return null;
+        throw error;
+      },
+    );
+
+  const markdownPaths = async (): Promise<string[]> =>
+    (await store.list()).map((e) => e.path).filter((p) => p.endsWith(".md"));
+
   api.openapi(savePage, async (c) => {
     const { path } = c.req.valid("param");
     const { content, version } = c.req.valid("json");
     const problem = pathProblem(path);
     if (problem) {
       return c.json({ error: { code: "invalid_path", message: problem } }, 400);
+    }
+    if (version === null) {
+      const clashes = pagesCollidingWith(path, await markdownPaths());
+      if (clashes.length > 0) {
+        return c.json(
+          {
+            error: {
+              code: "collision",
+              message: collisionMessage(path, clashes),
+            },
+            currentVersion: null,
+          },
+          409,
+        );
+      }
     }
     try {
       const saved = await store.write(path, content, version);
@@ -213,17 +297,90 @@ export function createApiApp(store: ContentStore) {
       );
     } catch (error) {
       if (!(error instanceof VersionConflictError)) throw error;
-      const current = await store.read(path).then(
-        (page) => page.version,
-        (readError: unknown) => {
-          if (readError instanceof NotFoundError) return null;
-          throw readError;
-        },
-      );
       return c.json(
         {
           error: { code: "conflict", message: error.message },
-          currentVersion: current,
+          currentVersion: await versionNow(path),
+        },
+        409,
+      );
+    }
+  });
+
+  api.openapi(deletePage, async (c) => {
+    const { path } = c.req.valid("param");
+    const { version } = c.req.valid("query");
+    const problem = pathProblem(path);
+    if (problem) {
+      return c.json({ error: { code: "invalid_path", message: problem } }, 400);
+    }
+    try {
+      await store.delete(path, version);
+      return c.body(null, 204);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return c.json(
+          { error: { code: "not_found", message: `No such page: ${path}` } },
+          404,
+        );
+      }
+      if (!(error instanceof VersionConflictError)) throw error;
+      return c.json(
+        {
+          error: { code: "conflict", message: error.message },
+          currentVersion: await versionNow(path),
+        },
+        409,
+      );
+    }
+  });
+
+  api.openapi(renamePage, async (c) => {
+    const { path } = c.req.valid("param");
+    const { to, version } = c.req.valid("json");
+    const problem = pathProblem(path) ?? pathProblem(to);
+    if (problem) {
+      return c.json({ error: { code: "invalid_path", message: problem } }, 400);
+    }
+    // Once this page moves it no longer takes up its old address.
+    const others = (await markdownPaths()).filter((p) => p !== path);
+    const clashes = pagesCollidingWith(to, others);
+    if (clashes.length > 0) {
+      return c.json(
+        {
+          error: { code: "collision", message: collisionMessage(to, clashes) },
+          currentVersion: await versionNow(path),
+        },
+        409,
+      );
+    }
+    try {
+      const moved = await store.rename(path, to, version);
+      return c.json({ path: to, version: moved.version }, 200);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return c.json(
+          { error: { code: "not_found", message: `No such page: ${path}` } },
+          404,
+        );
+      }
+      if (error instanceof AlreadyExistsError) {
+        return c.json(
+          {
+            error: {
+              code: "exists",
+              message: `A page already exists at ${to}.`,
+            },
+            currentVersion: await versionNow(path),
+          },
+          409,
+        );
+      }
+      if (!(error instanceof VersionConflictError)) throw error;
+      return c.json(
+        {
+          error: { code: "conflict", message: error.message },
+          currentVersion: await versionNow(path),
         },
         409,
       );

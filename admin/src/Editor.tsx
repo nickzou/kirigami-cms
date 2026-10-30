@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { deletePage, listPages, renamePage } from "./api.js";
 import { BackLink } from "./components/BackLink/BackLink.js";
 import { BuildProblem } from "./components/BuildProblem/BuildProblem.js";
+import { Button } from "./components/Button/Button.js";
 import { ConflictPanel } from "./components/ConflictPanel/ConflictPanel.js";
+import { DeleteDialog } from "./components/DeleteDialog/DeleteDialog.js";
 import {
   EDITOR_FORM_ID,
   EditorForm,
@@ -10,7 +14,9 @@ import { ErrorPanel } from "./components/ErrorPanel/ErrorPanel.js";
 import { HeaderActions } from "./components/HeaderActions/HeaderActions.js";
 import { LineEndingsNotice } from "./components/LineEndingsNotice/LineEndingsNotice.js";
 import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
+import { pageHref } from "./components/PageListView/PageListView.js";
 import { PreviewFrame } from "./components/PreviewFrame/PreviewFrame.js";
+import { RenameDialog } from "./components/RenameDialog/RenameDialog.js";
 import { SaveControls } from "./components/SaveControls/SaveControls.js";
 import { SaveFailedPanel } from "./components/SaveFailedPanel/SaveFailedPanel.js";
 import { SaveStatus } from "./components/SaveStatus/SaveStatus.js";
@@ -34,6 +40,21 @@ export function Editor({ path }: { path: string }) {
   const build = useBuildEvents();
   // One view at a time, chosen with the segmented control.
   const [view, setView] = useState<"editor" | "preview">("editor");
+  const navigate = useNavigate();
+  const [dialog, setDialog] = useState<"rename" | "delete">();
+  // The other pages' paths, fetched when the rename dialog opens, so it can say
+  // right away if the new path is taken. The server still has the last word.
+  const [others, setOthers] = useState<string[]>();
+  useEffect(() => {
+    if (dialog !== "rename") return;
+    const controller = new AbortController();
+    listPages(controller.signal).then(
+      (pages) =>
+        setOthers(pages.map((page) => page.path).filter((p) => p !== path)),
+      () => {},
+    );
+    return () => controller.abort();
+  }, [dialog, path]);
 
   const { load, save } = editor;
 
@@ -81,7 +102,29 @@ export function Editor({ path }: { path: string }) {
         }}
         className=":uno: -mx-4 min-h-[calc(100vh-5rem)] px-4 pt-4 pb-28 md:mx-auto md:max-w-[55rem] md:rounded-t-lg md:px-12 md:pt-8"
       >
-        <BackLink />
+        <div className=":uno: mb-4 flex items-center justify-between gap-3 [&>p]:m-0">
+          <BackLink />
+          {editor.version !== undefined && (
+            <div className=":uno: flex gap-2">
+              <Button
+                size="small"
+                disabled={editor.dirty || editor.saving}
+                title={editor.dirty ? "Save your changes first." : undefined}
+                onClick={() => setDialog("rename")}
+              >
+                Rename
+              </Button>
+              <Button
+                size="small"
+                disabled={editor.dirty || editor.saving}
+                title={editor.dirty ? "Save your changes first." : undefined}
+                onClick={() => setDialog("delete")}
+              >
+                Delete
+              </Button>
+            </div>
+          )}
+        </div>
         <h1>{path}</h1>
         {build.error !== null && <BuildProblem message={build.error} />}
         <HeaderActions>
@@ -123,6 +166,27 @@ export function Editor({ path }: { path: string }) {
           />
         )}
       </div>
+      {dialog === "rename" && editor.version !== undefined && (
+        <RenameDialog
+          path={path}
+          others={others}
+          onClose={() => setDialog(undefined)}
+          onRename={async (to) => {
+            const moved = await renamePage(path, to, editor.version as string);
+            navigate(pageHref(moved.path), { replace: true });
+          }}
+        />
+      )}
+      {dialog === "delete" && editor.version !== undefined && (
+        <DeleteDialog
+          path={path}
+          onClose={() => setDialog(undefined)}
+          onDelete={async () => {
+            await deletePage(path, editor.version as string);
+            navigate("/", { replace: true });
+          }}
+        />
+      )}
       {editor.url && (
         // Fixed to the bottom centre at every size, over the page as it scrolls.
         <div className=":uno: fixed bottom-4 left-1/2 z-10 w-[min(22.5rem,calc(100%-2rem))] -translate-x-1/2">

@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -395,5 +396,86 @@ describe("Editor: unsaved changes guard", () => {
     fireEvent.click(saveButton());
     await screen.findByText("Saved.");
     expect(closing()).toBe(false);
+  });
+});
+
+describe("Editor: rename and delete", () => {
+  it("renames the page and opens it at its new path", async () => {
+    const store = serve({ "blog/hello.md": "# Hello\n" });
+    open("/pages/blog/hello.md");
+    await editor();
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/Links to this page/)).toBeDefined();
+    fireEvent.change(within(dialog).getByLabelText("Path"), {
+      target: { value: "blog/renamed" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Rename" }));
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        "blog/renamed.md",
+      ),
+    );
+    expect((await editor()).value).toBe("# Hello\n");
+    expect((await store.list()).map((e) => e.path)).toEqual([
+      "blog/renamed.md",
+    ]);
+  });
+
+  it("asks before deleting, then deletes the page and goes back to the list", async () => {
+    const store = serve({ "a.md": "# A\n", "b.md": "# B\n" });
+    open("/pages/a.md");
+    await editor();
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog", { name: "Delete a.md?" });
+    expect(within(dialog).getByText(/cannot be undone/)).toBeDefined();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Delete page" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        "Pages",
+      ),
+    );
+    expect((await store.list()).map((e) => e.path)).toEqual(["b.md"]);
+  });
+
+  it("keeps the page when the delete dialog is cancelled", async () => {
+    const store = serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    await editor();
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
+  });
+
+  it("warns about a path another page has, once the other pages are known", async () => {
+    serve({ "a.md": "# A\n", "b.md": "# B\n" });
+    open("/pages/a.md");
+    await editor();
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Path"), {
+      target: { value: "b" },
+    });
+    expect((await within(dialog).findByRole("alert")).textContent).toContain(
+      "A page already exists at b.md.",
+    );
+  });
+
+  it("cannot rename or delete while there are unsaved changes", async () => {
+    serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    type(await editor(), "# A\n\nmore");
+    const rename = screen.getByRole("button", {
+      name: "Rename",
+    }) as HTMLButtonElement;
+    const remove = screen.getByRole("button", {
+      name: "Delete",
+    }) as HTMLButtonElement;
+    expect(rename.disabled).toBe(true);
+    expect(remove.disabled).toBe(true);
+    expect(rename.title).toBe("Save your changes first.");
   });
 });

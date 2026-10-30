@@ -1,9 +1,16 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { describeContentStore } from "../../test/store-contract.js";
-import { VersionConflictError } from "../core/index.js";
+import { AlreadyExistsError, VersionConflictError } from "../core/index.js";
 import { LocalFolderStore } from "./local-folder.js";
 
 const folders: string[] = [];
@@ -75,5 +82,49 @@ describe("LocalFolderStore", () => {
     await expect(store.write("a.md", "mine", version)).rejects.toBeInstanceOf(
       VersionConflictError,
     );
+  });
+
+  it("removes the folders a delete leaves empty, but not ones that still hold files", async () => {
+    const folder = await tempFolder();
+    const store = new LocalFolderStore(folder);
+    const deep = await store.write("a/b/deep.md", "x", null);
+    const sibling = await store.write("a/sibling.md", "y", null);
+    await store.delete("a/b/deep.md", deep.version);
+    expect(await readdir(join(folder, "a"))).toEqual(["sibling.md"]);
+    await store.delete("a/sibling.md", sibling.version);
+    expect(await readdir(folder)).toEqual([]);
+  });
+
+  it("removes the folder a rename leaves empty", async () => {
+    const folder = await tempFolder();
+    const store = new LocalFolderStore(folder);
+    const { version } = await store.write("blog/hello.md", "x", null);
+    await store.rename("blog/hello.md", "hello.md", version);
+    expect(await readdir(folder)).toEqual(["hello.md"]);
+  });
+
+  it("treats a folder or a file in the way of the new path as already existing", async () => {
+    const folder = await tempFolder();
+    const store = new LocalFolderStore(folder);
+    const a = await store.write("a.md", "a", null);
+    await mkdir(join(folder, "taken.md"));
+    await store.write("other.md", "o", null);
+    await expect(
+      store.rename("a.md", "taken.md", a.version),
+    ).rejects.toBeInstanceOf(AlreadyExistsError);
+    await expect(
+      store.rename("a.md", "other.md/x.md", a.version),
+    ).rejects.toBeInstanceOf(AlreadyExistsError);
+    expect(await readFile(join(folder, "a.md"), "utf8")).toBe("a");
+  });
+
+  it("keeps a file's bytes exactly when renaming, even if they are not valid UTF-8", async () => {
+    const folder = await tempFolder();
+    const store = new LocalFolderStore(folder);
+    const bytes = Buffer.from([0x23, 0x20, 0xff, 0xfe, 0x0a]);
+    await writeFile(join(folder, "a.md"), bytes);
+    const { version } = await store.read("a.md");
+    await store.rename("a.md", "b.md", version);
+    expect(await readFile(join(folder, "b.md"))).toEqual(bytes);
   });
 });
