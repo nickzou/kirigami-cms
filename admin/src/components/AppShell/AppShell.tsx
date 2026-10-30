@@ -1,4 +1,6 @@
-import { type ReactNode, useState } from "react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
+import { useStoredFlag } from "../../hooks/useStoredFlag.js";
 import { AppHeader } from "../AppHeader/AppHeader.js";
 import { BrandLink } from "../BrandLink/BrandLink.js";
 import { MainMenu } from "../MainMenu/MainMenu.js";
@@ -13,12 +15,34 @@ import { HeaderSlot } from "./header-slot.js";
 export function AppShell({ children }: { children: ReactNode }) {
   // A state (not a ref object) so screens render again once the spot exists.
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const [thin, setThin] = useStoredFlag("kirigami.sidebar-thin", false);
+  const sidebarId = useId();
+  const Toggle = thin ? PanelLeftOpen : PanelLeftClose;
   return (
     <HeaderSlot.Provider value={slot}>
       <div className=":uno: md:flex md:items-start">
-        <aside className=":uno: sticky top-0 hidden h-screen w-56 shrink-0 flex-col gap-6 overflow-y-auto bg-surface p-4 shadow md:flex">
-          <BrandLink />
-          <MainMenu />
+        <aside
+          id={sidebarId}
+          className={
+            thin
+              ? ":uno: sticky top-0 hidden h-screen w-20 shrink-0 flex-col gap-6 overflow-hidden bg-surface p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
+              : ":uno: sticky top-0 hidden h-screen w-56 shrink-0 flex-col gap-6 overflow-hidden bg-surface p-4 shadow transition-[width] duration-200 ease-[ease-in-out] motion-reduce:transition-none md:flex"
+          }
+        >
+          <BrandLink compact={thin} />
+          <MainMenu compact={thin} />
+          <button
+            type="button"
+            aria-label={thin ? "Expand the sidebar" : "Thin the sidebar"}
+            aria-controls={sidebarId}
+            aria-expanded={!thin}
+            title={thin ? "Expand the sidebar" : "Thin the sidebar"}
+            onClick={() => setThin(!thin)}
+            className=":uno: mt-auto flex min-h-10 cursor-pointer items-center gap-3 rounded border-0 bg-transparent px-3 py-2 text-left text-muted [font:inherit] whitespace-nowrap transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle hover:text-text motion-reduce:transition-none"
+          >
+            <Toggle size={18} aria-hidden="true" className=":uno: shrink-0" />
+            <span className={thin ? ":uno: sr-only" : ""}>Thin</span>
+          </button>
         </aside>
         <div className=":uno: min-w-0 flex-1">
           <AppHeader>

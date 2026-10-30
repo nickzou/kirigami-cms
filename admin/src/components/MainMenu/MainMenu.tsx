@@ -27,9 +27,10 @@ const items: readonly MenuItem[] = [
 /**
  * The main menu: where in the admin you can go. It sits down the left side on
  * a tablet and wider (see `AppShell`); the item for the screen you are on is
- * marked as the current page.
+ * marked as the current page. `compact` shows only the icons (the names stay
+ * for screen readers, and as a tooltip).
  */
-export function MainMenu() {
+export function MainMenu({ compact = false }: { compact?: boolean }) {
   const { pathname } = useLocation();
   return (
     <nav aria-label="Main">
@@ -41,14 +42,17 @@ export function MainMenu() {
               <Link
                 to={to}
                 aria-current={current ? "page" : undefined}
+                title={compact ? label : undefined}
                 className={
                   current
-                    ? ":uno: flex items-center gap-3 rounded px-3 py-2 font-bold text-on-accent no-underline bg-accent transition-colors duration-200 ease-[ease-in-out] motion-reduce:transition-none"
-                    : ":uno: flex items-center gap-3 rounded px-3 py-2 font-bold text-text no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle motion-reduce:transition-none"
+                    ? ":uno: flex min-h-10 items-center gap-3 rounded px-3 py-2 font-bold whitespace-nowrap text-on-accent no-underline bg-accent transition-colors duration-200 ease-[ease-in-out] motion-reduce:transition-none"
+                    : ":uno: flex min-h-10 items-center gap-3 rounded px-3 py-2 font-bold whitespace-nowrap text-text no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle motion-reduce:transition-none"
                 }
               >
-                <Icon size={18} aria-hidden="true" />
-                {label}
+                <Icon size={18} aria-hidden="true" className=":uno: shrink-0" />
+                <span className={compact ? ":uno: sr-only" : ":uno: truncate"}>
+                  {label}
+                </span>
               </Link>
             </li>
           );
