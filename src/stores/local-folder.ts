@@ -1,7 +1,18 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { constants } from "node:fs";
 import {
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rmdir,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
+import { dirname, join, posix } from "node:path";
+import {
+  AlreadyExistsError,
   assertValidPath,
   type Content,
   type ContentStore,
@@ -86,6 +97,75 @@ export class LocalFolderStore implements ContentStore {
     await writeFile(temp, content);
     await rename(temp, file);
     return { version: versionOf(content) };
+  }
+
+  async delete(path: string, expectedVersion: Version): Promise<void> {
+    assertValidPath(path);
+    const current = await this.readRaw(path);
+    if (versionOf(current) !== expectedVersion)
+      throw new VersionConflictError(path);
+    try {
+      await unlink(join(this.root, path));
+    } catch (error) {
+      if (hasCode(error, "ENOENT")) throw new NotFoundError(path);
+      throw error;
+    }
+    await this.removeEmptyFolders(path);
+  }
+
+  async rename(
+    from: string,
+    to: string,
+    expectedVersion: Version,
+  ): Promise<{ version: Version }> {
+    assertValidPath(from);
+    assertValidPath(to);
+    const current = await this.readRaw(from);
+    if (versionOf(current) !== expectedVersion)
+      throw new VersionConflictError(from);
+
+    try {
+      await mkdir(dirname(join(this.root, to)), { recursive: true });
+    } catch (error) {
+      // A file is in the way of the new folder, so the destination is taken.
+      if (hasCode(error, "EEXIST") || hasCode(error, "ENOTDIR"))
+        throw new AlreadyExistsError(to);
+      throw error;
+    }
+    try {
+      // Copy, refusing to overwrite, then remove the original: unlike a plain
+      // rename, this can never replace a file that is already at `to`.
+      await copyFile(
+        join(this.root, from),
+        join(this.root, to),
+        constants.COPYFILE_EXCL,
+      );
+    } catch (error) {
+      if (hasCode(error, "EEXIST") || hasCode(error, "EISDIR"))
+        throw new AlreadyExistsError(to);
+      if (hasCode(error, "ENOENT")) throw new NotFoundError(from);
+      throw error;
+    }
+    try {
+      await unlink(join(this.root, from));
+    } catch (error) {
+      if (!hasCode(error, "ENOENT")) throw error;
+    }
+    await this.removeEmptyFolders(from);
+    return { version: versionOf(current) };
+  }
+
+  /** Removes the folders a file leaves empty, up to (not including) the root. */
+  private async removeEmptyFolders(path: string): Promise<void> {
+    let folder = posix.dirname(path);
+    while (folder !== ".") {
+      try {
+        await rmdir(join(this.root, folder));
+      } catch {
+        return; // not empty (or already gone): stop here
+      }
+      folder = posix.dirname(folder);
+    }
   }
 
   private async readRaw(path: string): Promise<string> {
