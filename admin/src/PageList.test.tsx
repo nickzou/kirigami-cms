@@ -50,14 +50,15 @@ describe("PageList", () => {
     );
     show();
     const links = await screen.findAllByRole("link");
-    // Pages in a folder come first, and show their file name, not the path.
+    // Top-level pages first, then the folders; a page in a folder shows its
+    // file name, not its path.
     expect(links.map((l) => l.textContent)).toEqual([
-      "My postmy post.md",
       "Homeindex.md",
+      "My postmy post.md",
     ]);
     expect(links.map((l) => l.getAttribute("href"))).toEqual([
-      "/pages/blog/my%20post.md",
       "/pages/index.md",
+      "/pages/blog/my%20post.md",
     ]);
   });
 
@@ -187,7 +188,7 @@ describe("PageList: rename", () => {
       (await screen.findAllByRole("link")).map((link) =>
         link.getAttribute("href"),
       ),
-    ).toEqual(["/pages/notes/a.md", "/pages/b.md"]);
+    ).toEqual(["/pages/b.md", "/pages/notes/a.md"]);
   });
 
   it("cannot rename onto a page that exists, and keeps both", async () => {

@@ -32,7 +32,8 @@ const folderId = (prefix: string, path: string): string =>
 /**
  * The site's pages, grouped under their folders. Each folder is a row that
  * opens and closes on its own; they start open, so nothing is hidden until you
- * close it. A folder exists because a page is in it.
+ * close it. A folder exists because a page is in it. At each level the pages
+ * come first and the folders after them.
  */
 export function PageListView({ pages, onRename, onDelete }: PageListViewProps) {
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
@@ -59,6 +60,45 @@ export function PageListView({ pages, onRename, onDelete }: PageListViewProps) {
           : ":uno: m-0 list-none p-0"
       }
     >
+      {folder.pages.map((page) => (
+        <li
+          key={page.path}
+          className=":uno: flex items-center [border-top:1px_solid_var(--border)]"
+        >
+          <Link
+            to={pageHref(page.path)}
+            style={{ paddingLeft: indent(depth) }}
+            className=":uno: flex min-w-0 flex-1 justify-between gap-4 py-3 pr-4 text-text no-underline hover:bg-accent-soft"
+          >
+            <strong>{page.title}</strong>
+            <span className=":uno: truncate font-mono text-sm text-muted">
+              {fileName(page.path)}
+            </span>
+          </Link>
+          {(onRename || onDelete) && (
+            <div className=":uno: flex shrink-0 gap-2 pr-3 pl-1">
+              {onRename && (
+                <Button
+                  size="small"
+                  aria-label={`Rename ${page.path}`}
+                  onClick={() => onRename(page)}
+                >
+                  Rename
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  size="small"
+                  aria-label={`Delete ${page.path}`}
+                  onClick={() => onDelete(page)}
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          )}
+        </li>
+      ))}
       {folder.folders.map((child) => {
         const open = !closed.has(child.path);
         const id = folderId(idPrefix, child.path);
@@ -100,45 +140,6 @@ export function PageListView({ pages, onRename, onDelete }: PageListViewProps) {
           </li>
         );
       })}
-      {folder.pages.map((page) => (
-        <li
-          key={page.path}
-          className=":uno: flex items-center [border-top:1px_solid_var(--border)]"
-        >
-          <Link
-            to={pageHref(page.path)}
-            style={{ paddingLeft: indent(depth) }}
-            className=":uno: flex min-w-0 flex-1 justify-between gap-4 py-3 pr-4 text-text no-underline hover:bg-accent-soft"
-          >
-            <strong>{page.title}</strong>
-            <span className=":uno: truncate font-mono text-sm text-muted">
-              {fileName(page.path)}
-            </span>
-          </Link>
-          {(onRename || onDelete) && (
-            <div className=":uno: flex shrink-0 gap-2 pr-3 pl-1">
-              {onRename && (
-                <Button
-                  size="small"
-                  aria-label={`Rename ${page.path}`}
-                  onClick={() => onRename(page)}
-                >
-                  Rename
-                </Button>
-              )}
-              {onDelete && (
-                <Button
-                  size="small"
-                  aria-label={`Delete ${page.path}`}
-                  onClick={() => onDelete(page)}
-                >
-                  Delete
-                </Button>
-              )}
-            </div>
-          )}
-        </li>
-      ))}
     </ul>
   );
 

@@ -60,15 +60,27 @@ describe("PageListView: folders", () => {
     expect(link.getAttribute("href")).toBe("/pages/blog/hello.md");
   });
 
-  it("lists folders before the pages at the same level", () => {
+  it("lists the pages at a level before its folders", () => {
     show(pages);
     const homeLink = screen.getByRole("link", { name: /Home/ });
     for (const name of ["blog", "docs"]) {
       expect(
-        folder(name).compareDocumentPosition(homeLink) &
+        homeLink.compareDocumentPosition(folder(name)) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     }
+  });
+
+  it("does the same inside a folder: its pages, then the folders in it", () => {
+    show([
+      page("docs/guides/start.md", "Start"),
+      page("docs/overview.md", "Overview"),
+    ]);
+    const overview = screen.getByRole("link", { name: /Overview/ });
+    expect(
+      overview.compareDocumentPosition(folder("guides")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("closes and opens a folder, and says so", () => {

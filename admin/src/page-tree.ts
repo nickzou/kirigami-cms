@@ -16,7 +16,8 @@ const byName = (a: string, b: string) =>
 
 /**
  * Groups pages by the folders in their paths, to any depth. A folder exists
- * because a page is in it. Folders come before pages, each in order.
+ * because a page is in it. Pages and folders are each in order (the list
+ * shows a level's pages first, then its folders).
  */
 export function groupPages(pages: readonly PageSummary[]): FolderNode {
   const root: FolderNode = { name: "", path: "", folders: [], pages: [] };
