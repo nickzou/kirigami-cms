@@ -30,7 +30,7 @@ build:
   out: ./dist           # default
 ```
 
-A folder given on the command line wins over it, and with neither, `./content` is used.
+A folder given on the command line wins over it, and with neither, `./content` is used. [`kirigami.config.example.yaml`](kirigami.config.example.yaml) is a commented template to copy.
 
 ```sh
 pnpm build

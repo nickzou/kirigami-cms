@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=./schema/project.schema.json
+#
+# Copy this file to kirigami.config.yaml (git ignores that one) to say where
+# this project's content comes from. `pnpm dev` and `kirigami dev|build|check`
+# find it from any folder inside the project.
+#
+# Every setting is shown with its default, so an empty file means the same
+# thing, and you only need to keep the lines you change.
+
+content:
+  # Where the content comes from. Only "local-folder" exists so far.
+  store: local-folder
+  # The folder of markdown files, relative to this file.
+  path: ./content
+
+build:
+  # Where `kirigami build` writes the site, relative to this file.
+  out: ./dist

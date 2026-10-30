@@ -31,6 +31,7 @@ It cannot live in the content, because it says where the content is, so it is se
 ## Consequences
 
 - `pnpm dev` uses the config when the project root has one, and a git-ignored copy of the test fixture (`.dev-site/`) when it does not.
+- This repository is the Kirigami code itself, so it ignores its own `kirigami.config.yaml` and `content/` (a developer's local choice, like a `.env` file) and commits `kirigami.config.example.yaml` as the template. A project that uses Kirigami commits its config, which holds no secrets.
 - `schema/*.schema.json` are generated files and are excluded from the formatter, since a test compares them byte for byte with the generator's output.
 - Watching for changes still assumes a local folder (see [0008](0008-content-store-interface.md)); a store that is not a folder will need its own way of telling the dev server something changed.
 
