@@ -4,40 +4,62 @@
   "type": "object",
   "properties": {
     "theme": {
+      "title": "Theme",
+      "description": "How the site looks.",
       "default": {},
       "type": "object",
       "properties": {
         "colors": {
+          "title": "Colors",
+          "description": "The palette of the site.",
           "default": {},
           "type": "object",
           "properties": {
             "background": {
               "default": "#ffffff",
+              "title": "Background",
+              "description": "The page background.",
+              "widget": "color",
               "type": "string",
               "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
             },
             "text": {
               "default": "#1a1a1a",
+              "title": "Text",
+              "description": "Body text.",
+              "widget": "color",
               "type": "string",
               "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
             },
             "muted": {
               "default": "#5c5c5c",
+              "title": "Muted text",
+              "description": "Secondary text, such as captions and dates.",
+              "widget": "color",
               "type": "string",
               "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
             },
             "link": {
               "default": "#0b57d0",
+              "title": "Links",
+              "description": "The color of links.",
+              "widget": "color",
               "type": "string",
               "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
             },
             "border": {
               "default": "#d9d9d9",
+              "title": "Borders",
+              "description": "Lines and rules, such as table borders and dividers.",
+              "widget": "color",
               "type": "string",
               "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
             },
             "codeBackground": {
               "default": "#f4f4f5",
+              "title": "Code background",
+              "description": "Behind code blocks and inline code.",
+              "widget": "color",
               "type": "string",
               "pattern": "^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\\([0-9a-zA-Z\\s,./%+-]*\\))$"
             }
@@ -45,21 +67,32 @@
           "additionalProperties": false
         },
         "fonts": {
+          "title": "Fonts",
+          "description": "Font-family lists. Fonts already on the reader's device are used.",
           "default": {},
           "type": "object",
           "properties": {
             "body": {
               "default": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+              "title": "Body font",
+              "description": "A font-family list, ending with a generic family, such as: Georgia, \"Times New Roman\", serif",
+              "widget": "font",
               "type": "string",
               "minLength": 1
             },
             "heading": {
               "default": "inherit",
+              "title": "Heading font",
+              "description": "A font-family list for headings, or inherit to use the body font.",
+              "widget": "font",
               "type": "string",
               "minLength": 1
             },
             "mono": {
               "default": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+              "title": "Code font",
+              "description": "A font-family list for code.",
+              "widget": "font",
               "type": "string",
               "minLength": 1
             }
@@ -67,22 +100,33 @@
           "additionalProperties": false
         },
         "type": {
+          "title": "Type",
+          "description": "The size and rhythm of text.",
           "default": {},
           "type": "object",
           "properties": {
             "baseSize": {
               "default": "1.125rem",
+              "title": "Base size",
+              "description": "The size of body text, such as 1.125rem or 18px.",
+              "widget": "length",
               "type": "string",
               "pattern": "^(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%)$"
             },
             "scale": {
               "default": 1.25,
+              "title": "Heading scale",
+              "description": "The ratio between heading levels, from 1 to 2. 1.25 is a \"major third\".",
+              "widget": "number",
               "type": "number",
               "minimum": 1,
               "maximum": 2
             },
             "lineHeight": {
               "default": 1.6,
+              "title": "Line height",
+              "description": "The space between lines, as a multiple of the text size.",
+              "widget": "number",
               "type": "number",
               "minimum": 1,
               "maximum": 3
@@ -91,11 +135,16 @@
           "additionalProperties": false
         },
         "spacing": {
+          "title": "Spacing",
+          "description": "How much room there is around things.",
           "default": {},
           "type": "object",
           "properties": {
             "unit": {
               "default": "1rem",
+              "title": "Spacing unit",
+              "description": "The basic gap. Margins and padding are multiples of it.",
+              "widget": "length",
               "type": "string",
               "pattern": "^(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%)$"
             }
@@ -103,11 +152,16 @@
           "additionalProperties": false
         },
         "layout": {
+          "title": "Layout",
+          "description": "The shape of the page.",
           "default": {},
           "type": "object",
           "properties": {
             "maxWidth": {
               "default": "44rem",
+              "title": "Content width",
+              "description": "The widest the text column gets, such as 44rem or 70ch.",
+              "widget": "length",
               "type": "string",
               "pattern": "^(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%)$"
             }

@@ -14,11 +14,13 @@ export {
   STYLESHEET_PATH,
 } from "./build/site.js";
 export { generateStylesheet } from "./config/css.js";
+export { type ConfigChange, editConfigText } from "./config/edit.js";
 export {
   ConfigError,
   type ConfigProblem,
   defaultProjectConfig,
   defaultSiteConfig,
+  parseConfigValues,
   parseProjectConfig,
   parseSiteConfig,
 } from "./config/load.js";
