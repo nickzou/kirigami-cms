@@ -45,8 +45,8 @@ export function MainMenu({ compact = false }: { compact?: boolean }) {
                 title={compact ? label : undefined}
                 className={
                   current
-                    ? ":uno: flex min-h-10 items-center gap-3 rounded px-3 py-2 font-bold whitespace-nowrap text-on-accent no-underline bg-accent transition-colors duration-200 ease-[ease-in-out] motion-reduce:transition-none"
-                    : ":uno: flex min-h-10 items-center gap-3 rounded px-3 py-2 font-bold whitespace-nowrap text-text no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle motion-reduce:transition-none"
+                    ? ":uno: flex min-h-10 items-center gap-3 rounded px-[11px] py-2 font-bold whitespace-nowrap text-on-accent no-underline bg-accent transition-colors duration-200 ease-[ease-in-out] motion-reduce:transition-none"
+                    : ":uno: flex min-h-10 items-center gap-3 rounded px-[11px] py-2 font-bold whitespace-nowrap text-text no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle motion-reduce:transition-none"
                 }
               >
                 <Icon size={18} aria-hidden="true" className=":uno: shrink-0" />
