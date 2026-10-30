@@ -50,7 +50,17 @@ An `.editorconfig` sets two-space indents, LF line endings and a final newline; 
 
 The admin app (React 19 + Vite) lives in `admin/` and is built into `dist/admin` by `pnpm build`. `kirigami dev` serves it at `/admin`.
 
-To work on it with hot reloading, run a site in one terminal and Vite in another:
+The quickest way to work on anything is one command:
+
+```sh
+pnpm dev                    # watches the code and serves .dev-site/ on http://localhost:3000/admin/
+pnpm dev path/to/my-site    # the same, for a site of your own
+pnpm dev --port 4000
+```
+
+It compiles the server and CLI when `src/` changes, rebuilds the admin when `admin/` changes, and runs `kirigami dev` on the site, restarting it when the compiled code changes. Edits to the site's pages are rebuilt by `kirigami dev` as usual. Each line is labelled `tsc`, `admin` or `dev`. Ctrl+C stops all three. With no site it uses `.dev-site/` (ignored by git), copied from the test fixture the first time, so trying things in the admin never changes the fixtures the tests use. Refresh the browser after a change to the admin; the server's own pages reload by themselves.
+
+To work on the admin with hot reloading instead, run a site in one terminal and Vite in another:
 
 ```sh
 node dist/cli/main.js dev path/to/my-site   # serves the API on port 3000

@@ -14,6 +14,7 @@
     "format": "biome format --write .",
     "test": "vitest run --passWithNoTests",
     "build": "tsc -p tsconfig.build.json && vite build",
+    "dev": "node scripts/dev.mjs",
     "admin:dev": "vite",
     "storybook": "storybook dev -p 6006",
     "build:storybook": "storybook build",

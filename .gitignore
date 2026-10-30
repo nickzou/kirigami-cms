@@ -18,6 +18,9 @@ node_modules/
 /build/
 /coverage/
 
+# The site that `pnpm dev` uses when none is given
+/.dev-site/
+
 # Logs
 *.log
 
