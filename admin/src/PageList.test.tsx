@@ -50,9 +50,11 @@ describe("PageList", () => {
     );
     show();
     const links = await screen.findAllByRole("link");
+    // Top-level pages first, then the folders; a page in a folder shows its
+    // file name, not its path.
     expect(links.map((l) => l.textContent)).toEqual([
       "Homeindex.md",
-      "My postblog/my post.md",
+      "My postmy post.md",
     ]);
     expect(links.map((l) => l.getAttribute("href"))).toEqual([
       "/pages/index.md",

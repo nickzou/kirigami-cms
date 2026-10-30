@@ -36,6 +36,40 @@ export const AwkwardPaths: Story = {
   },
 };
 
+const manyPages = [
+  { path: "index.md", title: "Basic site", version: "1" },
+  { path: "about.md", title: "About", version: "2" },
+  { path: "blog/hello.md", title: "Hello, world", version: "3" },
+  { path: "blog/second-post.md", title: "A second post", version: "4" },
+  { path: "docs/getting-started.md", title: "Getting started", version: "5" },
+  { path: "docs/guides/themes.md", title: "Themes", version: "6" },
+  { path: "docs/guides/content.md", title: "Writing content", version: "7" },
+];
+
+/** Pages in folders are grouped under them, to any depth, with a count. */
+export const Folders: Story = { args: { pages: manyPages } };
+
+/** A folder is a button: it opens and closes on its own, with the mouse or the keyboard. */
+export const OpensAndCloses: Story = {
+  args: { pages: manyPages },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const blog = await canvas.findByRole("button", { name: /^blog/ });
+    await expect(blog).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(blog);
+    await expect(blog).toHaveAttribute("aria-expanded", "false");
+    await expect(canvas.queryByText("Hello, world")).not.toBeInTheDocument();
+
+    // From the keyboard: Tab to the next folder and press Enter.
+    const docs = canvas.getByRole("button", { name: /^docs/ });
+    docs.focus();
+    await userEvent.keyboard("{Enter}");
+    await expect(docs).toHaveAttribute("aria-expanded", "false");
+    await userEvent.keyboard(" ");
+    await expect(docs).toHaveAttribute("aria-expanded", "true");
+  },
+};
+
 /** Given handlers, each row has Rename and Delete buttons beside its link. */
 export const WithActions: Story = {
   args: {
