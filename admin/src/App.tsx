@@ -2,6 +2,7 @@ import { Route, Routes, useParams } from "react-router";
 import { AppShell } from "./components/AppShell/AppShell.js";
 import { Editor } from "./Editor.js";
 import { PageList } from "./PageList.js";
+import { Settings } from "./Settings.js";
 
 function PagesScreen() {
   return (
@@ -24,6 +25,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<PagesScreen />} />
         <Route path="/pages/*" element={<EditorScreen />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<p>There is nothing at this address.</p>} />
       </Routes>
     </AppShell>

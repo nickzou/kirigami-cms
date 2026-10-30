@@ -3,12 +3,17 @@ import { bodyLimit } from "hono/body-limit";
 import {
   AlreadyExistsError,
   assertValidPath,
+  ConfigError,
   type ContentStore,
+  editConfigText,
   firstHeading,
   InvalidPathError,
   NotFoundError,
   pagesCollidingWith,
   pageUrl,
+  parseConfigValues,
+  parseSiteConfig,
+  SITE_CONFIG_PATH,
   VersionConflictError,
 } from "../core/index.js";
 import {
@@ -21,6 +26,8 @@ import {
   RenameRequest,
   Saved,
   SaveRequest,
+  SiteConfigSaveRequest,
+  SiteConfigSchema,
 } from "./api-schemas.js";
 
 const MAX_BODY_BYTES = 10 * 1024 * 1024;
@@ -133,6 +140,46 @@ const renamePage = createRoute({
     409: {
       description:
         "Nothing was moved. The error code says why: `conflict` (the page changed since you read it), `exists` (a page is already at the new path) or `collision` (the build would refuse the result, because two pages would share an address).",
+      content: { "application/json": { schema: ConflictBody } },
+    },
+  },
+});
+
+const getSiteConfig = createRoute({
+  method: "get",
+  path: "/api/site-config",
+  summary: "Read the site config (site.yaml)",
+  responses: {
+    200: {
+      description:
+        "The file's text and version, and the values it sets. An absent file is empty text with a null version.",
+      content: { "application/json": { schema: SiteConfigSchema } },
+    },
+  },
+});
+
+const putSiteConfig = createRoute({
+  method: "put",
+  path: "/api/site-config",
+  summary: "Change settings in the site config",
+  description:
+    "Applies the changes to the file's text, keeping its comments and the order of its keys. A key set to null is removed, and a section left empty goes with it.",
+  request: {
+    body: {
+      required: true,
+      content: { "application/json": { schema: SiteConfigSaveRequest } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Saved. The new text, version and values.",
+      content: { "application/json": { schema: SiteConfigSchema } },
+    },
+    400: errorResponse(
+      "The changes would make the file invalid, or it cannot be changed as it is. Nothing was written.",
+    ),
+    409: {
+      description: "site.yaml changed since you read it. Nothing was written.",
       content: { "application/json": { schema: ConflictBody } },
     },
   },
@@ -381,6 +428,85 @@ export function createApiApp(store: ContentStore) {
         {
           error: { code: "conflict", message: error.message },
           currentVersion: await versionNow(path),
+        },
+        409,
+      );
+    }
+  });
+
+  /** The site config as it is now: its text and version, and what it sets. */
+  const readSiteConfig = async (): Promise<{
+    content: string;
+    version: string | null;
+  }> => {
+    try {
+      return await store.read(SITE_CONFIG_PATH);
+    } catch (error) {
+      if (error instanceof NotFoundError) return { content: "", version: null };
+      throw error;
+    }
+  };
+
+  /** What the API says about a config file: valid, with its values, or not, with why. */
+  const describeSiteConfig = (content: string, version: string | null) => {
+    try {
+      parseSiteConfig(content, SITE_CONFIG_PATH);
+      const values = parseConfigValues(content, SITE_CONFIG_PATH) as Record<
+        string,
+        unknown
+      >;
+      return { content, version, values, error: null };
+    } catch (error) {
+      if (!(error instanceof ConfigError)) throw error;
+      return { content, version, values: null, error: error.message };
+    }
+  };
+
+  api.openapi(getSiteConfig, async (c) => {
+    const { content, version } = await readSiteConfig();
+    return c.json(describeSiteConfig(content, version), 200);
+  });
+
+  api.openapi(putSiteConfig, async (c) => {
+    const { changes, version } = c.req.valid("json");
+    const current = await readSiteConfig();
+    const conflict = () =>
+      c.json(
+        {
+          error: {
+            code: "conflict",
+            message: `${SITE_CONFIG_PATH} changed since it was read.`,
+          },
+          currentVersion: current.version,
+        },
+        409,
+      );
+    if (current.version !== version) return conflict();
+
+    let next: string;
+    try {
+      next = editConfigText(current.content, changes, SITE_CONFIG_PATH);
+      // Never write what the build would then refuse.
+      parseSiteConfig(next, SITE_CONFIG_PATH);
+    } catch (error) {
+      if (!(error instanceof ConfigError)) throw error;
+      return c.json(
+        { error: { code: "invalid_config", message: error.message } },
+        400,
+      );
+    }
+    if (next === current.content) {
+      return c.json(describeSiteConfig(current.content, current.version), 200);
+    }
+    try {
+      const saved = await store.write(SITE_CONFIG_PATH, next, current.version);
+      return c.json(describeSiteConfig(next, saved.version), 200);
+    } catch (error) {
+      if (!(error instanceof VersionConflictError)) throw error;
+      return c.json(
+        {
+          error: { code: "conflict", message: error.message },
+          currentVersion: (await readSiteConfig()).version,
         },
         409,
       );

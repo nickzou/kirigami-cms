@@ -13,6 +13,9 @@ type Story = StoryObj<typeof meta>;
 
 export const Clean: Story = {};
 export const Unsaved: Story = { args: { dirty: true } };
+/** A value that is not valid turns Save off, but the note still says there are changes. */
+export const Blocked: Story = { args: { dirty: true, blocked: true } };
+
 /** The label changes to "Saving…" only if the save takes a while. */
 export const Saving: Story = {
   args: { dirty: true, saving: true },

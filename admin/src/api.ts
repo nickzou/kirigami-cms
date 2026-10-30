@@ -4,9 +4,11 @@ import type {
   Page,
   PageSummary,
   Saved,
+  SiteConfig,
+  SiteConfigChange,
 } from "../../src/server/api-schemas.js";
 
-export type { Page, PageSummary, Saved };
+export type { Page, PageSummary, Saved, SiteConfig, SiteConfigChange };
 
 /** Something the API refused or could not do, with the message to show. */
 export class ApiRequestError extends Error {
@@ -115,4 +117,28 @@ export async function renamePage(
   });
   if (!response.ok) throw await failure(response);
   return (await response.json()) as Saved;
+}
+
+/** The site config (site.yaml): its text, version, and the values it sets. */
+export async function getSiteConfig(signal?: AbortSignal): Promise<SiteConfig> {
+  const response = await fetch("/api/site-config", { signal });
+  if (!response.ok) throw await failure(response);
+  return (await response.json()) as SiteConfig;
+}
+
+/**
+ * Changes settings in the site config. `version` is the one last read (null if
+ * there was no file). A setting set to null is removed, so its default applies.
+ */
+export async function saveSiteConfig(
+  changes: SiteConfigChange[],
+  version: string | null,
+): Promise<SiteConfig> {
+  const response = await fetch("/api/site-config", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ changes, version }),
+  });
+  if (!response.ok) throw await failure(response);
+  return (await response.json()) as SiteConfig;
 }

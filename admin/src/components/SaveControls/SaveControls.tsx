@@ -22,12 +22,19 @@ export interface SaveControlsProps {
   /** Whether the text differs from what was last saved. */
   dirty: boolean;
   saving: boolean;
+  /** Something stops the changes being saved (a value that is not valid): Save is off, the note is not. */
+  blocked?: boolean;
   /** The `id` of the form that Save submits (it can sit anywhere on the page). */
   formId: string;
 }
 
 /** The Save button, with a note on whether there is anything to save. */
-export function SaveControls({ dirty, saving, formId }: SaveControlsProps) {
+export function SaveControls({
+  dirty,
+  saving,
+  blocked = false,
+  formId,
+}: SaveControlsProps) {
   // Saving to a folder on this machine takes a few milliseconds. Swapping the
   // label for that long is a flash, so "Saving…" waits to see if it is needed.
   const slow = useAfterDelay(saving, SLOW_SAVE_MS);
@@ -42,7 +49,7 @@ export function SaveControls({ dirty, saving, formId }: SaveControlsProps) {
         variant="primary"
         // Wide enough for either label, so the button never changes size.
         className=":uno: min-w-24"
-        disabled={!dirty || saving}
+        disabled={!dirty || saving || blocked}
       >
         {saving && slow ? "Saving…" : "Save"}
       </Button>

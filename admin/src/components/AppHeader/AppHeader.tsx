@@ -1,10 +1,12 @@
+import { Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Logo } from "../Logo/Logo.js";
 
 /**
  * The banner at the top of every screen: the product name, linking home. What
- * is passed as `children` sits on the right (see `HeaderActions`).
+ * is passed as `children` sits on the right, after the link to the settings
+ * (see `HeaderActions`).
  */
 export function AppHeader({ children }: { children?: ReactNode }) {
   return (
@@ -16,9 +18,17 @@ export function AppHeader({ children }: { children?: ReactNode }) {
         <Logo className=":uno: h-6 w-auto" />
         Kirigami
       </Link>
-      {children && (
-        <div className=":uno: ml-auto flex items-center gap-3">{children}</div>
-      )}
+      <div className=":uno: ml-auto flex items-center gap-3">
+        <Link
+          to="/settings"
+          aria-label="Settings"
+          className=":uno: inline-flex items-center gap-1 rounded text-text no-underline hover:text-accent"
+        >
+          <Settings size={18} aria-hidden="true" />
+          <span className=":uno: hidden sm:inline">Settings</span>
+        </Link>
+        {children}
+      </div>
     </header>
   );
 }

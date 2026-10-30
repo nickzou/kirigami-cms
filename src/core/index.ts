@@ -14,11 +14,13 @@ export {
   STYLESHEET_PATH,
 } from "./build/site.js";
 export { generateStylesheet } from "./config/css.js";
+export { type ConfigChange, editConfigText } from "./config/edit.js";
 export {
   ConfigError,
   type ConfigProblem,
   defaultProjectConfig,
   defaultSiteConfig,
+  parseConfigValues,
   parseProjectConfig,
   parseSiteConfig,
 } from "./config/load.js";
@@ -34,6 +36,11 @@ export {
   type Theme,
   themeSchema,
 } from "./config/schema.js";
+export {
+  FONT_STACK_MESSAGE,
+  fontStackProblem,
+  hasNoBreakout,
+} from "./config/validate.js";
 export { type Page, type Section, splitSections } from "./markdown/sections.js";
 export { firstHeading, renderMarkdown } from "./render/markdown.js";
 export { type RenderPageInput, renderPage } from "./render/page.js";

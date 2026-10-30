@@ -1,5 +1,5 @@
 import { parseDocument } from "yaml";
-import type { z } from "zod";
+import { z } from "zod";
 import { type ProjectConfig, projectConfigSchema } from "./project-schema.js";
 import { type SiteConfig, siteConfigSchema } from "./schema.js";
 
@@ -55,6 +55,15 @@ function parseConfig<T>(text: string, file: string, schema: z.ZodType<T>): T {
   const result = schema.safeParse(data);
   if (!result.success) throw new ConfigError(file, problemsFrom(result.error));
   return result.data;
+}
+
+/**
+ * The values a config file sets, as a plain object, before any defaults: what
+ * the author wrote, so a form can tell a setting that was chosen from one that
+ * is only the default. Empty text is `{}`. Throws `ConfigError` for invalid YAML.
+ */
+export function parseConfigValues(text: string, file: string): unknown {
+  return parseConfig(text, file, z.unknown()) ?? {};
 }
 
 /** Parses the text of `site.yaml`. */
