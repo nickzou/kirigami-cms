@@ -70,7 +70,13 @@ export const RenamesAPage: Story = {
       within(dialog).getByRole("button", { name: "Rename" }),
     );
     await waitFor(() => expect(canvas.queryByRole("dialog")).toBeNull());
-    await expect(await canvas.findByText("notes/hello.md")).toBeVisible();
+    // It now sits in a new folder, under its file name.
+    await expect(
+      await canvas.findByRole("button", { name: /^notes/ }),
+    ).toBeVisible();
+    await expect(
+      await canvas.findByRole("link", { name: /hello\.md/ }),
+    ).toHaveAttribute("href", "/pages/notes/hello.md");
   },
 };
 
@@ -83,6 +89,9 @@ export const DeletesAfterConfirming: Story = {
     );
     await expect(await canvas.findByText(/cannot be undone/)).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Delete page" }));
-    await waitFor(() => expect(canvas.queryByText("blog/hello.md")).toBeNull());
+    // Its folder had only that page, so the folder goes with it.
+    await waitFor(() =>
+      expect(canvas.queryByRole("button", { name: /^blog/ })).toBeNull(),
+    );
   },
 };
