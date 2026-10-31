@@ -103,7 +103,7 @@ export function Editor({ path }: { path: string }) {
         onClick={(event) => {
           if (event.target === event.currentTarget) focusText();
         }}
-        className=":uno: -mx-4 min-h-[calc(100vh-5rem)] px-4 pt-4 pb-28 md:mx-auto md:max-w-[70rem] md:rounded-t-lg md:px-12 md:pt-8"
+        className=":uno: -mx-4 min-h-[calc(100vh-5rem)] px-4 pt-4 pb-28 md:mx-auto md:max-w-[55rem] md:rounded-t-lg md:px-12 md:pt-8"
       >
         <div className=":uno: mb-4 flex items-center justify-end gap-3">
           {editor.version !== undefined && (
