@@ -20,8 +20,8 @@ import { PagePathField } from "./components/PagePathField/PagePathField.js";
 import { PreviewFrame } from "./components/PreviewFrame/PreviewFrame.js";
 import { SaveControls } from "./components/SaveControls/SaveControls.js";
 import { SaveFailedPanel } from "./components/SaveFailedPanel/SaveFailedPanel.js";
-import { SaveStatus } from "./components/SaveStatus/SaveStatus.js";
 import { SegmentedControl } from "./components/SegmentedControl/SegmentedControl.js";
+import { Toast } from "./components/Toast/Toast.js";
 import { useBuildEvents } from "./hooks/useBuildEvents.js";
 import { usePageEditor } from "./hooks/usePageEditor.js";
 import { useSaveShortcut } from "./hooks/useSaveShortcut.js";
@@ -143,7 +143,7 @@ export function Editor({ path }: { path: string }) {
             formId={EDITOR_FORM_ID}
           />
         </HeaderActions>
-        <SaveStatus saved={save.status === "saved"} />
+        <Toast message={save.status === "saved" ? "Saved." : null} />
         {save.status === "error" && <SaveFailedPanel message={save.message} />}
         {save.status === "conflict" && (
           <ConflictPanel

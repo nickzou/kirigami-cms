@@ -7,11 +7,11 @@ import { HeaderTitle } from "./components/HeaderTitle/HeaderTitle.js";
 import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
 import { SaveControls } from "./components/SaveControls/SaveControls.js";
 import { SaveFailedPanel } from "./components/SaveFailedPanel/SaveFailedPanel.js";
-import { SaveStatus } from "./components/SaveStatus/SaveStatus.js";
 import { SegmentedControl } from "./components/SegmentedControl/SegmentedControl.js";
 import { SettingField } from "./components/SettingField/SettingField.js";
 import { SettingsSection } from "./components/SettingsSection/SettingsSection.js";
 import { ThemePreview } from "./components/ThemePreview/ThemePreview.js";
+import { Toast } from "./components/Toast/Toast.js";
 import { usePreviewPage } from "./hooks/usePreviewPage.js";
 import { useSaveShortcut } from "./hooks/useSaveShortcut.js";
 import { useSettings } from "./hooks/useSettings.js";
@@ -96,7 +96,7 @@ export function Settings() {
             formId={SETTINGS_FORM_ID}
           />
         </HeaderActions>
-        <SaveStatus saved={settings.save.status === "saved"} />
+        <Toast message={settings.save.status === "saved" ? "Saved." : null} />
         {settings.save.status === "error" && (
           <SaveFailedPanel message={settings.save.message} />
         )}

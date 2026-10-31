@@ -134,9 +134,10 @@ describe("Editor: saving", () => {
     expect(screen.getByText("Unsaved changes")).toBeDefined();
 
     fireEvent.click(saveButton());
+    // It shows in the live region, which announces it.
     expect(
-      (await screen.findByRole("status", { name: "" })).textContent,
-    ).toContain("Saved.");
+      (await screen.findByText("Saved.")).closest('[role="status"]'),
+    ).not.toBeNull();
     expect((await store.read("a.md")).content).toBe("# A\n\nMore\n");
     expect(saveButton().disabled).toBe(true);
     expect(screen.getByText("No changes")).toBeDefined();
