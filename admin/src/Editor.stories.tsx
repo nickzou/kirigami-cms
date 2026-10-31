@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { Editor } from "./Editor.js";
 import { failures, installFakeApi } from "./fake-api.js";
 import { events } from "./fake-events.js";
@@ -99,6 +99,7 @@ async function showPreview(canvas: ReturnType<typeof within>) {
   return canvas.findByTitle("Preview of blog/hello.md");
 }
 
+/** The new frame loads unseen over the old one, and takes its place when it has loaded. */
 export const PreviewReloadsAfterABuild: Story = {
   beforeEach: () => installFakeApi(hello).restore,
   play: async ({ canvasElement }) => {
@@ -106,11 +107,16 @@ export const PreviewReloadsAfterABuild: Story = {
     const before = await showPreview(canvas);
     await waitFor(() => expect(events.listeners()).toBe(1));
     events.reload();
-    await waitFor(async () =>
-      expect(await canvas.findByTitle("Preview of blog/hello.md")).not.toBe(
-        before,
-      ),
-    );
+    // Once the new frame has loaded it is the only one, in the old one's place.
+    // (Where frames do not really load, as in the test runner, this plays the
+    // browser's part.)
+    await waitFor(() => {
+      const frames = canvas.getAllByTitle("Preview of blog/hello.md");
+      if (frames.length === 2) fireEvent.load(frames[1] as Element);
+      expect(frames).toHaveLength(1);
+      expect(frames[0]).not.toBe(before);
+    });
+    await expect(before.isConnected).toBe(false);
   },
 };
 

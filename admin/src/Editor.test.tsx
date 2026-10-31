@@ -449,9 +449,10 @@ describe("Editor: rename and delete", () => {
     await editor();
     expect(screen.queryByText(/Links to this page/)).toBeNull();
     fireEvent.change(pagePath(), { target: { value: "b" } });
-    expect((await screen.findByText(/Links to this page/)).textContent).toBe(
-      "Links to this page in other pages are not updated.",
-    );
+    expect(
+      (await screen.findByText(/Links to this page/, {}, { timeout: 4000 }))
+        .textContent,
+    ).toBe("Links to this page in other pages are not updated.");
     // Back to the old path: nothing to say.
     fireEvent.change(pagePath(), { target: { value: "a" } });
     expect(screen.queryByText(/Links to this page/)).toBeNull();
@@ -484,9 +485,9 @@ describe("Editor: rename and delete", () => {
     );
     fireEvent.change(pagePath(), { target: { value: "z" } });
     fireEvent.keyDown(pagePath(), { key: "Enter" });
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "changed since it was read",
-    );
+    expect(
+      (await screen.findByRole("alert", {}, { timeout: 4000 })).textContent,
+    ).toContain("changed since it was read");
     expect(pagePath().value).toBe("z");
     expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
   });

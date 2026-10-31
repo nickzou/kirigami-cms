@@ -39,6 +39,15 @@ const showPreview = async () =>
 
 const frame = () =>
   screen.findByTitle("Preview of blog/hello.md") as Promise<HTMLIFrameElement>;
+/** A reload loads the new frame unseen; this is the browser finishing that load. */
+const finishReload = async () => {
+  await waitFor(() =>
+    expect(screen.getAllByTitle("Preview of blog/hello.md")).toHaveLength(2),
+  );
+  fireEvent.load(
+    screen.getAllByTitle("Preview of blog/hello.md")[1] as Element,
+  );
+};
 const hello = { "blog/hello.md": "# Hello\n" };
 
 describe("Editor: preview", () => {
@@ -59,14 +68,20 @@ describe("Editor: preview", () => {
     ).toBe("/");
   });
 
-  it("loads the preview again, as a new frame, after a good build", async () => {
+  it("loads the preview again, as a new frame, after a good build, keeping the old one until then", async () => {
     open("/pages/blog/hello.md", hello);
     await showPreview();
     const before = await frame();
     await waitFor(() => expect(events.listeners()).toBe(1));
     act(() => events.reload());
-    await waitFor(async () => expect(await frame()).not.toBe(before));
+    // The new frame loads unseen over the old one, which stays on screen.
+    await waitFor(() =>
+      expect(screen.getAllByTitle("Preview of blog/hello.md")).toHaveLength(2),
+    );
+    expect(before.isConnected).toBe(true);
+    await finishReload();
     expect(before.isConnected).toBe(false);
+    expect(await frame()).not.toBe(before);
   });
 
   it("keeps the editor's text and shows no error after a reload", async () => {
@@ -104,6 +119,7 @@ describe("Editor: preview", () => {
     await screen.findByRole("alert");
     act(() => events.reload());
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    await finishReload();
     expect(await frame()).not.toBe(before);
   });
 
