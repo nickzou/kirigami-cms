@@ -6,7 +6,8 @@ import { BrandLink } from "../BrandLink/BrandLink.js";
  * (linking home; just the logo when narrower than 640px), then the screen's
  * `title`, and on the right whatever is passed as `children` (see
  * `HeaderActions`). A tablet and up has the product name and the menu in the
- * sidebar instead.
+ * sidebar instead, and the header stays at the top while the page scrolls
+ * under it.
  */
 export function AppHeader({
   title,
@@ -17,7 +18,7 @@ export function AppHeader({
   children?: ReactNode;
 }) {
   return (
-    <header className=":uno: flex h-[60px] items-center justify-start gap-4 bg-surface px-4 shadow">
+    <header className=":uno: flex h-[60px] items-center justify-start gap-4 bg-surface px-4 shadow md:sticky md:top-0 md:z-20">
       {/* From a tablet width the logo lives in the sidebar instead. */}
       <div className=":uno: md:hidden">
         <BrandLink markOnPhone />
