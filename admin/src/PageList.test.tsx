@@ -122,8 +122,14 @@ describe("PageList: new page", () => {
   it("creates a page with a starter heading and opens it in the editor", async () => {
     const store = manage({ "index.md": "# Home\n" });
     fireEvent.click(await screen.findByRole("button", { name: "New page" }));
-    fireEvent.change(await screen.findByLabelText("Name"), {
-      target: { value: "blog/hello-world" },
+    fireEvent.change(await screen.findByLabelText("Folder"), {
+      target: { value: "/new" },
+    });
+    fireEvent.change(await screen.findByLabelText("New folder name"), {
+      target: { value: "blog" },
+    });
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "hello-world" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() =>
@@ -173,7 +179,11 @@ describe("PageList: new page", () => {
       "Folder",
     )) as HTMLSelectElement;
     expect(folder.value).toBe("blog");
-    expect([...folder.options].map((o) => o.value)).toEqual(["", "blog"]);
+    expect([...folder.options].map((o) => o.value)).toEqual([
+      "",
+      "blog",
+      "/new",
+    ]);
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "second" },
     });
@@ -184,6 +194,19 @@ describe("PageList: new page", () => {
       ),
     );
     expect(await pathsOf(store)).toContain("blog/second.md");
+  });
+
+  it("will not take a slash in the page's name", async () => {
+    manage({ "index.md": "# Home\n" });
+    fireEvent.click(await screen.findByRole("button", { name: "New page" }));
+    fireEvent.change(await screen.findByLabelText("Name"), {
+      target: { value: "blog/hello" },
+    });
+    expect((await screen.findByRole("alert")).textContent).toContain("slash");
+    expect(
+      (screen.getByRole("button", { name: "Create" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 
   it("does not take a typed .md, since the extension is fixed", async () => {
