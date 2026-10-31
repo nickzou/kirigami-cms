@@ -8,8 +8,6 @@ export { pageHref } from "../PageRow/PageRow.js";
 
 export interface PageListViewProps {
   pages: readonly PageSummary[];
-  /** When given, each row has a Rename button. */
-  onRename?: (page: PageSummary) => void;
   /** When given, each row has a Delete button. */
   onDelete?: (page: PageSummary) => void;
 }
@@ -24,7 +22,7 @@ const folderId = (prefix: string, path: string): string =>
  * nothing is hidden until you close it. A folder exists because a page is in
  * it. At each level the pages come first and the folders after them.
  */
-export function PageListView({ pages, onRename, onDelete }: PageListViewProps) {
+export function PageListView({ pages, onDelete }: PageListViewProps) {
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
   const tree = useMemo(() => groupPages(pages), [pages]);
   const idPrefix = useId();
@@ -54,7 +52,6 @@ export function PageListView({ pages, onRename, onDelete }: PageListViewProps) {
           key={page.path}
           page={page}
           depth={depth}
-          onRename={onRename}
           onDelete={onDelete}
         />
       ))}

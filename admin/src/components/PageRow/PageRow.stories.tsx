@@ -26,14 +26,10 @@ export const Default: Story = {};
 
 export const Nested: Story = { args: { depth: 2 } };
 
-export const WithActions: Story = {
-  args: { onRename: fn(), onDelete: fn() },
+export const WithDelete: Story = {
+  args: { onDelete: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Rename blog/hello.md" }),
-    );
-    await expect(args.onRename).toHaveBeenCalledWith(args.page);
     await userEvent.click(
       canvas.getByRole("button", { name: "Delete blog/hello.md" }),
     );
@@ -49,7 +45,6 @@ export const LongNames: Story = {
         "A very long title that goes on and on to see how the row copes when there is not enough room",
       version: "1",
     },
-    onRename: fn(),
     onDelete: fn(),
   },
 };

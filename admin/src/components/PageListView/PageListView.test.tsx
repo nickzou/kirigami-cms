@@ -120,16 +120,9 @@ describe("PageListView: folders", () => {
     expect(within(target as HTMLElement).getAllByRole("link")).toHaveLength(2);
   });
 
-  it("keeps whole paths for rename and delete, whatever folder a page is in", () => {
-    const onRename = vi.fn();
+  it("keeps the whole path for delete, whatever folder a page is in", () => {
     const onDelete = vi.fn();
-    show(pages, { onRename, onDelete });
-    fireEvent.click(
-      screen.getByRole("button", { name: "Rename blog/hello.md" }),
-    );
-    expect(onRename).toHaveBeenCalledWith(
-      expect.objectContaining({ path: "blog/hello.md" }),
-    );
+    show(pages, { onDelete });
     fireEvent.click(
       screen.getByRole("button", { name: "Delete docs/guides/start.md" }),
     );

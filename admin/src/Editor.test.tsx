@@ -457,6 +457,25 @@ describe("Editor: rename and delete", () => {
     expect((await store.list()).map((e) => e.path)).toEqual(["a.md", "b.md"]);
   });
 
+  it("shows what the server refuses, such as a page that changed meanwhile", async () => {
+    const store = serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    await editor();
+    // Someone else edits the page after it was loaded.
+    await store.write(
+      "a.md",
+      "# Changed\n",
+      (await store.read("a.md")).version,
+    );
+    fireEvent.change(pagePath(), { target: { value: "z" } });
+    fireEvent.keyDown(pagePath(), { key: "Enter" });
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "changed since it was read",
+    );
+    expect(pagePath().value).toBe("z");
+    expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
+  });
+
   it("cannot rename or delete while there are unsaved changes", async () => {
     serve({ "a.md": "# A\n" });
     open("/pages/a.md");
