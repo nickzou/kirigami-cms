@@ -276,3 +276,33 @@ export const RenameAndDeleteWaitForASave: Story = {
     await expect(canvas.getByRole("button", { name: "Delete" })).toBeDisabled();
   },
 };
+
+/** The preview shows the saved page, so unsaved text is saved when you switch to it. */
+export const SavesWhenSwitchingToPreview: Story = {
+  beforeEach: () => installFakeApi(hello).restore,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(await canvas.findByLabelText("Markdown"), " More.");
+    await expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled();
+    await expect(await showPreview(canvas)).toBeVisible();
+    await waitFor(() => expect(canvas.getByText("Saved.")).toBeVisible());
+    await expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled();
+  },
+};
+
+/** If the save is refused, the view stays on the text, where the problem is shown. */
+export const StaysOnTheTextWhenTheSaveFails: Story = {
+  beforeEach: () => installFakeApi(hello, failures.conflictOnSave).restore,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(await canvas.findByLabelText("Markdown"), " More.");
+    await userEvent.click(canvas.getByRole("radio", { name: "Preview" }));
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "changed since you opened it",
+    );
+    await expect(canvas.getByRole("radio", { name: "Editor" })).toBeChecked();
+    await expect(
+      canvas.queryByTitle("Preview of blog/hello.md"),
+    ).not.toBeInTheDocument();
+  },
+};
