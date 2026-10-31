@@ -5,6 +5,8 @@ import { folderPaths } from "../../page-tree.js";
 import { Alert } from "../Alert/Alert.js";
 import { Button } from "../Button/Button.js";
 import { Dialog } from "../Dialog/Dialog.js";
+import { Select } from "../Select/Select.js";
+import { TextField } from "../TextField/TextField.js";
 
 export interface NewPageDialogProps {
   /** The paths of the pages there already are. */
@@ -31,8 +33,6 @@ export function NewPageDialog({
   onCreate,
   onClose,
 }: NewPageDialogProps) {
-  const folderId = useId();
-  const nameId = useId();
   const helpId = useId();
   const folders = useMemo(() => folderPaths(others ?? []), [others]);
   const [folder, setFolder] = useState(initialFolder);
@@ -64,19 +64,13 @@ export function NewPageDialog({
     }
   }
 
-  const field =
-    ":uno: mt-1 block w-full rounded border border-solid border-line bg-bg p-2 text-text";
   return (
     <Dialog title="New page" onClose={onClose}>
-      <form onSubmit={submit}>
-        <label htmlFor={folderId} className=":uno: font-bold">
-          Folder
-        </label>
-        <select
-          id={folderId}
+      <form onSubmit={submit} className=":uno: flex flex-col gap-4">
+        <Select
+          label="Folder"
           value={folder}
           onChange={(event) => setFolder(event.target.value)}
-          className={`${field} [font:inherit]`}
         >
           <option value="">Top level</option>
           {folders.map((path) => (
@@ -84,14 +78,13 @@ export function NewPageDialog({
               {path}
             </option>
           ))}
-        </select>
-        <label htmlFor={nameId} className=":uno: mt-4 block font-bold">
-          Name
-        </label>
-        <div className=":uno: mt-1 flex items-center rounded border border-solid border-line bg-bg px-2 focus-within:border-accent">
-          <input
-            id={nameId}
+        </Select>
+        <div>
+          <TextField
+            label="Name"
             autoFocus
+            mono
+            suffix={EXTENSION}
             value={name}
             onChange={(event) => {
               // Typing the extension is no use: it is added.
@@ -102,24 +95,17 @@ export function NewPageDialog({
             aria-invalid={problem !== undefined}
             spellCheck={false}
             placeholder="hello"
-            className=":uno: min-w-0 flex-1 border-0 bg-transparent py-2 font-mono text-text focus:outline-none"
           />
-          <span
-            aria-hidden="true"
-            className=":uno: shrink-0 font-mono text-muted select-none"
-          >
-            {EXTENSION}
-          </span>
-        </div>
-        <p id={helpId} className=":uno: mt-2 mb-0 text-sm text-muted">
-          Type a folder and a slash to make a new folder, like{" "}
-          <code>drafts/hello</code>.
-        </p>
-        {problem && (
-          <p role="alert" className=":uno: mt-2 mb-0 text-sm text-danger">
-            {problem}
+          <p id={helpId} className=":uno: mt-2 mb-0 text-sm text-muted">
+            Type a folder and a slash to make a new folder, like{" "}
+            <code>drafts/hello</code>.
           </p>
-        )}
+          {problem && (
+            <p role="alert" className=":uno: mt-2 mb-0 text-sm text-danger">
+              {problem}
+            </p>
+          )}
+        </div>
         {failure && <Alert tone="error">{failure}</Alert>}
         <div className=":uno: mt-6 flex justify-end gap-3">
           <Button onClick={onClose}>Cancel</Button>
