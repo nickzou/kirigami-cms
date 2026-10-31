@@ -234,7 +234,12 @@ async function dev(
   const watcher = watchFolder(site, {
     ignore,
     relevant: isSourcePath,
-    onChange: () => void live.rebuild(),
+    onChange: () => {
+      // Open admin tabs hear of the change at once (an edit made outside the
+      // admin shows up in the editor), then of how the rebuild went.
+      hub.publish({ type: "changed" });
+      void live.rebuild();
+    },
     onError: (error) => io.err(`Cannot watch ${site}: ${error.message}`),
   });
   io.out(`Serving at ${server.url} (press Ctrl+C to stop)`);

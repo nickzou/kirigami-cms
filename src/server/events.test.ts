@@ -48,4 +48,20 @@ describe("createEventHub", () => {
     hub.subscribe(late.listener);
     expect(late.seen).toEqual([]);
   });
+
+  it("tells subscribers of a change, and does not forget a current error", () => {
+    const hub = createEventHub();
+    hub.publish({ type: "error", message: "bad" });
+    const a = collect();
+    hub.subscribe(a.listener);
+    hub.publish({ type: "changed" });
+    expect(a.seen).toEqual([
+      { type: "error", message: "bad" },
+      { type: "changed" },
+    ]);
+    // A late subscriber still gets the error, and not the change.
+    const late = collect();
+    hub.subscribe(late.listener);
+    expect(late.seen).toEqual([{ type: "error", message: "bad" }]);
+  });
 });
