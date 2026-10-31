@@ -62,7 +62,7 @@ export function Editor({ path }: { path: string }) {
   if (load.status === "loading") {
     return (
       <>
-        <HeaderTitle>{path}</HeaderTitle>
+        <HeaderTitle before={<BackLink compact />}>{path}</HeaderTitle>
         <LoadingMessage />
       </>
     );
@@ -71,7 +71,7 @@ export function Editor({ path }: { path: string }) {
   if (load.status === "error") {
     return (
       <>
-        <HeaderTitle>{path}</HeaderTitle>
+        <HeaderTitle before={<BackLink compact />}>{path}</HeaderTitle>
         <ErrorPanel
           message={
             load.missing
@@ -80,7 +80,6 @@ export function Editor({ path }: { path: string }) {
           }
           onRetry={load.missing ? undefined : editor.reload}
         />
-        <BackLink />
       </>
     );
   }
@@ -103,8 +102,7 @@ export function Editor({ path }: { path: string }) {
         }}
         className=":uno: -mx-4 min-h-[calc(100vh-5rem)] px-4 pt-4 pb-28 md:mx-auto md:max-w-[55rem] md:rounded-t-lg md:px-12 md:pt-8"
       >
-        <div className=":uno: mb-4 flex items-center justify-between gap-3 [&>p]:m-0">
-          <BackLink />
+        <div className=":uno: mb-4 flex items-center justify-end gap-3">
           {editor.version !== undefined && (
             <div className=":uno: flex gap-2">
               <Button
@@ -126,7 +124,7 @@ export function Editor({ path }: { path: string }) {
             </div>
           )}
         </div>
-        <HeaderTitle>{path}</HeaderTitle>
+        <HeaderTitle before={<BackLink compact />}>{path}</HeaderTitle>
         {build.error !== null && <BuildProblem message={build.error} />}
         <HeaderActions>
           <SaveControls
