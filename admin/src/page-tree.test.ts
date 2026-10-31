@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countPages, fileName, groupPages } from "./page-tree.js";
+import { countPages, groupPages } from "./page-tree.js";
 
 const page = (path: string) => ({ path, title: path, version: "v" });
 const paths = (pages: { path: string }[]) => pages.map((p) => p.path);
@@ -84,12 +84,5 @@ describe("countPages", () => {
     ]);
     expect(countPages(tree)).toBe(4);
     expect(countPages(tree.folders[0] as never)).toBe(3);
-  });
-});
-
-describe("fileName", () => {
-  it("is the last part of a path", () => {
-    expect(fileName("blog/2026/post.md")).toBe("post.md");
-    expect(fileName("index.md")).toBe("index.md");
   });
 });

@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { PageSummary } from "../../api.js";
-import { fileName, rowIndent } from "../../page-tree.js";
+import { rowIndent } from "../../page-tree.js";
 import { Button } from "../Button/Button.js";
 
 /** The address of a page's editor, with each path segment encoded. */
@@ -18,7 +18,7 @@ export interface PageRowProps {
 }
 
 /**
- * One page in the list: its title and file name, linking to the editor, with
+ * One page in the list: its title, linking to the editor, with
  * optional Rename and Delete. It draws its own top border, so a list of rows
  * never doubles one up.
  */
@@ -28,12 +28,9 @@ export function PageRow({ page, depth, onRename, onDelete }: PageRowProps) {
       <Link
         to={pageHref(page.path)}
         style={{ paddingLeft: rowIndent(depth) }}
-        className=":uno: flex min-w-0 flex-1 justify-between gap-4 py-3 pr-4 text-text no-underline hover:bg-accent-soft"
+        className=":uno: flex min-w-0 flex-1 gap-4 py-3 pr-4 text-text no-underline hover:bg-accent-soft"
       >
         <strong>{page.title}</strong>
-        <span className=":uno: truncate font-mono text-sm text-muted">
-          {fileName(page.path)}
-        </span>
       </Link>
       {(onRename || onDelete) && (
         <div className=":uno: flex shrink-0 gap-2 pr-3 pl-1">

@@ -70,12 +70,12 @@ export const RenamesAPage: Story = {
       within(dialog).getByRole("button", { name: "Rename" }),
     );
     await waitFor(() => expect(canvas.queryByRole("dialog")).toBeNull());
-    // It now sits in a new folder, under its file name.
+    // It now sits in a new folder.
     await expect(
       await canvas.findByRole("button", { name: /^notes/ }),
     ).toBeVisible();
     await expect(
-      await canvas.findByRole("link", { name: /hello\.md/ }),
+      await canvas.findByRole("link", { name: /Hello, world/ }),
     ).toHaveAttribute("href", "/pages/notes/hello.md");
   },
 };

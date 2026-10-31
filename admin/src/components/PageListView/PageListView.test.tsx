@@ -52,10 +52,10 @@ describe("PageListView: folders", () => {
     expect(screen.getByRole("link", { name: /Start/ })).toBeDefined();
   });
 
-  it("shows a page in a folder by its file name, not its whole path", () => {
+  it("shows a page by its title, and links it to its whole path", () => {
     show(pages);
     const link = screen.getByRole("link", { name: /Hello/ });
-    expect(link.textContent).toBe("Hellohello.md");
+    expect(link.textContent).toBe("Hello");
     // The link still goes to the whole path.
     expect(link.getAttribute("href")).toBe("/pages/blog/hello.md");
   });

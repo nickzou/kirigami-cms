@@ -50,12 +50,8 @@ describe("PageList", () => {
     );
     show();
     const links = await screen.findAllByRole("link");
-    // Top-level pages first, then the folders; a page in a folder shows its
-    // file name, not its path.
-    expect(links.map((l) => l.textContent)).toEqual([
-      "Homeindex.md",
-      "My postmy post.md",
-    ]);
+    // Top-level pages first, then the folders; each shows its title.
+    expect(links.map((l) => l.textContent)).toEqual(["Home", "My post"]);
     expect(links.map((l) => l.getAttribute("href"))).toEqual([
       "/pages/index.md",
       "/pages/blog/my%20post.md",
@@ -245,7 +241,7 @@ describe("PageList: delete", () => {
     expect(await pathsOf(store)).toEqual(["b.md"]);
     expect(
       (await screen.findAllByRole("link")).map((link) => link.textContent),
-    ).toEqual(["Bb.md"]);
+    ).toEqual(["B"]);
   });
 
   it("keeps the page when cancelled", async () => {
