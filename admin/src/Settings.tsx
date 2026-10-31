@@ -3,6 +3,7 @@ import { BackLink } from "./components/BackLink/BackLink.js";
 import { ConflictPanel } from "./components/ConflictPanel/ConflictPanel.js";
 import { ErrorPanel } from "./components/ErrorPanel/ErrorPanel.js";
 import { HeaderActions } from "./components/HeaderActions/HeaderActions.js";
+import { HeaderTitle } from "./components/HeaderTitle/HeaderTitle.js";
 import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
 import { SaveControls } from "./components/SaveControls/SaveControls.js";
 import { SaveFailedPanel } from "./components/SaveFailedPanel/SaveFailedPanel.js";
@@ -46,7 +47,7 @@ export function Settings() {
   if (settings.load.status === "loading") {
     return (
       <>
-        <h1>Settings</h1>
+        <HeaderTitle before={<BackLink />}>Settings</HeaderTitle>
         <LoadingMessage>Loading the settings…</LoadingMessage>
       </>
     );
@@ -54,12 +55,11 @@ export function Settings() {
   if (settings.load.status === "error") {
     return (
       <>
-        <h1>Settings</h1>
+        <HeaderTitle before={<BackLink />}>Settings</HeaderTitle>
         <ErrorPanel
           message={`Could not load the settings: ${settings.load.message}`}
           onRetry={settings.reload}
         />
-        <BackLink />
       </>
     );
   }
@@ -87,10 +87,7 @@ export function Settings() {
   return (
     <>
       <div className=":uno: -mx-4 min-h-[calc(100vh-5rem)] border border-solid border-line border-b-0 bg-surface px-4 pt-4 pb-28 shadow md:mx-auto md:rounded-t-lg md:px-8 md:pt-8">
-        <div className=":uno: mb-4 [&>p]:m-0">
-          <BackLink />
-        </div>
-        <h1>Settings</h1>
+        <HeaderTitle before={<BackLink />}>Settings</HeaderTitle>
         <HeaderActions>
           <SaveControls
             dirty={settings.dirty}

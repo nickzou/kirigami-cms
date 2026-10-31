@@ -9,6 +9,3 @@ const meta = {
 export default meta;
 
 export const Default: StoryObj<typeof meta> = {};
-
-/** Just the chevron, as it sits in the header. */
-export const Compact: StoryObj<typeof meta> = { args: { compact: true } };

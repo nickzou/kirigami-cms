@@ -22,3 +22,5 @@ export const EditorRoute: Story = {
 };
 
 export const UnknownRoute: Story = { parameters: { route: "/nowhere" } };
+
+export const SettingsRoute: Story = { parameters: { route: "/settings" } };

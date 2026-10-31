@@ -64,7 +64,7 @@ export function Editor({ path }: { path: string }) {
   if (load.status === "loading") {
     return (
       <>
-        <HeaderTitle before={<BackLink compact />}>{path}</HeaderTitle>
+        <HeaderTitle before={<BackLink />}>{path}</HeaderTitle>
         <LoadingMessage />
       </>
     );
@@ -73,7 +73,7 @@ export function Editor({ path }: { path: string }) {
   if (load.status === "error") {
     return (
       <>
-        <HeaderTitle before={<BackLink compact />}>{path}</HeaderTitle>
+        <HeaderTitle before={<BackLink />}>{path}</HeaderTitle>
         <ErrorPanel
           message={
             load.missing
@@ -120,7 +120,7 @@ export function Editor({ path }: { path: string }) {
         </div>
         <PagePathField
           path={path}
-          before={<BackLink compact />}
+          before={<BackLink />}
           others={others}
           lockedReason={
             editor.dirty || editor.saving
