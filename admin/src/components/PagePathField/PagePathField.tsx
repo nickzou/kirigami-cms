@@ -64,6 +64,12 @@ export function PagePathField({
   // Nothing to complain about while the field is empty: leaving it puts the path back.
   const message = failure ?? (input.trim() === "" ? undefined : problem);
 
+  // While a good new path is waiting to be confirmed, say what a rename leaves.
+  const note =
+    !message && !unchanged && input.trim() !== ""
+      ? "Links to this page in other pages are not updated."
+      : undefined;
+
   const revert = () => {
     setInput(stemOf(path));
     setFailure(undefined);
@@ -112,7 +118,7 @@ export function PagePathField({
           title={lockedReason}
           spellCheck={false}
           aria-invalid={message !== undefined}
-          aria-describedby={message ? messageId : undefined}
+          aria-describedby={message || note ? messageId : undefined}
           onFocus={onStartEditing}
           onChange={(event) => {
             // Typing the extension is no use: it is already there.
@@ -143,6 +149,15 @@ export function PagePathField({
     </p>
   );
 
+  const hint = note && (
+    <p
+      id={messageId}
+      className=":uno: absolute top-full left-0 z-10 m-0 mt-1 max-w-md rounded border border-solid border-line bg-surface px-3 py-2 text-sm text-muted shadow-lg"
+    >
+      {note}
+    </p>
+  );
+
   return slot ? (
     <>
       {createPortal(
@@ -153,12 +168,14 @@ export function PagePathField({
         slot,
       )}
       {alert && createPortal(alert, slot)}
+      {hint && createPortal(hint, slot)}
     </>
   ) : (
     <>
       {before}
       {field}
       {alert}
+      {hint}
     </>
   );
 }

@@ -442,6 +442,20 @@ describe("Editor: rename and delete", () => {
     expect((await store.list()).map((e) => e.path)).toEqual(["notes/b.md"]);
   });
 
+  it("says that links to the page are not updated, while a new path waits", async () => {
+    serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    await editor();
+    expect(screen.queryByText(/Links to this page/)).toBeNull();
+    fireEvent.change(pagePath(), { target: { value: "b" } });
+    expect((await screen.findByText(/Links to this page/)).textContent).toBe(
+      "Links to this page in other pages are not updated.",
+    );
+    // Back to the old path: nothing to say.
+    fireEvent.change(pagePath(), { target: { value: "a" } });
+    expect(screen.queryByText(/Links to this page/)).toBeNull();
+  });
+
   it("warns about a path another page has, once the other pages are known", async () => {
     const store = serve({ "a.md": "# A\n", "b.md": "# B\n" });
     open("/pages/a.md");
