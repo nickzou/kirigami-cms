@@ -11,6 +11,8 @@ export interface PageListViewProps {
   pages: readonly PageSummary[];
   /** When given, each row has a Delete button. */
   onDelete?: (page: PageSummary) => void;
+  /** When given, each folder row has a button that starts a new page in it. */
+  onNewPage?: (folder: string) => void;
 }
 
 /** A safe `id` for a folder, whatever characters its name has (a space would split `aria-controls`). */
@@ -24,7 +26,11 @@ const folderId = (prefix: string, path: string): string =>
  * after a reload (a page added to it later does not open it). A folder exists
  * because a page is in it. At each level the pages come first and the folders after them.
  */
-export function PageListView({ pages, onDelete }: PageListViewProps) {
+export function PageListView({
+  pages,
+  onDelete,
+  onNewPage,
+}: PageListViewProps) {
   // Remembered in this browser, so a folder you closed stays closed.
   const [closed, toggle] = useStoredSet("kirigami.closed-folders");
   const tree = useMemo(() => groupPages(pages), [pages]);
@@ -58,6 +64,7 @@ export function PageListView({ pages, onDelete }: PageListViewProps) {
           depth={depth}
           open={!closed.has(child.path)}
           onToggle={() => toggle(child.path)}
+          onNewPage={onNewPage && (() => onNewPage(child.path))}
           contentsId={folderId(idPrefix, child.path)}
         >
           {renderFolder(child, depth + 1)}

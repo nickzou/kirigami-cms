@@ -55,3 +55,18 @@ export function countPages(folder: FolderNode): number {
 
 /** How far a row is pushed in for each level of folder it is inside. */
 export const rowIndent = (depth: number): string => `${1 + depth * 1.5}rem`;
+
+/**
+ * Every folder the pages are in, each as its path (`docs`, `docs/guides`),
+ * including the folders only holding other folders, in order.
+ */
+export function folderPaths(pagePaths: readonly string[]): string[] {
+  const folders = new Set<string>();
+  for (const path of pagePaths) {
+    const names = path.split("/").slice(0, -1);
+    for (let i = 1; i <= names.length; i += 1) {
+      folders.add(names.slice(0, i).join("/"));
+    }
+  }
+  return [...folders].sort(byName);
+}

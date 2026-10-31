@@ -18,7 +18,9 @@ type State =
   | { status: "error"; message: string }
   | { status: "ready"; pages: PageSummary[] };
 
-type Dialog = { kind: "new" } | { kind: "delete"; page: PageSummary };
+type Dialog =
+  | { kind: "new"; folder: string }
+  | { kind: "delete"; page: PageSummary };
 
 /** Loads the site's pages and shows them, with new and delete. */
 export function PageList() {
@@ -67,17 +69,22 @@ export function PageList() {
   return (
     <>
       <HeaderActions>
-        <Button variant="primary" onClick={() => setDialog({ kind: "new" })}>
+        <Button
+          variant="primary"
+          onClick={() => setDialog({ kind: "new", folder: "" })}
+        >
           New page
         </Button>
       </HeaderActions>
       <PageListView
         pages={state.pages}
         onDelete={(page) => setDialog({ kind: "delete", page })}
+        onNewPage={(folder) => setDialog({ kind: "new", folder })}
       />
       {dialog?.kind === "new" && (
         <NewPageDialog
           others={paths}
+          folder={dialog.folder}
           onClose={close}
           onCreate={async (path) => {
             await createPage(path, starterContent(path));

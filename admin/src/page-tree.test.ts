@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countPages, groupPages } from "./page-tree.js";
+import { countPages, folderPaths, groupPages } from "./page-tree.js";
 
 const page = (path: string) => ({ path, title: path, version: "v" });
 const paths = (pages: { path: string }[]) => pages.map((p) => p.path);
@@ -84,5 +84,14 @@ describe("countPages", () => {
     ]);
     expect(countPages(tree)).toBe(4);
     expect(countPages(tree.folders[0] as never)).toBe(3);
+  });
+});
+
+describe("folderPaths", () => {
+  it("lists every folder once, with the ones between, in order", () => {
+    expect(
+      folderPaths(["index.md", "docs/guides/a.md", "blog/b.md", "docs/c.md"]),
+    ).toEqual(["blog", "docs", "docs/guides"]);
+    expect(folderPaths(["index.md"])).toEqual([]);
   });
 });

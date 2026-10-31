@@ -47,7 +47,7 @@ export const NewPageWarnsOfASharedAddress: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "New page" }),
     );
-    await userEvent.type(await canvas.findByLabelText("Path"), "about");
+    await userEvent.type(await canvas.findByLabelText("Name"), "about");
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "about/index.md",
     );
