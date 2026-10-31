@@ -28,9 +28,9 @@ function serve(
   return store;
 }
 
-function open(path: string) {
+function open(path: string, state?: unknown) {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], {
-    initialEntries: [path],
+    initialEntries: [{ pathname: path, state }],
   });
   render(<RouterProvider router={router} />);
 }
@@ -530,5 +530,21 @@ describe("Editor: rename and delete", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
+  });
+});
+
+describe("Editor: rename from the page list", () => {
+  it("focuses the title field when opened with a rename request", async () => {
+    serve({ "a.md": "# A\n" });
+    open("/pages/a.md", { rename: true });
+    await editor();
+    expect(document.activeElement).toBe(pagePath());
+  });
+
+  it("leaves the focus alone when opened normally", async () => {
+    serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    await editor();
+    expect(document.activeElement).not.toBe(pagePath());
   });
 });

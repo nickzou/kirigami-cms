@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import type { PageSummary } from "../../api.js";
 import { rowIndent } from "../../page-tree.js";
-import { Button } from "../Button/Button.js";
+import { RowMenu } from "../RowMenu/RowMenu.js";
 
 /** The address of a page's editor, with each path segment encoded. */
 export const pageHref = (path: string): string =>
@@ -11,13 +11,13 @@ export interface PageRowProps {
   page: PageSummary;
   /** How many folders deep the row is, for how far it is pushed in. */
   depth: number;
-  /** When given, the row has a Delete button. */
+  /** When given, the row's menu has a Delete item. */
   onDelete?: (page: PageSummary) => void;
 }
 
 /**
  * One page in the list: its title, linking to the editor, with
- * an optional Delete. It draws its own top border, so a list of rows
+ * a menu (Rename, and Delete when given). It draws its own top border, so a list of rows
  * never doubles one up.
  */
 export function PageRow({ page, depth, onDelete }: PageRowProps) {
@@ -30,17 +30,27 @@ export function PageRow({ page, depth, onDelete }: PageRowProps) {
       >
         <strong>{page.title}</strong>
       </Link>
-      {onDelete && (
-        <div className=":uno: shrink-0 pr-3 pl-1">
-          <Button
-            size="small"
-            aria-label={`Delete ${page.path}`}
-            onClick={() => onDelete(page)}
-          >
-            Delete
-          </Button>
-        </div>
-      )}
+      <div className=":uno: shrink-0 pr-3 pl-1">
+        <RowMenu
+          label={`Actions for ${page.title}`}
+          items={[
+            {
+              label: "Rename",
+              to: pageHref(page.path),
+              state: { rename: true },
+            },
+            ...(onDelete
+              ? [
+                  {
+                    label: "Delete",
+                    danger: true,
+                    onSelect: () => onDelete(page),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      </div>
     </li>
   );
 }

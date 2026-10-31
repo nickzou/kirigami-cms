@@ -203,10 +203,18 @@ describe("PageList: new page", () => {
   });
 });
 
+/** Opens a row's menu and picks Delete. */
+async function chooseDelete(title: string) {
+  fireEvent.click(
+    await screen.findByRole("button", { name: `Actions for ${title}` }),
+  );
+  fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
+}
+
 describe("PageList: delete", () => {
   it("names the page, says it cannot be undone, and deletes it when confirmed", async () => {
     const store = manage({ "a.md": "# A\n", "b.md": "# B\n" });
-    fireEvent.click(await screen.findByRole("button", { name: "Delete a.md" }));
+    await chooseDelete("A");
     const dialog = await screen.findByRole("dialog", { name: "Delete a.md?" });
     expect(within(dialog).getByText(/cannot be undone/)).toBeDefined();
     fireEvent.click(
@@ -221,7 +229,7 @@ describe("PageList: delete", () => {
 
   it("keeps the page when cancelled", async () => {
     const store = manage({ "a.md": "# A\n" });
-    fireEvent.click(await screen.findByRole("button", { name: "Delete a.md" }));
+    await chooseDelete("A");
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(await pathsOf(store)).toEqual(["a.md"]);
@@ -229,7 +237,7 @@ describe("PageList: delete", () => {
 
   it("keeps the page and says so when it changed since the list was read", async () => {
     const store = manage({ "a.md": "# A\n" });
-    fireEvent.click(await screen.findByRole("button", { name: "Delete a.md" }));
+    await chooseDelete("A");
     await store.write(
       "a.md",
       "# Changed\n",

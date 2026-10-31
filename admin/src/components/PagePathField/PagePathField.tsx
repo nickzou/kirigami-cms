@@ -2,7 +2,9 @@ import {
   type KeyboardEvent,
   type ReactNode,
   useContext,
+  useEffect,
   useId,
+  useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
@@ -19,6 +21,8 @@ export interface PagePathFieldProps {
   others?: readonly string[];
   /** Why the path cannot be changed right now, or nothing if it can. */
   lockedReason?: string;
+  /** Focus the field (with the name selected) when it first shows, to rename right away. */
+  autoFocus?: boolean;
   /** The field was focused: a good time to fetch `others`. */
   onStartEditing?: () => void;
   /** Moves the page to this path. A refusal from the API is shown under the field. */
@@ -43,9 +47,17 @@ export function PagePathField({
   before,
   others,
   lockedReason,
+  autoFocus,
   onStartEditing,
   onRename,
 }: PagePathFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only when it first shows
+  useEffect(() => {
+    if (!autoFocus) return;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
   const slot = useContext(HeaderTitleSlot);
   const inputId = useId();
   const messageId = useId();
@@ -115,6 +127,7 @@ export function PagePathField({
       </label>
       <div className=":uno: flex w-fit max-w-full items-center rounded border border-solid border-transparent px-2 py-1 transition-[border-color,background-color] duration-200 ease-[ease-in-out] focus-within:border-accent focus-within:bg-bg hover:border-line motion-reduce:transition-none">
         <input
+          ref={inputRef}
           id={inputId}
           value={input}
           readOnly={lockedReason !== undefined}

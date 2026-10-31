@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { deletePage, listPages, renamePage } from "./api.js";
 import { BackLink } from "./components/BackLink/BackLink.js";
 import { BuildProblem } from "./components/BuildProblem/BuildProblem.js";
@@ -43,6 +43,9 @@ export function Editor({ path }: { path: string }) {
   // One view at a time, chosen with the segmented control.
   const [view, setView] = useState<"editor" | "preview">("editor");
   const navigate = useNavigate();
+  // "Rename" in the page list opens this screen with the title field ready.
+  const renameRequested =
+    (useLocation().state as { rename?: boolean } | null)?.rename === true;
   const [deleting, setDeleting] = useState(false);
   // The other pages' paths, fetched when the title field is first focused, so
   // it can say right away if a new path is taken. The server still has the last
@@ -122,6 +125,7 @@ export function Editor({ path }: { path: string }) {
         <PagePathField
           path={path}
           before={<BackLink />}
+          autoFocus={renameRequested}
           others={others}
           lockedReason={
             editor.dirty || editor.saving

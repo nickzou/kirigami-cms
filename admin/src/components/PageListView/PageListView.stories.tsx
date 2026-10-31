@@ -70,7 +70,7 @@ export const OpensAndCloses: Story = {
   },
 };
 
-/** Given a handler, each row has a Delete button beside its link. */
+/** Given a handler, each row's menu has a Delete item. */
 export const WithDelete: Story = {
   args: {
     ...Default.args,
@@ -79,7 +79,10 @@ export const WithDelete: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Delete blog/hello.md" }),
+      await canvas.findByRole("button", { name: "Actions for Hello, world" }),
+    );
+    await userEvent.click(
+      await within(document.body).findByRole("menuitem", { name: "Delete" }),
     );
     await expect(args.onDelete).toHaveBeenCalledWith(
       expect.objectContaining({ path: "blog/hello.md" }),

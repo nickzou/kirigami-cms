@@ -60,7 +60,10 @@ export const DeletesAfterConfirming: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Delete blog/hello.md" }),
+      await canvas.findByRole("button", { name: "Actions for Hello, world" }),
+    );
+    await userEvent.click(
+      await within(document.body).findByRole("menuitem", { name: "Delete" }),
     );
     await expect(await canvas.findByText(/cannot be undone/)).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Delete page" }));
