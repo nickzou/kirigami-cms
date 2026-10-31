@@ -11,7 +11,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PageSummary } from "../../api.js";
 import { PageListView } from "./PageListView.js";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
 
 const page = (path: string, title = path): PageSummary => ({
   path,
@@ -147,5 +150,89 @@ describe("PageListView: folders", () => {
     const id = folder("my notes").getAttribute("aria-controls") as string;
     expect(id).not.toMatch(/\s/);
     expect(document.getElementById(id)).not.toBeNull();
+  });
+});
+
+describe("PageListView: remembering closed folders", () => {
+  const pages = [
+    page("index.md", "Home"),
+    page("blog/hello.md", "Hello"),
+    page("docs/guides/start.md", "Start"),
+  ];
+  const closeBlog = () =>
+    fireEvent.click(screen.getByRole("button", { name: /^blog/ }));
+  const blog = () =>
+    screen.getByRole("button", { name: /^blog/ }).getAttribute("aria-expanded");
+
+  it("keeps a folder closed when the list is shown again", () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <PageListView pages={pages} />
+      </MemoryRouter>,
+    );
+    closeBlog();
+    expect(blog()).toBe("false");
+    unmount();
+
+    render(
+      <MemoryRouter>
+        <PageListView pages={pages} />
+      </MemoryRouter>,
+    );
+    expect(blog()).toBe("false");
+    // Others were not closed.
+    expect(
+      screen
+        .getByRole("button", { name: /^docs/ })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+  });
+
+  it("opens it again, and remembers that too", () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <PageListView pages={pages} />
+      </MemoryRouter>,
+    );
+    closeBlog();
+    closeBlog();
+    unmount();
+    render(
+      <MemoryRouter>
+        <PageListView pages={pages} />
+      </MemoryRouter>,
+    );
+    expect(blog()).toBe("true");
+  });
+
+  it("keeps a closed folder closed when a page is added to it", () => {
+    const view = (list: PageSummary[]) => (
+      <MemoryRouter>
+        <PageListView pages={list} />
+      </MemoryRouter>
+    );
+    const { rerender } = render(view(pages));
+    closeBlog();
+    rerender(view([...pages, page("blog/third.md", "Third")]));
+    expect(blog()).toBe("false");
+    expect(screen.queryByText("Third")).toBeNull();
+  });
+
+  it("still works when storage is blocked", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    render(
+      <MemoryRouter>
+        <PageListView pages={pages} />
+      </MemoryRouter>,
+    );
+    expect(blog()).toBe("true");
+    closeBlog();
+    expect(blog()).toBe("false");
+    vi.restoreAllMocks();
   });
 });
