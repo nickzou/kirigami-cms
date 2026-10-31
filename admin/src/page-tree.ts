@@ -56,3 +56,6 @@ export function countPages(folder: FolderNode): number {
 /** A page's file name: the last part of its path. */
 export const fileName = (path: string): string =>
   path.slice(path.lastIndexOf("/") + 1);
+
+/** How far a row is pushed in for each level of folder it is inside. */
+export const rowIndent = (depth: number): string => `${1 + depth * 1.5}rem`;
