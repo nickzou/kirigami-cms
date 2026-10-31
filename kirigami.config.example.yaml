@@ -12,9 +12,11 @@ content:
   store: local-folder
   # The folder of markdown files: relative to this file, or an absolute path.
   # It can be inside the project (./content) or anywhere else on this machine
-  # (../my-site, /Users/you/Sites/my-site). `~` is not expanded.
+  # (../my-site, /Users/you/Sites/my-site, ~/Sites/my-site). A leading `~/`
+  # means your home folder.
   path: ./content
 
 build:
-  # Where `kirigami build` writes the site, relative to this file.
+  # Where `kirigami build` writes the site, relative to this file (a leading
+  # `~/` means your home folder here too).
   out: ./dist
