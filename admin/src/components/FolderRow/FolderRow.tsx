@@ -35,7 +35,7 @@ export function FolderRow({
         aria-controls={contentsId}
         onClick={onToggle}
         style={{ paddingLeft: rowIndent(depth) }}
-        className=":uno: flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent py-3 pr-4 text-left text-text [font:inherit] hover:bg-subtle"
+        className=":uno: flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent py-3 pr-4 text-left text-text transition-colors duration-200 ease-[ease-in-out] [font:inherit] hover:bg-subtle motion-reduce:transition-none"
       >
         <ChevronRight
           size={16}
