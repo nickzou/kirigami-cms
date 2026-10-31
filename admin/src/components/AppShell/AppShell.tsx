@@ -54,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               title={
                 <div
                   ref={setTitleSlot}
-                  className=":uno: flex min-w-0 items-center gap-2"
+                  className=":uno: relative flex min-w-0 flex-1 items-center gap-2"
                 />
               }
             >
