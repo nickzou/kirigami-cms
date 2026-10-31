@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { PageRow } from "../PageRow/PageRow.js";
 import { FolderRow } from "./FolderRow.js";
 
@@ -76,5 +76,16 @@ export const Interactive: Story = {
     await userEvent.click(toggle);
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await expect(canvas.queryByText("Hello, world")).toBeNull();
+  },
+};
+
+/** Given a handler, the row has a button that starts a new page in the folder. */
+export const WithNewPage: Story = {
+  args: { onNewPage: fn() },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole("button", { name: "New page in blog" }),
+    );
+    await expect(args.onNewPage).toHaveBeenCalledWith(args.folder);
   },
 };

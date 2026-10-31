@@ -32,6 +32,8 @@ const send = (event: unknown) => {
 
 /** What the server tells the open admin tabs. */
 export const events = {
+  /** The content changed on disk (the server says so before it rebuilds). */
+  changed: () => send({ type: "changed" }),
   /** A good build landed. */
   reload: () => send({ type: "reload" }),
   /** A build failed. */

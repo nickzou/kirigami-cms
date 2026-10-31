@@ -10,7 +10,18 @@ import { ThemedDocsContainer } from "./DocsContainer.js";
 
 const preview: Preview = {
   // The editor listens for build events; stories play the dev server's part.
-  beforeEach: () => installFakeEvents(),
+  beforeEach: () => {
+    // What the admin remembers in the browser (closed folders, the thin
+    // sidebar) starts empty in each story, so no story depends on another.
+    try {
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("kirigami.")) localStorage.removeItem(key);
+      }
+    } catch {
+      // storage is blocked: nothing to clear
+    }
+    return installFakeEvents();
+  },
   // A fixed start, so everyone opens Storybook looking at the same thing.
   // "System" is still in the toolbar for anyone who wants it.
   initialGlobals: { theme: "light" },

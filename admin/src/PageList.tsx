@@ -11,6 +11,7 @@ import {
   PageListView,
   pageHref,
 } from "./components/PageListView/PageListView.js";
+import { useBuildEvents } from "./hooks/useBuildEvents.js";
 import { starterContent } from "./page-path.js";
 
 type State =
@@ -18,7 +19,9 @@ type State =
   | { status: "error"; message: string }
   | { status: "ready"; pages: PageSummary[] };
 
-type Dialog = { kind: "new" } | { kind: "delete"; page: PageSummary };
+type Dialog =
+  | { kind: "new"; folder: string }
+  | { kind: "delete"; page: PageSummary };
 
 /** Loads the site's pages and shows them, with new and delete. */
 export function PageList() {
@@ -44,6 +47,26 @@ export function PageList() {
     return () => controller.abort();
   }, [attempt]);
 
+  // Pages added, removed or renamed outside the admin (another editor, a git
+  // pull) show up when the server says the content changed. The admin's own
+  // changes are told too, which only reads the same list again.
+  const { changes } = useBuildEvents();
+  useEffect(() => {
+    if (changes === 0) return;
+    const controller = new AbortController();
+    listPages(controller.signal).then(
+      (pages) =>
+        setState((current) =>
+          current.status === "ready" ? { status: "ready", pages } : current,
+        ),
+      () => {
+        // Not worth a message: the list shown is still what it was, and the
+        // next change looks again.
+      },
+    );
+    return () => controller.abort();
+  }, [changes]);
+
   /** Loads the list again after a change, without a loading state in between. */
   const refresh = useCallback(async () => {
     setState({ status: "ready", pages: await listPages() });
@@ -67,17 +90,22 @@ export function PageList() {
   return (
     <>
       <HeaderActions>
-        <Button variant="primary" onClick={() => setDialog({ kind: "new" })}>
+        <Button
+          variant="primary"
+          onClick={() => setDialog({ kind: "new", folder: "" })}
+        >
           New page
         </Button>
       </HeaderActions>
       <PageListView
         pages={state.pages}
         onDelete={(page) => setDialog({ kind: "delete", page })}
+        onNewPage={(folder) => setDialog({ kind: "new", folder })}
       />
       {dialog?.kind === "new" && (
         <NewPageDialog
           others={paths}
+          folder={dialog.folder}
           onClose={close}
           onCreate={async (path) => {
             await createPage(path, starterContent(path));

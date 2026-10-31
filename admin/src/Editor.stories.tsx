@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { Editor } from "./Editor.js";
 import { failures, installFakeApi } from "./fake-api.js";
 import { events } from "./fake-events.js";
@@ -59,6 +59,59 @@ export const PageChangedElsewhere: Story = {
   },
 };
 
+let outside: ReturnType<typeof installFakeApi>["store"];
+
+/** What another program does: write the file, then the server says so. */
+async function editOutside(content: string) {
+  const path = "blog/hello.md";
+  await waitFor(() => expect(events.listeners()).toBe(1));
+  await outside.write(path, content, (await outside.read(path)).version);
+  events.changed();
+}
+
+/** Nothing unsaved: the new text is loaded quietly, and a toast says so. */
+export const EditedOutsideNothingUnsaved: Story = {
+  beforeEach: () => {
+    const api = installFakeApi(hello);
+    outside = api.store;
+    return api.restore;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByLabelText("Markdown");
+    await editOutside("# Changed in another editor\n");
+    await waitFor(async () =>
+      expect(await canvas.findByLabelText("Markdown")).toHaveValue(
+        "# Changed in another editor\n",
+      ),
+    );
+    await expect(
+      await canvas.findByText(/changed outside the admin/),
+    ).toBeVisible();
+  },
+};
+
+/** Unsaved text is kept, and the person chooses before a save is refused. */
+export const EditedOutsideWhileTyping: Story = {
+  beforeEach: () => {
+    const api = installFakeApi(hello);
+    outside = api.store;
+    return api.restore;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(await canvas.findByLabelText("Markdown"), " mine");
+    await editOutside("# Changed in another editor\n");
+    await expect(
+      await canvas.findByText(/This page changed outside the admin/),
+    ).toBeVisible();
+    // What was typed is still there, and the other editor's text is not.
+    const box = canvas.getByLabelText<HTMLTextAreaElement>("Markdown");
+    await expect(box.value).toContain(" mine");
+    await expect(box.value).not.toContain("another editor");
+  },
+};
+
 export const PageDeletedElsewhere: Story = {
   beforeEach: () => installFakeApi(hello, failures.goneOnSave).restore,
   play: async ({ canvasElement }) => {
@@ -99,6 +152,7 @@ async function showPreview(canvas: ReturnType<typeof within>) {
   return canvas.findByTitle("Preview of blog/hello.md");
 }
 
+/** The new frame loads unseen over the old one, and takes its place when it has loaded. */
 export const PreviewReloadsAfterABuild: Story = {
   beforeEach: () => installFakeApi(hello).restore,
   play: async ({ canvasElement }) => {
@@ -106,11 +160,16 @@ export const PreviewReloadsAfterABuild: Story = {
     const before = await showPreview(canvas);
     await waitFor(() => expect(events.listeners()).toBe(1));
     events.reload();
-    await waitFor(async () =>
-      expect(await canvas.findByTitle("Preview of blog/hello.md")).not.toBe(
-        before,
-      ),
-    );
+    // Once the new frame has loaded it is the only one, in the old one's place.
+    // (Where frames do not really load, as in the test runner, this plays the
+    // browser's part.)
+    await waitFor(() => {
+      const frames = canvas.getAllByTitle("Preview of blog/hello.md");
+      if (frames.length === 2) fireEvent.load(frames[1] as Element);
+      expect(frames).toHaveLength(1);
+      expect(frames[0]).not.toBe(before);
+    });
+    await expect(before.isConnected).toBe(false);
   },
 };
 

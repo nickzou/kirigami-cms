@@ -134,9 +134,10 @@ describe("Editor: saving", () => {
     expect(screen.getByText("Unsaved changes")).toBeDefined();
 
     fireEvent.click(saveButton());
+    // It shows in the live region, which announces it.
     expect(
-      (await screen.findByRole("status", { name: "" })).textContent,
-    ).toContain("Saved.");
+      (await screen.findByText("Saved.")).closest('[role="status"]'),
+    ).not.toBeNull();
     expect((await store.read("a.md")).content).toBe("# A\n\nMore\n");
     expect(saveButton().disabled).toBe(true);
     expect(screen.getByText("No changes")).toBeDefined();
@@ -442,6 +443,21 @@ describe("Editor: rename and delete", () => {
     expect((await store.list()).map((e) => e.path)).toEqual(["notes/b.md"]);
   });
 
+  it("says that links to the page are not updated, while a new path waits", async () => {
+    serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    await editor();
+    expect(screen.queryByText(/Links to this page/)).toBeNull();
+    fireEvent.change(pagePath(), { target: { value: "b" } });
+    expect(
+      (await screen.findByText(/Links to this page/, {}, { timeout: 4000 }))
+        .textContent,
+    ).toBe("Links to this page in other pages are not updated.");
+    // Back to the old path: nothing to say.
+    fireEvent.change(pagePath(), { target: { value: "a" } });
+    expect(screen.queryByText(/Links to this page/)).toBeNull();
+  });
+
   it("warns about a path another page has, once the other pages are known", async () => {
     const store = serve({ "a.md": "# A\n", "b.md": "# B\n" });
     open("/pages/a.md");
@@ -469,9 +485,9 @@ describe("Editor: rename and delete", () => {
     );
     fireEvent.change(pagePath(), { target: { value: "z" } });
     fireEvent.keyDown(pagePath(), { key: "Enter" });
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "changed since it was read",
-    );
+    expect(
+      (await screen.findByRole("alert", {}, { timeout: 4000 })).textContent,
+    ).toContain("changed since it was read");
     expect(pagePath().value).toBe("z");
     expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
   });

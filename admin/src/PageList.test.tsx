@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -10,6 +11,7 @@ import {
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakeApi } from "./fake-api.js";
+import { events, installFakeEvents } from "./fake-events.js";
 import { PageList } from "./PageList.js";
 
 afterEach(() => {
@@ -120,7 +122,7 @@ describe("PageList: new page", () => {
   it("creates a page with a starter heading and opens it in the editor", async () => {
     const store = manage({ "index.md": "# Home\n" });
     fireEvent.click(await screen.findByRole("button", { name: "New page" }));
-    fireEvent.change(await screen.findByLabelText("Path"), {
+    fireEvent.change(await screen.findByLabelText("Name"), {
       target: { value: "blog/hello-world" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
@@ -140,7 +142,7 @@ describe("PageList: new page", () => {
       "about/index.md": "# About\n",
     });
     fireEvent.click(await screen.findByRole("button", { name: "New page" }));
-    const path = await screen.findByLabelText("Path");
+    const path = await screen.findByLabelText("Name");
     const create = screen.getByRole("button", {
       name: "Create",
     }) as HTMLButtonElement;
@@ -157,6 +159,39 @@ describe("PageList: new page", () => {
     );
     expect(create.disabled).toBe(true);
     expect(await pathsOf(store)).toEqual(["about/index.md", "index.md"]);
+  });
+
+  it("starts in a folder when opened from the folder's row, and offers the folders there are", async () => {
+    const store = manage({
+      "index.md": "# Home\n",
+      "blog/hello.md": "# Hello\n",
+    });
+    fireEvent.click(
+      await screen.findByRole("button", { name: "New page in blog" }),
+    );
+    const folder = (await screen.findByLabelText(
+      "Folder",
+    )) as HTMLSelectElement;
+    expect(folder.value).toBe("blog");
+    expect([...folder.options].map((o) => o.value)).toEqual(["", "blog"]);
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "second" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("here").textContent).toBe(
+        "/pages/blog/second.md",
+      ),
+    );
+    expect(await pathsOf(store)).toContain("blog/second.md");
+  });
+
+  it("does not take a typed .md, since the extension is fixed", async () => {
+    manage({ "index.md": "# Home\n" });
+    fireEvent.click(await screen.findByRole("button", { name: "New page" }));
+    const name = (await screen.findByLabelText("Name")) as HTMLInputElement;
+    fireEvent.change(name, { target: { value: "notes.md" } });
+    expect(name.value).toBe("notes");
   });
 
   it("closes without creating anything when cancelled", async () => {
@@ -205,5 +240,32 @@ describe("PageList: delete", () => {
       "changed since it was read",
     );
     expect(await pathsOf(store)).toEqual(["a.md"]);
+  });
+});
+
+describe("PageList: edits made outside the admin", () => {
+  it("shows a page added, and one removed, when the server says the content changed", async () => {
+    const restore = installFakeEvents();
+    try {
+      const { store, fetch } = createFakeApi({
+        "a.md": "# A\n",
+        "b.md": "# B\n",
+      });
+      vi.stubGlobal("fetch", fetch);
+      show();
+      await screen.findByRole("link", { name: "A" });
+      await waitFor(() => expect(events.listeners()).toBe(1));
+
+      await store.write("c.md", "# C\n", null);
+      await store.delete("b.md", (await store.read("b.md")).version);
+      act(() => events.changed());
+
+      await screen.findByRole("link", { name: "C" });
+      await waitFor(() =>
+        expect(screen.queryByRole("link", { name: "B" })).toBeNull(),
+      );
+    } finally {
+      restore();
+    }
   });
 });

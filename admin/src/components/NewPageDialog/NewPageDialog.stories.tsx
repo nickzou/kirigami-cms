@@ -18,11 +18,11 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** `.md` is added when it is left out, and the new path is what gets created. */
+/** A slash makes a new folder; `.md` is added, so it is not typed. */
 export const Creates: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Path"), "blog/second");
+    await userEvent.type(await canvas.findByLabelText("Name"), "blog/second");
     await userEvent.click(canvas.getByRole("button", { name: "Create" }));
     await waitFor(() =>
       expect(args.onCreate).toHaveBeenCalledWith("blog/second.md"),
@@ -33,7 +33,7 @@ export const Creates: Story = {
 export const PathTaken: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Path"), "blog/hello");
+    await userEvent.type(await canvas.findByLabelText("Name"), "blog/hello");
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "A page already exists at blog/hello.md.",
     );
@@ -45,7 +45,7 @@ export const PathTaken: Story = {
 export const SharedAddress: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Path"), "about");
+    await userEvent.type(await canvas.findByLabelText("Name"), "about");
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "about/index.md",
     );
@@ -56,7 +56,7 @@ export const SharedAddress: Story = {
 export const InvalidPath: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Path"), "../outside");
+    await userEvent.type(await canvas.findByLabelText("Name"), "../outside");
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "not allowed",
     );
@@ -77,10 +77,47 @@ export const ServerRefuses: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Path"), "new");
+    await userEvent.type(await canvas.findByLabelText("Name"), "new");
     await userEvent.click(canvas.getByRole("button", { name: "Create" }));
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "A page already exists at new.md.",
     );
+  },
+};
+
+/** The folders there are can be picked, so only the name is typed. */
+export const PicksAFolder: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.selectOptions(
+      await canvas.findByLabelText("Folder"),
+      "blog",
+    );
+    await userEvent.type(canvas.getByLabelText("Name"), "second");
+    await userEvent.click(canvas.getByRole("button", { name: "Create" }));
+    await waitFor(() =>
+      expect(args.onCreate).toHaveBeenCalledWith("blog/second.md"),
+    );
+  },
+};
+
+/** Opened from a folder, it starts in that folder. */
+export const StartsInAFolder: Story = {
+  args: { folder: "blog" },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByLabelText("Folder"),
+    ).toHaveValue("blog");
+  },
+};
+
+/** Typing the extension changes nothing: it is already there. */
+export const ExtensionIsFixed: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(await canvas.findByLabelText("Name"), "notes.md");
+    await expect(canvas.getByLabelText("Name")).toHaveValue("notes");
+    await userEvent.click(canvas.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(args.onCreate).toHaveBeenCalledWith("notes.md"));
   },
 };

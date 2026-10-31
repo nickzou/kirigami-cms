@@ -6,6 +6,7 @@ import {
   type ProjectConfig,
   parseProjectConfig,
 } from "../core/index.js";
+import { expandHome } from "./home.js";
 
 export interface FoundProject {
   /** The path of the config file. */
@@ -80,13 +81,17 @@ export async function resolveProject(
   }
   const found = await findProjectConfig(cwd);
   if (found) {
+    const { content } = found.config;
     return {
-      content: found.config.content,
+      content:
+        content.store === "local-folder"
+          ? { ...content, path: expandHome(content.path) }
+          : content,
       baseDir: found.dir,
       outDir:
         outArg !== undefined
           ? resolve(cwd, outArg)
-          : resolve(found.dir, found.config.build.out),
+          : resolve(found.dir, expandHome(found.config.build.out)),
       source: `from ${relative(cwd, found.file)}`,
     };
   }

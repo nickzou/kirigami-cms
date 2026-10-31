@@ -415,17 +415,37 @@ describe("kirigami dev", () => {
       expect(await get("/")).toContain("/__kirigami/client.js");
       const events = await fetch(new URL("/__kirigami/events", url));
       const reader = (events.body as ReadableStream<Uint8Array>).getReader();
-      const nextEvent = async () =>
-        new TextDecoder().decode((await reader.read()).value);
+      // Events come one per message. A change on disk is told at once (a
+      // "changed" event), then the build says how it went; this reads the
+      // next build event (of the kind asked for, since a file can be reported
+      // twice and so rebuilt twice), remembering which changes it passed over.
+      let pending = "";
+      let changes = 0;
+      const nextEvent = async (kind: "reload" | "error"): Promise<string> => {
+        for (;;) {
+          const end = pending.indexOf("\n\n");
+          if (end !== -1) {
+            const message = pending.slice(0, end);
+            pending = pending.slice(end + 2);
+            if (message.includes('"changed"')) {
+              changes += 1;
+              continue;
+            }
+            if (message.includes(`"type":"${kind}"`)) return message;
+          }
+          const chunk = new TextDecoder().decode((await reader.read()).value);
+          pending += chunk;
+        }
+      };
 
       await writeFile(join(dir, "index.md"), "# Brand new heading\n");
-      expect(await nextEvent()).toContain('"reload"');
+      expect(await nextEvent("reload")).toContain('"reload"');
       await vi.waitFor(async () =>
         expect(await get("/")).toContain("Brand new heading"),
       );
 
       await writeFile(join(dir, "site.yaml"), "nope: 1\n");
-      expect(await nextEvent()).toContain('"type":"error"');
+      expect(await nextEvent("error")).toContain('"type":"error"');
       await vi.waitFor(() =>
         expect(io.lines.err.join("\n")).toContain(
           "Still serving the last good build",
@@ -437,7 +457,9 @@ describe("kirigami dev", () => {
       await vi.waitFor(() =>
         expect(io.lines.out.join("\n")).toContain("Fixed. Rebuilt"),
       );
-      expect(await nextEvent()).toContain('"reload"');
+      expect(await nextEvent("reload")).toContain('"reload"');
+      // Each edit was told as a change too, whether or not the build was good.
+      expect(changes).toBeGreaterThanOrEqual(2);
       await reader.cancel();
     } finally {
       abort.abort();
