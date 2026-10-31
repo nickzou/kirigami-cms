@@ -211,6 +211,43 @@ async function chooseDelete(title: string) {
   fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 }
 
+describe("PageList: rename", () => {
+  it("moves the page to the path typed, keeping .md", async () => {
+    const store = manage({ "a.md": "# A\n", "b.md": "# B\n" });
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Actions for A" }),
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
+    const dialog = await screen.findByRole("dialog", { name: "Rename a.md" });
+    const field = within(dialog).getByLabelText("New path") as HTMLInputElement;
+    expect(field.value).toBe("a");
+    fireEvent.change(field, { target: { value: "notes/a" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Rename" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(await pathsOf(store)).toEqual(["b.md", "notes/a.md"]);
+  });
+
+  it("will not take a path another page has", async () => {
+    manage({ "a.md": "# A\n", "b.md": "# B\n" });
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Actions for A" }),
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("New path"), {
+      target: { value: "b" },
+    });
+    expect(within(dialog).getByRole("alert")).toBeDefined();
+    expect(
+      (
+        within(dialog).getByRole("button", {
+          name: "Rename",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
+});
+
 describe("PageList: delete", () => {
   it("names the page, says it cannot be undone, and deletes it when confirmed", async () => {
     const store = manage({ "a.md": "# A\n", "b.md": "# B\n" });

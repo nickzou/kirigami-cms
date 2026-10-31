@@ -135,9 +135,7 @@ describe("PageListView: folders", () => {
 
   it("shows pages with no folders as before, with no folder rows", () => {
     show([page("a.md", "A"), page("b.md", "B")]);
-    expect(
-      screen.queryAllByRole("button", { name: /^(?!Actions for)/ }),
-    ).toHaveLength(0);
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(screen.getAllByRole("link")).toHaveLength(2);
   });
 

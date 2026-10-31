@@ -52,15 +52,16 @@ export const LongNames: Story = {
   },
 };
 
-/** Rename opens the editor with its title field ready (see `Editor`). */
-export const RenameItem: Story = {
-  play: async ({ canvasElement }) => {
+export const WithRename: Story = {
+  args: { onRename: fn() },
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
       canvas.getByRole("button", { name: "Actions for Hello, world" }),
     );
-    await expect(
+    await userEvent.click(
       within(document.body).getByRole("menuitem", { name: "Rename" }),
-    ).toHaveAttribute("href", "/pages/blog/hello.md");
+    );
+    await expect(args.onRename).toHaveBeenCalledWith(args.page);
   },
 };
