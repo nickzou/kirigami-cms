@@ -28,7 +28,7 @@ export function PageRow({ page, depth, onRename, onDelete }: PageRowProps) {
       <Link
         to={pageHref(page.path)}
         style={{ paddingLeft: rowIndent(depth) }}
-        className=":uno: flex min-w-0 flex-1 gap-4 py-3 pr-4 text-text no-underline hover:bg-accent-soft"
+        className=":uno: flex min-w-0 flex-1 gap-4 py-3 pr-4 text-text no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-accent-soft motion-reduce:transition-none"
       >
         <strong>{page.title}</strong>
       </Link>
