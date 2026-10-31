@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateStylesheet } from "./css.js";
 import { defaultSiteConfig, parseSiteConfig } from "./load.js";
+import { themeSchema } from "./schema.js";
 
 const defaults = defaultSiteConfig.theme;
 const themeFrom = (yaml: string) => parseSiteConfig(yaml, "site.yaml").theme;
@@ -126,5 +127,32 @@ theme:
     expect(css).toMatch(
       /\.table-wrap|table \{[^}]*(display: block|overflow-x: auto)/,
     );
+  });
+});
+
+describe("generateStylesheet: headings", () => {
+  const themeWith = (headings: Record<string, unknown>) =>
+    themeSchema.parse({ headings });
+
+  it("sizes each heading from the scale unless it is given a size", () => {
+    const css = generateStylesheet(
+      themeWith({ h2: { size: "2.5rem" }, h3: { size: "auto" } }),
+    );
+    expect(css).toMatch(/h2 \{[^}]*font-size: 2\.5rem;/);
+    expect(css).toMatch(
+      /h3 \{[^}]*font-size: calc\(var\(--k-font-size\) \* 1\.563\);/,
+    );
+  });
+
+  it("sets each heading's weight, bold by default", () => {
+    const css = generateStylesheet(themeWith({ h1: { weight: 300 } }));
+    expect(css).toMatch(/h1 \{[^}]*font-weight: 300;/);
+    expect(css).toMatch(/h2 \{[^}]*font-weight: 700;/);
+  });
+
+  it("refuses a size that is not a length or auto, and a weight that is not a multiple of 100", () => {
+    expect(() => themeWith({ h1: { size: "huge" } })).toThrow();
+    expect(() => themeWith({ h1: { size: "1rem; color: red" } })).toThrow();
+    expect(() => themeWith({ h1: { weight: 650 } })).toThrow();
   });
 });

@@ -209,9 +209,12 @@ export function Editor({ path }: { path: string }) {
             label="View"
             options={views}
             value={view}
-            onChange={(next) =>
-              setView(next === "preview" ? "preview" : "editor")
-            }
+            onChange={async (next) => {
+              if (next !== "preview") return setView("editor");
+              // The preview shows the saved page, so save what was typed first.
+              // If that fails, stay with the text, where the problem is shown.
+              if (await editor.saveNow()) setView("preview");
+            }}
           />
         </div>
       )}

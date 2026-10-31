@@ -60,7 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <div ref={setSlot} className=":uno: flex items-center gap-3" />
             </AppHeader>
-            <main className=":uno: mx-auto max-w-5xl p-4">{children}</main>
+            <main className=":uno: mx-auto max-w-7xl p-4">{children}</main>
           </div>
         </div>
       </HeaderTitleSlot.Provider>

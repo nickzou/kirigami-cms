@@ -26,12 +26,15 @@ export const Default: Story = {};
 
 export const Nested: Story = { args: { depth: 2 } };
 
-export const WithDelete: Story = {
+export const WithMenu: Story = {
   args: { onDelete: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Delete blog/hello.md" }),
+      canvas.getByRole("button", { name: "Actions for Hello, world" }),
+    );
+    await userEvent.click(
+      within(document.body).getByRole("menuitem", { name: "Delete" }),
     );
     await expect(args.onDelete).toHaveBeenCalledWith(args.page);
   },
@@ -46,5 +49,19 @@ export const LongNames: Story = {
       version: "1",
     },
     onDelete: fn(),
+  },
+};
+
+export const WithRename: Story = {
+  args: { onRename: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Actions for Hello, world" }),
+    );
+    await userEvent.click(
+      within(document.body).getByRole("menuitem", { name: "Rename" }),
+    );
+    await expect(args.onRename).toHaveBeenCalledWith(args.page);
   },
 };

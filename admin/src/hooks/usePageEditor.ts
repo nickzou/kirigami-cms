@@ -129,20 +129,24 @@ export function usePageEditor(path: string, changes = 0) {
     return () => controller.abort();
   }, [changes, path, adopt]);
 
-  const submit = useCallback(async () => {
-    if (!base || !dirty || saving) return;
+  /** Saves the draft; says whether the page is saved afterwards (nothing to save counts). */
+  const submit = useCallback(async (): Promise<boolean> => {
+    if (!base || saving) return false;
+    if (!dirty) return true;
     const content = forSaving(draft, base.endings);
     setSave({ status: "saving" });
     try {
       const saved = await savePage(path, content, base.version);
       setBase({ ...base, content, version: saved.version });
       setSave({ status: "saved" });
+      return true;
     } catch (error) {
       setSave(
         error instanceof ConflictError
           ? { status: "conflict", gone: error.currentVersion === null }
           : { status: "error", message: describe(error) },
       );
+      return false;
     }
   }, [base, dirty, saving, draft, path]);
 
@@ -185,6 +189,8 @@ export function usePageEditor(path: string, changes = 0) {
     ready: load.status === "ready" && base !== undefined,
     textareaRef,
     submit: useCallback(() => void submit(), [submit]),
+    /** Like `submit`, but waits, and says whether the page is saved afterwards. */
+    saveNow: submit,
     reload,
     dismissSave,
     /** Set when the page changed outside the admin and there is unsaved text (or the page is gone). */

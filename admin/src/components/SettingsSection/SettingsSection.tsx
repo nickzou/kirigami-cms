@@ -15,9 +15,9 @@ export function SettingsSection({
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className=":uno: mb-8">
-      <h2 id={headingId} className=":uno: m-0 mb-1 text-xl">
+      <h3 id={headingId} className=":uno: m-0 mb-1 text-xl">
         {title}
-      </h2>
+      </h3>
       <p className=":uno: m-0 mb-4 text-muted">{description}</p>
       <div className=":uno: grid gap-6">{children}</div>
     </section>

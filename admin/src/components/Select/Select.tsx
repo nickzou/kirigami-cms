@@ -3,8 +3,10 @@ import { type ReactNode, type SelectHTMLAttributes, useId } from "react";
 
 export interface SelectProps
   extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "className" | "id"> {
-  /** What the choice is for. Always shown. */
-  label: string;
+  /** What the choice is for. Shown above it, unless `id` is given for a label drawn elsewhere. */
+  label?: string;
+  /** Only when the label is drawn elsewhere (a `<label htmlFor>` of its own), and then no `label` is given. */
+  id?: string;
   /** The `<option>`s. */
   children: ReactNode;
 }
@@ -15,14 +17,26 @@ export interface SelectProps
  * readers and the phone's picker all work), with the browser's arrow swapped
  * for a chevron that matches the rest of the admin.
  */
-export function Select({ label, children, ...props }: SelectProps) {
-  const id = useId();
+export function Select({
+  label,
+  id: givenId,
+  children,
+  ...props
+}: SelectProps) {
+  const ownId = useId();
+  const id = givenId ?? ownId;
   return (
     <div>
-      <label htmlFor={id} className=":uno: block font-bold">
-        {label}
-      </label>
-      <div className=":uno: relative mt-1">
+      {label !== undefined && (
+        <label htmlFor={id} className=":uno: block font-bold">
+          {label}
+        </label>
+      )}
+      <div
+        className={
+          label !== undefined ? ":uno: relative mt-1" : ":uno: relative"
+        }
+      >
         <select
           id={id}
           {...props}

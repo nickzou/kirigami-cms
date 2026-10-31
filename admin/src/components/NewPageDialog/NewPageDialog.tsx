@@ -19,13 +19,16 @@ export interface NewPageDialogProps {
 }
 
 const EXTENSION = ".md";
+/** The Folder select's value for "make a new folder". No folder path starts with a slash. */
+const NEW_FOLDER = "/new";
 
 /**
- * Asks where a new page should go: a folder to pick from the ones there are,
- * and a name. A slash in the name makes a new folder (`drafts/hello`), since a
- * folder exists because a page is in it. Pages are markdown, so `.md` is shown
- * after the name and is not typed. What is wrong with the path is said as it
- * is typed.
+ * Asks where a new page should go: a folder (one of the ones there are, the
+ * top level, or "New folder…" with a name to give it) and a name for the page.
+ * A folder exists because a page is in it, so a new folder is made by creating
+ * its first page. The page's name has no slash: the folder is picked above it.
+ * Pages are markdown, so `.md` is shown after the name and is not typed. What
+ * is wrong with the path is said as it is typed.
  */
 export function NewPageDialog({
   others,
@@ -33,19 +36,30 @@ export function NewPageDialog({
   onCreate,
   onClose,
 }: NewPageDialogProps) {
-  const helpId = useId();
+  const folderHelpId = useId();
   const folders = useMemo(() => folderPaths(others ?? []), [others]);
   const [folder, setFolder] = useState(initialFolder);
+  const [newFolder, setNewFolder] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
 
-  const stem = name.trim().replace(/^\/+/, "");
+  const making = folder === NEW_FOLDER;
+  // A new folder may be nested (`blog/2026`); the page's own name may not.
+  const folderPath = making
+    ? newFolder.trim().replace(/^\/+|\/+$/g, "")
+    : folder;
+  const stem = name.trim();
+  const slash = stem.includes("/");
   const path =
-    stem === ""
+    stem === "" || (making && folderPath === "")
       ? ""
-      : `${folder === "" ? "" : `${folder}/`}${stem}${EXTENSION}`;
-  const problem = path === "" ? undefined : pathProblem(path, others ?? []);
+      : `${folderPath === "" ? "" : `${folderPath}/`}${stem}${EXTENSION}`;
+  const problem = slash
+    ? "A page's name cannot contain a slash. Pick a folder above, or choose New folder…."
+    : path === ""
+      ? undefined
+      : pathProblem(path, others ?? []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -78,11 +92,33 @@ export function NewPageDialog({
               {path}
             </option>
           ))}
+          <option value={NEW_FOLDER}>New folder…</option>
         </Select>
+        {making && (
+          <div>
+            <TextField
+              label="New folder name"
+              autoFocus
+              mono
+              value={newFolder}
+              onChange={(event) => {
+                setNewFolder(event.target.value);
+                setFailure(undefined);
+              }}
+              aria-describedby={folderHelpId}
+              spellCheck={false}
+              placeholder="drafts"
+            />
+            <p id={folderHelpId} className=":uno: mt-2 mb-0 text-sm text-muted">
+              Use a slash for a folder inside another, like{" "}
+              <code>blog/2026</code>.
+            </p>
+          </div>
+        )}
         <div>
           <TextField
             label="Name"
-            autoFocus
+            autoFocus={!making}
             mono
             suffix={EXTENSION}
             value={name}
@@ -91,15 +127,10 @@ export function NewPageDialog({
               setName(event.target.value.replace(/\.md$/i, ""));
               setFailure(undefined);
             }}
-            aria-describedby={helpId}
             aria-invalid={problem !== undefined}
             spellCheck={false}
             placeholder="hello"
           />
-          <p id={helpId} className=":uno: mt-2 mb-0 text-sm text-muted">
-            Type a folder and a slash to make a new folder, like{" "}
-            <code>drafts/hello</code>.
-          </p>
           {problem && (
             <p role="alert" className=":uno: mt-2 mb-0 text-sm text-danger">
               {problem}

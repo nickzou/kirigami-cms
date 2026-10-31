@@ -9,7 +9,9 @@ export { pageHref } from "../PageRow/PageRow.js";
 
 export interface PageListViewProps {
   pages: readonly PageSummary[];
-  /** When given, each row has a Delete button. */
+  /** When given, each row's menu has a Rename item. */
+  onRename?: (page: PageSummary) => void;
+  /** When given, each row's menu has a Delete item. */
   onDelete?: (page: PageSummary) => void;
   /** When given, each folder row has a button that starts a new page in it. */
   onNewPage?: (folder: string) => void;
@@ -28,6 +30,7 @@ const folderId = (prefix: string, path: string): string =>
  */
 export function PageListView({
   pages,
+  onRename,
   onDelete,
   onNewPage,
 }: PageListViewProps) {
@@ -54,6 +57,7 @@ export function PageListView({
           key={page.path}
           page={page}
           depth={depth}
+          onRename={onRename}
           onDelete={onDelete}
         />
       ))}

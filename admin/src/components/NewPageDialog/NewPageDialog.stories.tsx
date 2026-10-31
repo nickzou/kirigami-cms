@@ -18,22 +18,58 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** A slash makes a new folder; `.md` is added, so it is not typed. */
+/** `.md` is added, so it is not typed. */
 export const Creates: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Name"), "blog/second");
+    await userEvent.type(await canvas.findByLabelText("Name"), "second");
     await userEvent.click(canvas.getByRole("button", { name: "Create" }));
     await waitFor(() =>
-      expect(args.onCreate).toHaveBeenCalledWith("blog/second.md"),
+      expect(args.onCreate).toHaveBeenCalledWith("second.md"),
     );
+  },
+};
+
+/** "New folder…" asks for the folder's name; the page goes in it. */
+export const MakesANewFolder: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.selectOptions(
+      await canvas.findByLabelText("Folder"),
+      "New folder…",
+    );
+    const folder = await canvas.findByLabelText("New folder name");
+    await expect(folder).toHaveFocus();
+    await userEvent.type(folder, "drafts");
+    await expect(canvas.getByRole("button", { name: "Create" })).toBeDisabled();
+    await userEvent.type(canvas.getByLabelText("Name"), "hello");
+    await userEvent.click(canvas.getByRole("button", { name: "Create" }));
+    await waitFor(() =>
+      expect(args.onCreate).toHaveBeenCalledWith("drafts/hello.md"),
+    );
+  },
+};
+
+/** The page's name takes no folder: that is what the Folder select is for. */
+export const SlashInNameIsRefused: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(await canvas.findByLabelText("Name"), "blog/second");
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "cannot contain a slash",
+    );
+    await expect(canvas.getByRole("button", { name: "Create" })).toBeDisabled();
   },
 };
 
 export const PathTaken: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Name"), "blog/hello");
+    await userEvent.selectOptions(
+      await canvas.findByLabelText("Folder"),
+      "blog",
+    );
+    await userEvent.type(canvas.getByLabelText("Name"), "hello");
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "A page already exists at blog/hello.md.",
     );
@@ -56,7 +92,12 @@ export const SharedAddress: Story = {
 export const InvalidPath: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Name"), "../outside");
+    await userEvent.selectOptions(
+      await canvas.findByLabelText("Folder"),
+      "New folder…",
+    );
+    await userEvent.type(await canvas.findByLabelText("New folder name"), "..");
+    await userEvent.type(canvas.getByLabelText("Name"), "outside");
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "not allowed",
     );

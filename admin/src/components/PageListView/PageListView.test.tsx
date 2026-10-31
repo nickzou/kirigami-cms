@@ -126,9 +126,8 @@ describe("PageListView: folders", () => {
   it("keeps the whole path for delete, whatever folder a page is in", () => {
     const onDelete = vi.fn();
     show(pages, { onDelete });
-    fireEvent.click(
-      screen.getByRole("button", { name: "Delete docs/guides/start.md" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Actions for Start" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
     expect(onDelete).toHaveBeenCalledWith(
       expect.objectContaining({ path: "docs/guides/start.md" }),
     );

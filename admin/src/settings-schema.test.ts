@@ -26,12 +26,29 @@ describe("siteSections", () => {
       "Type",
       "Spacing",
       "Layout",
+      "Heading 1",
+      "Heading 2",
+      "Heading 3",
+      "Heading 4",
+      "Heading 5",
+      "Heading 6",
     ]);
+  });
+
+  it("puts colors, fonts and layout in General, and the finer settings in Advanced", () => {
+    const groupOf = (title: string) =>
+      siteSections.find((s) => s.title === title)?.group;
+    for (const title of ["Colors", "Fonts", "Layout"]) {
+      expect(groupOf(title), title).toBe("general");
+    }
+    for (const title of ["Type", "Spacing", "Heading 1", "Heading 6"]) {
+      expect(groupOf(title), title).toBe("advanced");
+    }
   });
 
   it("has every setting in the schema, each with a title, description, widget and default", () => {
     const fields = siteSections.flatMap((s) => s.fields);
-    expect(fields).toHaveLength(14);
+    expect(fields).toHaveLength(26);
     for (const f of fields) {
       expect(f.title, f.key).not.toBe("");
       expect(f.description, f.key).not.toBe("");
