@@ -39,7 +39,7 @@ const editor = () =>
   screen.findByLabelText("Markdown") as Promise<HTMLTextAreaElement>;
 const type = (box: HTMLTextAreaElement, value: string) =>
   fireEvent.change(box, { target: { value } });
-/** The page's path, which is the title: a text field in the header. */
+/** The page's path, which is the title: a text field in the header, without its `.md`. */
 const pagePath = () =>
   screen.getByRole("textbox", { name: "Page path" }) as HTMLInputElement;
 const saveButton = () =>
@@ -50,7 +50,7 @@ describe("Editor: loading", () => {
     serve({ "blog/hello.md": "# Hello\n\nText\n" });
     open("/pages/blog/hello.md");
     expect((await editor()).value).toBe("# Hello\n\nText\n");
-    expect(pagePath().value).toBe("blog/hello.md");
+    expect(pagePath().value).toBe("blog/hello");
     expect(saveButton().disabled).toBe(true);
     expect(screen.getByText("No changes")).toBeDefined();
   });
@@ -344,7 +344,7 @@ describe("Editor: unsaved changes guard", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "Back to all pages" }));
     await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
-    expect(pagePath().value).toBe("a.md");
+    expect(pagePath().value).toBe("a");
     expect(box.value).toBe("two");
   });
 
@@ -407,7 +407,7 @@ describe("Editor: rename and delete", () => {
     await editor();
     fireEvent.change(pagePath(), { target: { value: "blog/renamed" } });
     fireEvent.keyDown(pagePath(), { key: "Enter" });
-    await waitFor(() => expect(pagePath().value).toBe("blog/renamed.md"));
+    await waitFor(() => expect(pagePath().value).toBe("blog/renamed"));
     expect((await editor()).value).toBe("# Hello\n");
     expect((await store.list()).map((e) => e.path)).toEqual([
       "blog/renamed.md",
@@ -420,13 +420,26 @@ describe("Editor: rename and delete", () => {
     await editor();
     fireEvent.change(pagePath(), { target: { value: "nope" } });
     fireEvent.keyDown(pagePath(), { key: "Escape" });
-    expect(pagePath().value).toBe("a.md");
+    expect(pagePath().value).toBe("a");
     expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
 
     fireEvent.change(pagePath(), { target: { value: "b" } });
     fireEvent.blur(pagePath());
-    await waitFor(() => expect(pagePath().value).toBe("b.md"));
+    await waitFor(() => expect(pagePath().value).toBe("b"));
     expect((await store.list()).map((e) => e.path)).toEqual(["b.md"]);
+  });
+
+  it("keeps the .md extension out of the field, and on the page", async () => {
+    const store = serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    await editor();
+    expect(screen.getByText(".md")).toBeDefined();
+    // Typing the extension changes nothing: it is already there.
+    fireEvent.change(pagePath(), { target: { value: "notes/b.md" } });
+    expect(pagePath().value).toBe("notes/b");
+    fireEvent.keyDown(pagePath(), { key: "Enter" });
+    await waitFor(() => expect(pagePath().value).toBe("notes/b"));
+    expect((await store.list()).map((e) => e.path)).toEqual(["notes/b.md"]);
   });
 
   it("warns about a path another page has, once the other pages are known", async () => {
