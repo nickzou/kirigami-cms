@@ -1,6 +1,7 @@
 import { useId } from "react";
 import type { SettingField as Setting } from "../../settings-schema.js";
 import { Button } from "../Button/Button.js";
+import { FontPicker } from "../FontPicker/FontPicker.js";
 
 export interface SettingFieldProps {
   field: Setting;
@@ -14,8 +15,6 @@ export interface SettingFieldProps {
   onReset: () => void;
 }
 
-const inputClass =
-  ":uno: block w-full min-w-0 rounded border border-solid border-line bg-bg p-2 text-text";
 const monoInputClass =
   ":uno: block w-full min-w-0 rounded border border-solid border-line bg-bg p-2 font-mono text-text";
 
@@ -86,7 +85,16 @@ export function SettingField({
             />
           </label>
         )}
-        {field.widget === "number" ? (
+        {field.widget === "font" ? (
+          <FontPicker
+            field={field}
+            id={id}
+            text={text}
+            describedBy={describedBy}
+            invalid={error !== undefined}
+            onChange={onChange}
+          />
+        ) : field.widget === "number" ? (
           <input
             {...common}
             type="number"
@@ -102,7 +110,7 @@ export function SettingField({
             type="text"
             spellCheck={false}
             autoComplete="off"
-            className={field.widget === "font" ? inputClass : monoInputClass}
+            className={monoInputClass}
           />
         )}
         {isSet && (

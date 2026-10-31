@@ -115,7 +115,11 @@ describe("Settings: editing and the live preview", () => {
     expect((await screen.findAllByRole("alert"))[0]?.textContent).toContain(
       "from 1 to 2",
     );
-    type(await field("Body font"), "a; color: red");
+    fireEvent.change(await field("Body font"), { target: { value: "custom" } });
+    type(
+      await screen.findByLabelText("Body font, custom font list"),
+      "a; color: red",
+    );
     await waitFor(() =>
       expect(screen.getAllByRole("alert").length).toBeGreaterThanOrEqual(2),
     );
