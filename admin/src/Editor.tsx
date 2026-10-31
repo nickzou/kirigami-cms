@@ -15,6 +15,7 @@ import { HeaderActions } from "./components/HeaderActions/HeaderActions.js";
 import { HeaderTitle } from "./components/HeaderTitle/HeaderTitle.js";
 import { LineEndingsNotice } from "./components/LineEndingsNotice/LineEndingsNotice.js";
 import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
+import { OutsideChangePanel } from "./components/OutsideChangePanel/OutsideChangePanel.js";
 import { pageHref } from "./components/PageListView/PageListView.js";
 import { PagePathField } from "./components/PagePathField/PagePathField.js";
 import { PreviewFrame } from "./components/PreviewFrame/PreviewFrame.js";
@@ -34,11 +35,11 @@ const views = [
 
 /** The screen for editing one page. The work is in `usePageEditor`. */
 export function Editor({ path }: { path: string }) {
-  const editor = usePageEditor(path);
+  const build = useBuildEvents();
+  const editor = usePageEditor(path, build.changes);
   useSaveShortcut(editor.submit);
   useUnsavedChangesGuard(editor.dirty);
 
-  const build = useBuildEvents();
   // One view at a time, chosen with the segmented control.
   const [view, setView] = useState<"editor" | "preview">("editor");
   const navigate = useNavigate();
@@ -143,7 +144,23 @@ export function Editor({ path }: { path: string }) {
             formId={EDITOR_FORM_ID}
           />
         </HeaderActions>
-        <Toast message={save.status === "saved" ? "Saved." : null} />
+        <Toast
+          message={
+            save.status === "saved"
+              ? "Saved."
+              : editor.updatedOutside
+                ? "Updated: this page changed outside the admin."
+                : null
+          }
+        />
+        {editor.outside && (
+          <OutsideChangePanel
+            gone={editor.outside.kind === "gone"}
+            onLoadLatest={editor.reload}
+            onCopy={editor.copyDraft}
+            onKeepEditing={editor.dismissOutside}
+          />
+        )}
         {save.status === "error" && <SaveFailedPanel message={save.message} />}
         {save.status === "conflict" && (
           <ConflictPanel

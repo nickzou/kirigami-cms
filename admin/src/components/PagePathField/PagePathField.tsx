@@ -2,7 +2,6 @@ import {
   type KeyboardEvent,
   type ReactNode,
   useContext,
-  useEffect,
   useId,
   useState,
 } from "react";
@@ -54,8 +53,13 @@ export function PagePathField({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
 
-  // Another path (the page moved, or the page changed under us): show it.
-  useEffect(() => setInput(stemOf(path)), [path]);
+  // Another path (the page moved): show it. Done while rendering, not in an
+  // effect, so it can never land after, and undo, something just typed.
+  const [shownPath, setShownPath] = useState(path);
+  if (path !== shownPath) {
+    setShownPath(path);
+    setInput(stemOf(path));
+  }
 
   const stem = input.trim().replace(/^\/+/, "");
   const next = stem === "" ? "" : `${stem}${EXTENSION}`;

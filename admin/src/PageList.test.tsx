@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -10,6 +11,7 @@ import {
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakeApi } from "./fake-api.js";
+import { events, installFakeEvents } from "./fake-events.js";
 import { PageList } from "./PageList.js";
 
 afterEach(() => {
@@ -238,5 +240,32 @@ describe("PageList: delete", () => {
       "changed since it was read",
     );
     expect(await pathsOf(store)).toEqual(["a.md"]);
+  });
+});
+
+describe("PageList: edits made outside the admin", () => {
+  it("shows a page added, and one removed, when the server says the content changed", async () => {
+    const restore = installFakeEvents();
+    try {
+      const { store, fetch } = createFakeApi({
+        "a.md": "# A\n",
+        "b.md": "# B\n",
+      });
+      vi.stubGlobal("fetch", fetch);
+      show();
+      await screen.findByRole("link", { name: "A" });
+      await waitFor(() => expect(events.listeners()).toBe(1));
+
+      await store.write("c.md", "# C\n", null);
+      await store.delete("b.md", (await store.read("b.md")).version);
+      act(() => events.changed());
+
+      await screen.findByRole("link", { name: "C" });
+      await waitFor(() =>
+        expect(screen.queryByRole("link", { name: "B" })).toBeNull(),
+      );
+    } finally {
+      restore();
+    }
   });
 });

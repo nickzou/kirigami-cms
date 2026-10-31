@@ -11,6 +11,7 @@ import {
   PageListView,
   pageHref,
 } from "./components/PageListView/PageListView.js";
+import { useBuildEvents } from "./hooks/useBuildEvents.js";
 import { starterContent } from "./page-path.js";
 
 type State =
@@ -45,6 +46,26 @@ export function PageList() {
     );
     return () => controller.abort();
   }, [attempt]);
+
+  // Pages added, removed or renamed outside the admin (another editor, a git
+  // pull) show up when the server says the content changed. The admin's own
+  // changes are told too, which only reads the same list again.
+  const { changes } = useBuildEvents();
+  useEffect(() => {
+    if (changes === 0) return;
+    const controller = new AbortController();
+    listPages(controller.signal).then(
+      (pages) =>
+        setState((current) =>
+          current.status === "ready" ? { status: "ready", pages } : current,
+        ),
+      () => {
+        // Not worth a message: the list shown is still what it was, and the
+        // next change looks again.
+      },
+    );
+    return () => controller.abort();
+  }, [changes]);
 
   /** Loads the list again after a change, without a loading state in between. */
   const refresh = useCallback(async () => {

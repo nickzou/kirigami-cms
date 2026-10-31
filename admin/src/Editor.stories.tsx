@@ -59,6 +59,59 @@ export const PageChangedElsewhere: Story = {
   },
 };
 
+let outside: ReturnType<typeof installFakeApi>["store"];
+
+/** What another program does: write the file, then the server says so. */
+async function editOutside(content: string) {
+  const path = "blog/hello.md";
+  await waitFor(() => expect(events.listeners()).toBe(1));
+  await outside.write(path, content, (await outside.read(path)).version);
+  events.changed();
+}
+
+/** Nothing unsaved: the new text is loaded quietly, and a toast says so. */
+export const EditedOutsideNothingUnsaved: Story = {
+  beforeEach: () => {
+    const api = installFakeApi(hello);
+    outside = api.store;
+    return api.restore;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByLabelText("Markdown");
+    await editOutside("# Changed in another editor\n");
+    await waitFor(async () =>
+      expect(await canvas.findByLabelText("Markdown")).toHaveValue(
+        "# Changed in another editor\n",
+      ),
+    );
+    await expect(
+      await canvas.findByText(/changed outside the admin/),
+    ).toBeVisible();
+  },
+};
+
+/** Unsaved text is kept, and the person chooses before a save is refused. */
+export const EditedOutsideWhileTyping: Story = {
+  beforeEach: () => {
+    const api = installFakeApi(hello);
+    outside = api.store;
+    return api.restore;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(await canvas.findByLabelText("Markdown"), " mine");
+    await editOutside("# Changed in another editor\n");
+    await expect(
+      await canvas.findByText(/This page changed outside the admin/),
+    ).toBeVisible();
+    // What was typed is still there, and the other editor's text is not.
+    const box = canvas.getByLabelText<HTMLTextAreaElement>("Markdown");
+    await expect(box.value).toContain(" mine");
+    await expect(box.value).not.toContain("another editor");
+  },
+};
+
 export const PageDeletedElsewhere: Story = {
   beforeEach: () => installFakeApi(hello, failures.goneOnSave).restore,
   play: async ({ canvasElement }) => {
