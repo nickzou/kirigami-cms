@@ -22,11 +22,11 @@ export interface PageRowProps {
  */
 export function PageRow({ page, depth, onDelete }: PageRowProps) {
   return (
-    <li className=":uno: flex items-center [border-top:1px_solid_var(--border)]">
+    <li className=":uno: flex items-center transition-colors duration-200 ease-[ease-in-out] [border-top:1px_solid_var(--border)] hover:bg-accent-soft motion-reduce:transition-none">
       <Link
         to={pageHref(page.path)}
         style={{ paddingLeft: rowIndent(depth) }}
-        className=":uno: flex min-w-0 flex-1 gap-4 py-3 pr-4 text-text no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-accent-soft motion-reduce:transition-none"
+        className=":uno: flex min-w-0 flex-1 gap-4 py-3 pr-4 text-text no-underline"
       >
         <strong>{page.title}</strong>
       </Link>
