@@ -68,8 +68,8 @@ export function Settings() {
   const formClass = view === "settings" ? "" : ":uno: hidden lg:block";
   const previewClass =
     view === "preview"
-      ? ":uno: block lg:sticky lg:top-4 lg:self-start"
-      : ":uno: hidden lg:sticky lg:top-4 lg:block lg:self-start";
+      ? ":uno: block lg:sticky lg:top-[76px] lg:self-start"
+      : ":uno: hidden lg:sticky lg:top-[76px] lg:block lg:self-start";
 
   const copyChanges = async () => {
     const text = settings.changes

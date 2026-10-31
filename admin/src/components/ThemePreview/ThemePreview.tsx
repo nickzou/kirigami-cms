@@ -14,7 +14,7 @@ export function ThemePreview({ html }: ThemePreviewProps) {
       title="Preview of the theme"
       sandbox=""
       srcDoc={html}
-      className=":uno: block h-[70vh] min-h-[24rem] w-full rounded-lg border border-solid border-line bg-white shadow"
+      className=":uno: block h-[calc(100vh-108px)] min-h-[24rem] w-full rounded-lg border border-solid border-line bg-white shadow"
     />
   );
 }
