@@ -86,7 +86,7 @@ export function Settings() {
 
   return (
     <>
-      <div className=":uno: -mx-4 min-h-[calc(100vh-5rem)] border border-solid border-line border-b-0 bg-surface px-4 pt-4 pb-28 shadow md:mx-auto md:rounded-t-lg md:px-8 md:pt-8">
+      <div className=":uno: pt-4 pb-28 md:pt-8">
         <HeaderTitle before={<BackLink />}>Settings</HeaderTitle>
         <HeaderActions>
           <SaveControls
