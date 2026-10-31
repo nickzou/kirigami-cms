@@ -99,7 +99,7 @@ export function SettingField({
             {...common}
             type="number"
             inputMode="decimal"
-            step="0.05"
+            step={field.step ?? 0.05}
             min={field.min}
             max={field.max}
             className={monoInputClass}

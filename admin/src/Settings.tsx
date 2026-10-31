@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Accordion } from "./components/Accordion/Accordion.js";
 import { BackLink } from "./components/BackLink/BackLink.js";
 import { ConflictPanel } from "./components/ConflictPanel/ConflictPanel.js";
 import { ErrorPanel } from "./components/ErrorPanel/ErrorPanel.js";
@@ -15,12 +16,36 @@ import { Toast } from "./components/Toast/Toast.js";
 import { usePreviewPage } from "./hooks/usePreviewPage.js";
 import { useSaveShortcut } from "./hooks/useSaveShortcut.js";
 import { useSettings } from "./hooks/useSettings.js";
+import { useStoredFlag } from "./hooks/useStoredFlag.js";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard.js";
 import { previewDocument } from "./preview-document.js";
-import { buildTheme, siteSections } from "./settings-schema.js";
+import {
+  buildTheme,
+  type SettingsSection as Section,
+  type SettingsGroup,
+  siteSections,
+} from "./settings-schema.js";
 
 /** The id of the form, so Save in the header can submit it. */
 const SETTINGS_FORM_ID = "site-settings";
+
+/** The settings groups, in order: the everyday ones open, the finer ones closed. */
+const groups: readonly {
+  group: SettingsGroup;
+  title: string;
+  description: string;
+}[] = [
+  {
+    group: "general",
+    title: "General",
+    description: "The colors, fonts and width most sites change first.",
+  },
+  {
+    group: "advanced",
+    title: "Advanced",
+    description: "Finer settings, such as the size and weight of each heading.",
+  },
+];
 
 const views = [
   { value: "settings", label: "Settings" },
@@ -41,6 +66,17 @@ export function Settings() {
     () => previewDocument(page, buildTheme(siteSections, settings.explicit)),
     [page, settings.explicit],
   );
+  // Whether each group is open is remembered in this browser.
+  const [generalOpen, setGeneralOpen] = useStoredFlag(
+    "kirigami.settings-general-open",
+    true,
+  );
+  const [advancedOpen, setAdvancedOpen] = useStoredFlag(
+    "kirigami.settings-advanced-open",
+    false,
+  );
+  const open = { general: generalOpen, advanced: advancedOpen };
+  const setOpen = { general: setGeneralOpen, advanced: setAdvancedOpen };
   // On a narrow screen one of the two shows at a time. From `lg` up, both do.
   const [view, setView] = useState<"settings" | "preview">("settings");
 
@@ -117,25 +153,49 @@ export function Settings() {
               settings.submit();
             }}
           >
-            {siteSections.map((section) => (
-              <SettingsSection
-                key={section.key}
-                title={section.title}
-                description={section.description}
-              >
-                {section.fields.map((field) => (
-                  <SettingField
-                    key={field.key}
-                    field={field}
-                    text={settings.textOf(field)}
-                    error={settings.errors.get(field.key)}
-                    isSet={settings.isSet(field)}
-                    onChange={(text) => settings.setText(field, text)}
-                    onReset={() => settings.reset(field)}
-                  />
-                ))}
-              </SettingsSection>
-            ))}
+            {groups.map(({ group, title, description }) => {
+              const sections = siteSections.filter(
+                (section: Section) => section.group === group,
+              );
+              // A closed group must not hide why Save is blocked.
+              const problems = sections
+                .flatMap((section) => section.fields)
+                .filter((field) => settings.errors.has(field.key)).length;
+              return (
+                <Accordion
+                  key={group}
+                  title={title}
+                  description={description}
+                  open={open[group]}
+                  onToggle={() => setOpen[group](!open[group])}
+                  note={
+                    problems > 0 && !open[group]
+                      ? `${problems} ${problems === 1 ? "problem" : "problems"}`
+                      : undefined
+                  }
+                >
+                  {sections.map((section) => (
+                    <SettingsSection
+                      key={section.key}
+                      title={section.title}
+                      description={section.description}
+                    >
+                      {section.fields.map((field) => (
+                        <SettingField
+                          key={field.key}
+                          field={field}
+                          text={settings.textOf(field)}
+                          error={settings.errors.get(field.key)}
+                          isSet={settings.isSet(field)}
+                          onChange={(text) => settings.setText(field, text)}
+                          onReset={() => settings.reset(field)}
+                        />
+                      ))}
+                    </SettingsSection>
+                  ))}
+                </Accordion>
+              );
+            })}
           </form>
           <div className={previewClass}>
             <ThemePreview html={html} />

@@ -91,6 +91,9 @@ export const FileChangedMeanwhile: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /Advanced/ }),
+    );
     await userEvent.type(await canvas.findByLabelText("Heading scale"), "1.5");
     await (globalThis as { __editSite?: () => Promise<void> }).__editSite?.();
     await userEvent.click(canvas.getByRole("button", { name: "Save" }));
@@ -118,5 +121,33 @@ export const OnAPhone: Story = {
     await canvas.findByLabelText("Links");
     await userEvent.click(canvas.getByRole("radio", { name: "Preview" }));
     await expect(canvas.getByTitle("Preview of the theme")).toBeVisible();
+  },
+};
+
+/** General is open and Advanced is closed until it is opened. */
+export const AdvancedStartsClosed: Story = {
+  beforeEach: () => installFakeApi({ "site.yaml": FILE }).restore,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const general = await canvas.findByRole("button", { name: /General/ });
+    const advanced = canvas.getByRole("button", { name: /Advanced/ });
+    await expect(general).toHaveAttribute("aria-expanded", "true");
+    await expect(advanced).toHaveAttribute("aria-expanded", "false");
+    await expect(canvas.getByLabelText("Heading 1 size")).not.toBeVisible();
+    await userEvent.click(advanced);
+    await expect(canvas.getByLabelText("Heading 1 size")).toBeVisible();
+  },
+};
+
+/** A problem in a closed group is not hidden: the group says so. */
+export const ProblemInAClosedGroup: Story = {
+  beforeEach: () => installFakeApi({ "site.yaml": FILE }).restore,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const advanced = await canvas.findByRole("button", { name: /Advanced/ });
+    await userEvent.click(advanced);
+    await userEvent.type(canvas.getByLabelText("Heading 1 size"), "big");
+    await userEvent.click(advanced);
+    await expect(advanced).toHaveTextContent("1 problem");
   },
 };

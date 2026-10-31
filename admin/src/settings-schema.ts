@@ -22,11 +22,17 @@ export interface SettingField {
   max?: number;
   /** For colors and lengths: the regular expression a value must match. */
   pattern?: string;
+  /** For numbers: a value must be a multiple of this. */
+  step?: number;
 }
+
+/** Where a section is shown: the everyday settings, or the finer ones. */
+export type SettingsGroup = "general" | "advanced";
 
 export interface SettingsSection {
   key: string;
   path: string[];
+  group: SettingsGroup;
   title: string;
   description: string;
   fields: SettingField[];
@@ -37,6 +43,8 @@ interface SchemaNode {
   title?: string;
   description?: string;
   widget?: Widget;
+  group?: SettingsGroup;
+  multipleOf?: number;
   default?: unknown;
   properties?: Record<string, SchemaNode>;
   minimum?: number;
@@ -64,6 +72,7 @@ function toField(name: string, path: string[], node: SchemaNode): SettingField {
     ...(node.minimum !== undefined && { min: node.minimum }),
     ...(node.maximum !== undefined && { max: node.maximum }),
     ...(node.pattern !== undefined && { pattern: node.pattern }),
+    ...(node.multipleOf !== undefined && { step: node.multipleOf }),
   };
 }
 
@@ -82,6 +91,7 @@ export function buildSections(
       {
         key: path.join("/"),
         path,
+        group: node.group === "advanced" ? "advanced" : "general",
         title: node.title ?? path[path.length - 1] ?? "",
         description: node.description ?? "",
         fields: children.map(([name, child]) =>
@@ -104,6 +114,8 @@ const COLOR_MESSAGE =
   "Enter a color such as #1a1a1a, rgb(26 26 26), or a color name.";
 const LENGTH_MESSAGE =
   "Enter a length with a unit, such as 1rem, 18px, or 40ch.";
+const AUTO_LENGTH_MESSAGE =
+  "Enter a length with a unit, such as 2rem or 32px, or auto.";
 
 /** Why `raw` cannot be this setting's value, or `undefined` if it can. */
 export function fieldProblem(
@@ -114,7 +126,12 @@ export function fieldProblem(
   switch (field.widget) {
     case "color":
     case "length": {
-      const message = field.widget === "color" ? COLOR_MESSAGE : LENGTH_MESSAGE;
+      const message =
+        field.widget === "color"
+          ? COLOR_MESSAGE
+          : field.default === "auto"
+            ? AUTO_LENGTH_MESSAGE
+            : LENGTH_MESSAGE;
       return field.pattern && new RegExp(field.pattern).test(value)
         ? undefined
         : message;
@@ -124,7 +141,10 @@ export function fieldProblem(
     case "number": {
       const number = Number(value);
       if (value === "" || Number.isNaN(number)) return "Enter a number.";
-      const { min, max } = field;
+      const { min, max, step } = field;
+      if (step !== undefined && number % step !== 0) {
+        return `Enter a multiple of ${step}.`;
+      }
       if (
         (min !== undefined && number < min) ||
         (max !== undefined && number > max)

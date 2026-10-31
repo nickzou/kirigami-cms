@@ -37,6 +37,19 @@ const length = (fallback: string, hint: Hint) =>
     .default(fallback)
     .meta({ ...hint, widget: "length" });
 
+const HEADING_SIZE = /^(auto|(\d+|\d*\.\d+)(px|rem|em|ch|vw|%))$/;
+
+/** A heading's size: a length, or `auto` for the size the heading scale gives. */
+const headingSize = (hint: Hint) =>
+  z
+    .string()
+    .regex(
+      HEADING_SIZE,
+      "Expected a length with a unit, such as 2rem or 32px, or auto",
+    )
+    .default("auto")
+    .meta({ ...hint, widget: "length" });
+
 const fontStack = (fallback: string, hint: Hint) =>
   z
     .string()
@@ -76,7 +89,11 @@ const colors = z
     }),
   })
   .prefault({})
-  .meta({ title: "Colors", description: "The palette of the site." });
+  .meta({
+    title: "Colors",
+    description: "The palette of the site.",
+    group: "general",
+  });
 
 const fonts = z
   .strictObject({
@@ -100,6 +117,7 @@ const fonts = z
     title: "Fonts",
     description:
       "Font-family lists. Fonts already on the reader's device are used.",
+    group: "general",
   });
 
 const type = z
@@ -121,7 +139,11 @@ const type = z
     }),
   })
   .prefault({})
-  .meta({ title: "Type", description: "The size and rhythm of text." });
+  .meta({
+    title: "Type",
+    description: "The size and rhythm of text.",
+    group: "advanced",
+  });
 
 const spacing = z
   .strictObject({
@@ -134,6 +156,7 @@ const spacing = z
   .meta({
     title: "Spacing",
     description: "How much room there is around things.",
+    group: "advanced",
   });
 
 const layout = z
@@ -144,10 +167,57 @@ const layout = z
     }),
   })
   .prefault({})
-  .meta({ title: "Layout", description: "The shape of the page." });
+  .meta({
+    title: "Layout",
+    description: "The shape of the page.",
+    group: "general",
+  });
+
+/** One heading level: its size and weight. The defaults leave it as the scale and the browser make it. */
+const heading = (level: number) =>
+  z
+    .strictObject({
+      size: headingSize({
+        title: `Heading ${level} size`,
+        description: `The size of <h${level}> headings, such as 2rem, or auto for the size the heading scale gives.`,
+      }),
+      weight: z
+        .number()
+        .int()
+        .min(100)
+        .max(900)
+        .multipleOf(100)
+        .default(700)
+        .meta({
+          title: `Heading ${level} weight`,
+          description: `How bold <h${level}> headings are: 400 is normal, 700 is bold.`,
+          widget: "number",
+        }),
+    })
+    .prefault({})
+    .meta({
+      title: `Heading ${level}`,
+      description: `The size and weight of <h${level}> headings.`,
+      group: "advanced",
+    });
+
+const headings = z
+  .strictObject({
+    h1: heading(1),
+    h2: heading(2),
+    h3: heading(3),
+    h4: heading(4),
+    h5: heading(5),
+    h6: heading(6),
+  })
+  .prefault({})
+  .meta({
+    title: "Headings",
+    description: "The size and weight of each heading level.",
+  });
 
 export const themeSchema = z
-  .strictObject({ colors, fonts, type, spacing, layout })
+  .strictObject({ colors, fonts, type, spacing, layout, headings })
   .prefault({})
   .meta({ title: "Theme", description: "How the site looks." });
 

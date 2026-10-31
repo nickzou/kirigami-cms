@@ -12,6 +12,7 @@
         "colors": {
           "title": "Colors",
           "description": "The palette of the site.",
+          "group": "general",
           "default": {},
           "type": "object",
           "properties": {
@@ -69,6 +70,7 @@
         "fonts": {
           "title": "Fonts",
           "description": "Font-family lists. Fonts already on the reader's device are used.",
+          "group": "general",
           "default": {},
           "type": "object",
           "properties": {
@@ -102,6 +104,7 @@
         "type": {
           "title": "Type",
           "description": "The size and rhythm of text.",
+          "group": "advanced",
           "default": {},
           "type": "object",
           "properties": {
@@ -137,6 +140,7 @@
         "spacing": {
           "title": "Spacing",
           "description": "How much room there is around things.",
+          "group": "advanced",
           "default": {},
           "type": "object",
           "properties": {
@@ -154,6 +158,7 @@
         "layout": {
           "title": "Layout",
           "description": "The shape of the page.",
+          "group": "general",
           "default": {},
           "type": "object",
           "properties": {
@@ -164,6 +169,183 @@
               "widget": "length",
               "type": "string",
               "pattern": "^(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%)$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "headings": {
+          "title": "Headings",
+          "description": "The size and weight of each heading level.",
+          "default": {},
+          "type": "object",
+          "properties": {
+            "h1": {
+              "title": "Heading 1",
+              "description": "The size and weight of <h1> headings.",
+              "group": "advanced",
+              "default": {},
+              "type": "object",
+              "properties": {
+                "size": {
+                  "default": "auto",
+                  "title": "Heading 1 size",
+                  "description": "The size of <h1> headings, such as 2rem, or auto for the size the heading scale gives.",
+                  "widget": "length",
+                  "type": "string",
+                  "pattern": "^(auto|(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%))$"
+                },
+                "weight": {
+                  "default": 700,
+                  "title": "Heading 1 weight",
+                  "description": "How bold <h1> headings are: 400 is normal, 700 is bold.",
+                  "widget": "number",
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 900,
+                  "multipleOf": 100
+                }
+              },
+              "additionalProperties": false
+            },
+            "h2": {
+              "title": "Heading 2",
+              "description": "The size and weight of <h2> headings.",
+              "group": "advanced",
+              "default": {},
+              "type": "object",
+              "properties": {
+                "size": {
+                  "default": "auto",
+                  "title": "Heading 2 size",
+                  "description": "The size of <h2> headings, such as 2rem, or auto for the size the heading scale gives.",
+                  "widget": "length",
+                  "type": "string",
+                  "pattern": "^(auto|(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%))$"
+                },
+                "weight": {
+                  "default": 700,
+                  "title": "Heading 2 weight",
+                  "description": "How bold <h2> headings are: 400 is normal, 700 is bold.",
+                  "widget": "number",
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 900,
+                  "multipleOf": 100
+                }
+              },
+              "additionalProperties": false
+            },
+            "h3": {
+              "title": "Heading 3",
+              "description": "The size and weight of <h3> headings.",
+              "group": "advanced",
+              "default": {},
+              "type": "object",
+              "properties": {
+                "size": {
+                  "default": "auto",
+                  "title": "Heading 3 size",
+                  "description": "The size of <h3> headings, such as 2rem, or auto for the size the heading scale gives.",
+                  "widget": "length",
+                  "type": "string",
+                  "pattern": "^(auto|(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%))$"
+                },
+                "weight": {
+                  "default": 700,
+                  "title": "Heading 3 weight",
+                  "description": "How bold <h3> headings are: 400 is normal, 700 is bold.",
+                  "widget": "number",
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 900,
+                  "multipleOf": 100
+                }
+              },
+              "additionalProperties": false
+            },
+            "h4": {
+              "title": "Heading 4",
+              "description": "The size and weight of <h4> headings.",
+              "group": "advanced",
+              "default": {},
+              "type": "object",
+              "properties": {
+                "size": {
+                  "default": "auto",
+                  "title": "Heading 4 size",
+                  "description": "The size of <h4> headings, such as 2rem, or auto for the size the heading scale gives.",
+                  "widget": "length",
+                  "type": "string",
+                  "pattern": "^(auto|(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%))$"
+                },
+                "weight": {
+                  "default": 700,
+                  "title": "Heading 4 weight",
+                  "description": "How bold <h4> headings are: 400 is normal, 700 is bold.",
+                  "widget": "number",
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 900,
+                  "multipleOf": 100
+                }
+              },
+              "additionalProperties": false
+            },
+            "h5": {
+              "title": "Heading 5",
+              "description": "The size and weight of <h5> headings.",
+              "group": "advanced",
+              "default": {},
+              "type": "object",
+              "properties": {
+                "size": {
+                  "default": "auto",
+                  "title": "Heading 5 size",
+                  "description": "The size of <h5> headings, such as 2rem, or auto for the size the heading scale gives.",
+                  "widget": "length",
+                  "type": "string",
+                  "pattern": "^(auto|(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%))$"
+                },
+                "weight": {
+                  "default": 700,
+                  "title": "Heading 5 weight",
+                  "description": "How bold <h5> headings are: 400 is normal, 700 is bold.",
+                  "widget": "number",
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 900,
+                  "multipleOf": 100
+                }
+              },
+              "additionalProperties": false
+            },
+            "h6": {
+              "title": "Heading 6",
+              "description": "The size and weight of <h6> headings.",
+              "group": "advanced",
+              "default": {},
+              "type": "object",
+              "properties": {
+                "size": {
+                  "default": "auto",
+                  "title": "Heading 6 size",
+                  "description": "The size of <h6> headings, such as 2rem, or auto for the size the heading scale gives.",
+                  "widget": "length",
+                  "type": "string",
+                  "pattern": "^(auto|(\\d+|\\d*\\.\\d+)(px|rem|em|ch|vw|%))$"
+                },
+                "weight": {
+                  "default": 700,
+                  "title": "Heading 6 weight",
+                  "description": "How bold <h6> headings are: 400 is normal, 700 is bold.",
+                  "widget": "number",
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 900,
+                  "multipleOf": 100
+                }
+              },
+              "additionalProperties": false
             }
           },
           "additionalProperties": false

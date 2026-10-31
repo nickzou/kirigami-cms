@@ -7,13 +7,20 @@ const power = (scale: number, steps: number): number =>
 const size = (scale: number, steps: number): string =>
   `calc(var(--k-font-size) * ${power(scale, steps)})`;
 
+/** How many steps up the scale each heading level is, unless it is given a size. */
+const STEPS = { h1: 4, h2: 3, h3: 2, h4: 1, h5: 0, h6: 0 } as const;
+
 /**
  * Generates the site stylesheet from the theme: every token becomes a CSS
  * variable on `:root`, and the element rules below use only those variables.
  */
 export function generateStylesheet(theme: Theme): string {
-  const { colors, fonts, type, spacing, layout } = theme;
+  const { colors, fonts, type, spacing, layout, headings } = theme;
   const s = type.scale;
+  const headingSize = (level: keyof typeof STEPS): string =>
+    headings[level].size === "auto"
+      ? size(s, STEPS[level])
+      : headings[level].size;
 
   return `:root {
   --k-color-background: ${colors.background};
@@ -65,27 +72,33 @@ h6 {
 
 h1 {
   margin-top: 0;
-  font-size: ${size(s, 4)};
+  font-size: ${headingSize("h1")};
+  font-weight: ${headings.h1.weight};
 }
 
 h2 {
-  font-size: ${size(s, 3)};
+  font-size: ${headingSize("h2")};
+  font-weight: ${headings.h2.weight};
 }
 
 h3 {
-  font-size: ${size(s, 2)};
+  font-size: ${headingSize("h3")};
+  font-weight: ${headings.h3.weight};
 }
 
 h4 {
-  font-size: ${size(s, 1)};
+  font-size: ${headingSize("h4")};
+  font-weight: ${headings.h4.weight};
 }
 
 h5 {
-  font-size: ${size(s, 0)};
+  font-size: ${headingSize("h5")};
+  font-weight: ${headings.h5.weight};
 }
 
 h6 {
-  font-size: ${size(s, 0)};
+  font-size: ${headingSize("h6")};
+  font-weight: ${headings.h6.weight};
   color: var(--k-color-muted);
 }
 

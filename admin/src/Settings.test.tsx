@@ -15,6 +15,8 @@ import { Settings } from "./Settings.js";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // Which groups are open is remembered; each test starts fresh.
+  localStorage.clear();
 });
 
 const FILE = [
@@ -45,10 +47,24 @@ const type = (input: HTMLInputElement, value: string) =>
 const previewHtml = () =>
   screen.getByTitle("Preview of the theme").getAttribute("srcdoc") ?? "";
 
+/** Advanced starts closed. */
+const openAdvanced = () =>
+  fireEvent.click(screen.getByRole("button", { name: /Advanced/ }));
+
 describe("Settings: loading", () => {
   it("shows every theme setting in its section, with its default and what it is for", async () => {
     show();
-    for (const heading of ["Colors", "Fonts", "Type", "Spacing", "Layout"]) {
+    await screen.findByRole("button", { name: /Advanced/ });
+    openAdvanced();
+    for (const heading of [
+      "Colors",
+      "Fonts",
+      "Type",
+      "Spacing",
+      "Layout",
+      "Heading 1",
+      "Heading 6",
+    ]) {
       expect(
         await screen.findByRole("heading", { name: heading }),
       ).toBeDefined();
@@ -56,7 +72,7 @@ describe("Settings: loading", () => {
     const link = await field("Links");
     expect(link.value).toBe("");
     expect(link.placeholder).toBe("#0b57d0");
-    expect(screen.getAllByText(/^Default:/)).toHaveLength(14);
+    expect(screen.getAllByText(/^Default:/)).toHaveLength(26);
     expect(screen.getByText("The color of links.")).toBeDefined();
     expect(save().disabled).toBe(true);
   });
@@ -111,6 +127,8 @@ describe("Settings: editing and the live preview", () => {
 
   it("checks a number's limits and a font list", async () => {
     show();
+    await screen.findByRole("button", { name: /Advanced/ });
+    openAdvanced();
     type(await field("Heading scale"), "3");
     expect((await screen.findAllByRole("alert"))[0]?.textContent).toContain(
       "from 1 to 2",
@@ -131,6 +149,41 @@ describe("Settings: editing and the live preview", () => {
       target: { value: "#00ff00" },
     });
     expect((await field("Links")).value).toBe("#00ff00");
+  });
+});
+
+describe("Settings: general and advanced", () => {
+  it("opens General and closes Advanced to begin with", async () => {
+    show();
+    const general = await screen.findByRole("button", { name: /General/ });
+    const advanced = screen.getByRole("button", { name: /Advanced/ });
+    expect(general.getAttribute("aria-expanded")).toBe("true");
+    expect(advanced.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("heading", { name: "Heading 1" })).toBeNull();
+    fireEvent.click(advanced);
+    expect(screen.getByRole("heading", { name: "Heading 1" })).toBeDefined();
+  });
+
+  it("says so on a closed group with a problem, and keeps Save blocked", async () => {
+    show();
+    await screen.findByRole("button", { name: /Advanced/ });
+    openAdvanced();
+    type(await field("Heading 2 size"), "huge");
+    openAdvanced();
+    expect(
+      screen.getByRole("button", { name: /Advanced/ }).textContent,
+    ).toContain("1 problem");
+    expect(save().disabled).toBe(true);
+  });
+
+  it("checks a heading's weight is a multiple of 100", async () => {
+    show();
+    await screen.findByRole("button", { name: /Advanced/ });
+    openAdvanced();
+    type(await field("Heading 1 weight"), "650");
+    expect((await screen.findAllByRole("alert"))[0]?.textContent).toContain(
+      "multiple of 100",
+    );
   });
 });
 
