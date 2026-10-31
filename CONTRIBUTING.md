@@ -58,7 +58,7 @@ pnpm dev path/to/my-site    # the same, for a site of your own
 pnpm dev --port 4000
 ```
 
-It compiles the server and CLI when `src/` changes, rebuilds the admin when `admin/` changes, and runs `kirigami dev` on the site, restarting it when the compiled code changes. Edits to the site's pages are rebuilt by `kirigami dev` as usual. Each line is labelled `tsc`, `admin` or `dev`. Ctrl+C stops all three. With no site it uses the content `kirigami.config.yaml` names, if the project root has one (see [ADR 0014](docs/adr/0014-project-configuration.md)), and otherwise `.dev-site/` (ignored by git), copied from the test fixture the first time, so trying things in the admin never changes the fixtures the tests use. Refresh the browser after a change to the admin; the server's own pages reload by themselves.
+It compiles the server and CLI when `src/` changes, rebuilds the admin when `admin/` changes, and runs `kirigami dev` on the site, restarting it when the compiled code changes. Edits to the site's pages are rebuilt by `kirigami dev` as usual. It also runs Vite, which serves the admin with hot reloading (it prints its own address, `http://localhost:5173/admin/` unless that port is taken) and takes the API and the preview from the site above. Each line is labelled `tsc`, `admin`, `dev` or `vite`. Ctrl+C stops them all. With no site it uses the content `kirigami.config.yaml` names, if the project root has one (see [ADR 0014](docs/adr/0014-project-configuration.md)), and otherwise `.dev-site/` (ignored by git), copied from the test fixture the first time, so trying things in the admin never changes the fixtures the tests use. Work on the admin at Vite's address; the built admin on port 3000 needs a refresh after a change.
 
 To serve your own content from this project instead, copy the template and edit it:
 
@@ -68,14 +68,14 @@ cp kirigami.config.example.yaml kirigami.config.yaml   # git ignores this copy, 
 
 `pnpm dev` then serves the folder it names (`./content` by default, also ignored by git, and made for you if it is missing). The template shows every setting with its default.
 
-To work on the admin with hot reloading instead, run a site in one terminal and Vite in another:
+`pnpm admin:dev` is the same command as `pnpm dev`. Running `vite` by itself has no API behind it (nothing is listening on port 3000), so the page list and every screen fail to load. To run the pieces yourself instead:
 
 ```sh
 node dist/cli/main.js dev path/to/my-site   # serves the API on port 3000
-pnpm admin:dev                              # admin on http://localhost:5173/admin/, proxying /api
+pnpm exec vite                              # admin on http://localhost:5173/admin/, proxying /api
 ```
 
-The proxy sends everything outside `/admin` to `kirigami dev`: the API, the build events, and the site's own pages, which the editor's preview frame shows (see ADR 0013). If the site runs on another port, set `KIRIGAMI_DEV_URL` (for example `KIRIGAMI_DEV_URL=http://localhost:4000 pnpm admin:dev`). The admin imports only types from `src/server/api-schemas.ts`, so its request and response shapes cannot drift from the API.
+The proxy sends everything outside `/admin` to `kirigami dev`: the API, the build events, and the site's own pages, which the editor's preview frame shows (see ADR 0013). If the site runs on another port, set `KIRIGAMI_DEV_URL` (for example `KIRIGAMI_DEV_URL=http://localhost:4000 pnpm exec vite`; `pnpm dev` sets it for you). The admin imports only types from `src/server/api-schemas.ts`, so its request and response shapes cannot drift from the API.
 
 ### Styling
 

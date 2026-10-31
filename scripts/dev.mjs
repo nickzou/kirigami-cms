@@ -4,6 +4,8 @@
 //   tsc    compiles the server and CLI to dist/ whenever src/ changes
 //   admin  rebuilds the admin into dist/admin whenever admin/ changes
 //   dev    runs `kirigami dev <site>`, and restarts it when the compiled code changes
+//   vite   serves the admin with live reload (it takes the API from `dev`), so
+//          a change to admin/ shows up without a refresh
 // Edits to the site's pages and site.yaml are rebuilt by `kirigami dev` itself.
 //
 // With no site it uses the content named by kirigami.config.yaml, if the
@@ -60,18 +62,18 @@ if (site !== undefined && siteIndex === -1 && !existsSync(site)) {
   console.log("Made .dev-site/ from the test fixture (it is ignored by git).");
 }
 
-const colors = { tsc: 36, admin: 35, dev: 32 };
+const colors = { tsc: 36, admin: 35, dev: 32, vite: 33 };
 const children = [];
 let stopping = false;
 
 /** Starts a process in its own group, prefixing each line it prints. */
-function run(label, command, commandArgs, onLine = () => {}) {
+function run(label, command, commandArgs, onLine = () => {}, extraEnv = {}) {
   const child = spawn(command, commandArgs, {
     cwd: root,
     detached: true, // its own group, so stopping takes its children with it
     stdio: ["ignore", "pipe", "pipe"],
     shell: process.platform === "win32",
-    env: { ...process.env, FORCE_COLOR: "1" },
+    env: { ...process.env, FORCE_COLOR: "1", ...extraEnv },
   });
   children.push(child);
   const tag = `\u001b[${colors[label]}m${label.padEnd(5)}\u001b[0m`;
@@ -115,7 +117,7 @@ function startServerWhenReady() {
   if (started || !compiled || !built) return;
   started = true;
   console.log(
-    `\nOpen http://localhost:${port}/admin/ (refresh after a change to the admin).\n`,
+    `\nWorking on the admin: open the vite address below (it live-reloads).\nThe built admin is at http://localhost:${port}/admin/ (refresh after a change).\n`,
   );
   // --watch restarts it when any compiled file it uses changes.
   run("dev", process.execPath, [
@@ -126,6 +128,11 @@ function startServerWhenReady() {
     ...(site === undefined ? [] : [site]),
     ...args,
   ]);
+  // The admin with live reload, taking the API and the preview from the server
+  // above (vite's own address is printed on the line it starts with).
+  run("vite", "pnpm", pnpm("vite"), undefined, {
+    KIRIGAMI_DEV_URL: `http://localhost:${port}`,
+  });
 }
 
 const pnpm = (...rest) => ["exec", ...rest];

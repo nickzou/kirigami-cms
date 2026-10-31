@@ -15,7 +15,7 @@
     "test": "vitest run --passWithNoTests",
     "build": "tsc -p tsconfig.build.json && vite build",
     "dev": "node scripts/dev.mjs",
-    "admin:dev": "vite",
+    "admin:dev": "node scripts/dev.mjs",
     "storybook": "storybook dev -p 6006",
     "build:storybook": "storybook build",
     "check:boundaries": "depcruise src --config .dependency-cruiser.cjs",
