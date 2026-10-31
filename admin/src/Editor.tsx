@@ -12,11 +12,12 @@ import {
 } from "./components/EditorForm/EditorForm.js";
 import { ErrorPanel } from "./components/ErrorPanel/ErrorPanel.js";
 import { HeaderActions } from "./components/HeaderActions/HeaderActions.js";
+import { HeaderTitle } from "./components/HeaderTitle/HeaderTitle.js";
 import { LineEndingsNotice } from "./components/LineEndingsNotice/LineEndingsNotice.js";
 import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
 import { pageHref } from "./components/PageListView/PageListView.js";
+import { PagePathField } from "./components/PagePathField/PagePathField.js";
 import { PreviewFrame } from "./components/PreviewFrame/PreviewFrame.js";
-import { RenameDialog } from "./components/RenameDialog/RenameDialog.js";
 import { SaveControls } from "./components/SaveControls/SaveControls.js";
 import { SaveFailedPanel } from "./components/SaveFailedPanel/SaveFailedPanel.js";
 import { SaveStatus } from "./components/SaveStatus/SaveStatus.js";
@@ -41,12 +42,14 @@ export function Editor({ path }: { path: string }) {
   // One view at a time, chosen with the segmented control.
   const [view, setView] = useState<"editor" | "preview">("editor");
   const navigate = useNavigate();
-  const [dialog, setDialog] = useState<"rename" | "delete">();
-  // The other pages' paths, fetched when the rename dialog opens, so it can say
-  // right away if the new path is taken. The server still has the last word.
+  const [deleting, setDeleting] = useState(false);
+  // The other pages' paths, fetched when the title field is first focused, so
+  // it can say right away if a new path is taken. The server still has the last
+  // word.
+  const [editingPath, setEditingPath] = useState(false);
   const [others, setOthers] = useState<string[]>();
   useEffect(() => {
-    if (dialog !== "rename") return;
+    if (!editingPath) return;
     const controller = new AbortController();
     listPages(controller.signal).then(
       (pages) =>
@@ -54,14 +57,14 @@ export function Editor({ path }: { path: string }) {
       () => {},
     );
     return () => controller.abort();
-  }, [dialog, path]);
+  }, [editingPath, path]);
 
   const { load, save } = editor;
 
   if (load.status === "loading") {
     return (
       <>
-        <h1>{path}</h1>
+        <HeaderTitle before={<BackLink />}>{path}</HeaderTitle>
         <LoadingMessage />
       </>
     );
@@ -70,7 +73,7 @@ export function Editor({ path }: { path: string }) {
   if (load.status === "error") {
     return (
       <>
-        <h1>{path}</h1>
+        <HeaderTitle before={<BackLink />}>{path}</HeaderTitle>
         <ErrorPanel
           message={
             load.missing
@@ -79,7 +82,6 @@ export function Editor({ path }: { path: string }) {
           }
           onRetry={load.missing ? undefined : editor.reload}
         />
-        <BackLink />
       </>
     );
   }
@@ -102,30 +104,37 @@ export function Editor({ path }: { path: string }) {
         }}
         className=":uno: -mx-4 min-h-[calc(100vh-5rem)] px-4 pt-4 pb-28 md:mx-auto md:max-w-[55rem] md:rounded-t-lg md:px-12 md:pt-8"
       >
-        <div className=":uno: mb-4 flex items-center justify-between gap-3 [&>p]:m-0">
-          <BackLink />
+        <div className=":uno: mb-4 flex items-center justify-end gap-3">
           {editor.version !== undefined && (
             <div className=":uno: flex gap-2">
               <Button
                 size="small"
                 disabled={editor.dirty || editor.saving}
                 title={editor.dirty ? "Save your changes first." : undefined}
-                onClick={() => setDialog("rename")}
-              >
-                Rename
-              </Button>
-              <Button
-                size="small"
-                disabled={editor.dirty || editor.saving}
-                title={editor.dirty ? "Save your changes first." : undefined}
-                onClick={() => setDialog("delete")}
+                onClick={() => setDeleting(true)}
               >
                 Delete
               </Button>
             </div>
           )}
         </div>
-        <h1>{path}</h1>
+        <PagePathField
+          path={path}
+          before={<BackLink />}
+          others={others}
+          lockedReason={
+            editor.dirty || editor.saving
+              ? "Save your changes first."
+              : editor.version === undefined
+                ? "This page cannot be renamed."
+                : undefined
+          }
+          onStartEditing={() => setEditingPath(true)}
+          onRename={async (to) => {
+            const moved = await renamePage(path, to, editor.version as string);
+            navigate(pageHref(moved.path), { replace: true });
+          }}
+        />
         {build.error !== null && <BuildProblem message={build.error} />}
         <HeaderActions>
           <SaveControls
@@ -166,21 +175,10 @@ export function Editor({ path }: { path: string }) {
           />
         )}
       </div>
-      {dialog === "rename" && editor.version !== undefined && (
-        <RenameDialog
-          path={path}
-          others={others}
-          onClose={() => setDialog(undefined)}
-          onRename={async (to) => {
-            const moved = await renamePage(path, to, editor.version as string);
-            navigate(pageHref(moved.path), { replace: true });
-          }}
-        />
-      )}
-      {dialog === "delete" && editor.version !== undefined && (
+      {deleting && editor.version !== undefined && (
         <DeleteDialog
           path={path}
-          onClose={() => setDialog(undefined)}
+          onClose={() => setDeleting(false)}
           onDelete={async () => {
             await deletePage(path, editor.version as string);
             navigate("/", { replace: true });

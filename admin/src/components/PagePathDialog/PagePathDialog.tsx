@@ -24,8 +24,8 @@ export interface PagePathDialogProps {
 }
 
 /**
- * Asks for a page's path and checks it as it is typed. It is the body of both
- * the New page and the Rename dialogs.
+ * Asks for a page's path and checks it as it is typed. It is the body of the
+ * New page dialog.
  */
 export function PagePathDialog({
   title,

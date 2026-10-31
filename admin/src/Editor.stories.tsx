@@ -160,17 +160,35 @@ export const SwitchesViewsOnAPhone: Story = {
   },
 };
 
-/** Rename and Delete sit beside the back link; each opens a dialog. */
-export const RenameDialogOpen: Story = {
+/** The title is a field: type a new path and press Enter to rename. */
+export const RenameFromTheTitle: Story = {
   beforeEach: () => installFakeApi(hello).restore,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Rename" }),
+    const path = await canvas.findByRole("textbox", { name: "Page path" });
+    await userEvent.clear(path);
+    await userEvent.type(path, "blog/renamed{Enter}");
+    // Done when the field is free again (the app moves to the new address; a
+    // story has no routes, so it stays where it is).
+    await waitFor(() =>
+      expect(canvas.getByRole("textbox", { name: "Page path" })).toBeEnabled(),
     );
-    await expect(
-      await canvas.findByRole("dialog", { name: "Rename blog/hello.md" }),
-    ).toBeVisible();
+    await expect(canvas.queryByRole("alert")).toBeNull();
+  },
+};
+
+/** A path that is taken is refused as it is typed. */
+export const RenameToATakenPath: Story = {
+  beforeEach: () =>
+    installFakeApi({ ...hello, "about.md": "# About\n" }).restore,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const path = await canvas.findByRole("textbox", { name: "Page path" });
+    await userEvent.clear(path);
+    await userEvent.type(path, "about");
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "A page already exists at about.md.",
+    );
   },
 };
 
@@ -193,7 +211,9 @@ export const RenameAndDeleteWaitForASave: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(await canvas.findByLabelText("Markdown"), " more");
-    await expect(canvas.getByRole("button", { name: "Rename" })).toBeDisabled();
+    await expect(
+      canvas.getByRole("textbox", { name: "Page path" }),
+    ).toHaveAttribute("readonly");
     await expect(canvas.getByRole("button", { name: "Delete" })).toBeDisabled();
   },
 };

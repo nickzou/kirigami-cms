@@ -55,31 +55,6 @@ export const NewPageWarnsOfASharedAddress: Story = {
   },
 };
 
-export const RenamesAPage: Story = {
-  beforeEach: () => installFakeApi(site).restore,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Rename blog/hello.md" }),
-    );
-    const dialog = await canvas.findByRole("dialog");
-    const input = within(dialog).getByLabelText("Path");
-    await userEvent.clear(input);
-    await userEvent.type(input, "notes/hello");
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "Rename" }),
-    );
-    await waitFor(() => expect(canvas.queryByRole("dialog")).toBeNull());
-    // It now sits in a new folder, under its file name.
-    await expect(
-      await canvas.findByRole("button", { name: /^notes/ }),
-    ).toBeVisible();
-    await expect(
-      await canvas.findByRole("link", { name: /hello\.md/ }),
-    ).toHaveAttribute("href", "/pages/notes/hello.md");
-  },
-};
-
 export const DeletesAfterConfirming: Story = {
   beforeEach: () => installFakeApi(site).restore,
   play: async ({ canvasElement }) => {

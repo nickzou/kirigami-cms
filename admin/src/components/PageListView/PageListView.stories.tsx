@@ -70,23 +70,16 @@ export const OpensAndCloses: Story = {
   },
 };
 
-/** Given handlers, each row has Rename and Delete buttons beside its link. */
-export const WithActions: Story = {
+/** Given a handler, each row has a Delete button beside its link. */
+export const WithDelete: Story = {
   args: {
     ...Default.args,
-    onRename: fn(),
     onDelete: fn(),
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Rename about.md" }),
-    );
-    await expect(args.onRename).toHaveBeenCalledWith(
-      expect.objectContaining({ path: "about.md" }),
-    );
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Delete blog/hello.md" }),
+      await canvas.findByRole("button", { name: "Delete blog/hello.md" }),
     );
     await expect(args.onDelete).toHaveBeenCalledWith(
       expect.objectContaining({ path: "blog/hello.md" }),

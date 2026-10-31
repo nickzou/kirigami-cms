@@ -50,12 +50,8 @@ describe("PageList", () => {
     );
     show();
     const links = await screen.findAllByRole("link");
-    // Top-level pages first, then the folders; a page in a folder shows its
-    // file name, not its path.
-    expect(links.map((l) => l.textContent)).toEqual([
-      "Homeindex.md",
-      "My postmy post.md",
-    ]);
+    // Top-level pages first, then the folders; each shows its title.
+    expect(links.map((l) => l.textContent)).toEqual(["Home", "My post"]);
     expect(links.map((l) => l.getAttribute("href"))).toEqual([
       "/pages/index.md",
       "/pages/blog/my%20post.md",
@@ -172,66 +168,6 @@ describe("PageList: new page", () => {
   });
 });
 
-describe("PageList: rename", () => {
-  it("moves the page and shows it at its new path, saying links are not updated", async () => {
-    const store = manage({ "a.md": "# A\n", "b.md": "# B\n" });
-    fireEvent.click(await screen.findByRole("button", { name: "Rename a.md" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/Links to this page/)).toBeDefined();
-    fireEvent.change(within(dialog).getByLabelText("Path"), {
-      target: { value: "notes/a" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Rename" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(await pathsOf(store)).toEqual(["b.md", "notes/a.md"]);
-    expect(
-      (await screen.findAllByRole("link")).map((link) =>
-        link.getAttribute("href"),
-      ),
-    ).toEqual(["/pages/b.md", "/pages/notes/a.md"]);
-  });
-
-  it("cannot rename onto a page that exists, and keeps both", async () => {
-    const store = manage({ "a.md": "# A\n", "b.md": "# B\n" });
-    fireEvent.click(await screen.findByRole("button", { name: "Rename a.md" }));
-    const dialog = await screen.findByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText("Path"), {
-      target: { value: "b" },
-    });
-    expect((await within(dialog).findByRole("alert")).textContent).toContain(
-      "A page already exists at b.md.",
-    );
-    expect(
-      (
-        within(dialog).getByRole("button", {
-          name: "Rename",
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-    expect(await pathsOf(store)).toEqual(["a.md", "b.md"]);
-  });
-
-  it("shows what the server refuses, such as a page that changed meanwhile", async () => {
-    const store = manage({ "a.md": "# A\n" });
-    fireEvent.click(await screen.findByRole("button", { name: "Rename a.md" }));
-    const dialog = await screen.findByRole("dialog");
-    // Someone else edits the page after the list was loaded.
-    await store.write(
-      "a.md",
-      "# Changed\n",
-      (await store.read("a.md")).version,
-    );
-    fireEvent.change(within(dialog).getByLabelText("Path"), {
-      target: { value: "z" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Rename" }));
-    expect((await within(dialog).findByRole("alert")).textContent).toContain(
-      "changed since it was read",
-    );
-    expect(await pathsOf(store)).toEqual(["a.md"]);
-  });
-});
-
 describe("PageList: delete", () => {
   it("names the page, says it cannot be undone, and deletes it when confirmed", async () => {
     const store = manage({ "a.md": "# A\n", "b.md": "# B\n" });
@@ -245,7 +181,7 @@ describe("PageList: delete", () => {
     expect(await pathsOf(store)).toEqual(["b.md"]);
     expect(
       (await screen.findAllByRole("link")).map((link) => link.textContent),
-    ).toEqual(["Bb.md"]);
+    ).toEqual(["B"]);
   });
 
   it("keeps the page when cancelled", async () => {

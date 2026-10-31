@@ -50,6 +50,22 @@ describe("App", () => {
     await screen.findByRole("link", { name: /Hello/ });
   });
 
+  it("has the way to Settings on the Pages screen only, in the banner", async () => {
+    stubPages();
+    open("/");
+    await screen.findByRole("link", { name: /Hello/ });
+    const banner = screen.getByRole("banner");
+    expect(
+      within(banner)
+        .getByRole("link", { name: "Settings" })
+        .getAttribute("href"),
+    ).toBe("/settings");
+
+    fireEvent.click(screen.getByRole("link", { name: /Hello/ }));
+    await screen.findByLabelText("Markdown");
+    expect(within(banner).queryByRole("link", { name: "Settings" })).toBeNull();
+  });
+
   it("opens a page's route from the list, and goes back", async () => {
     stubPages();
     open("/");

@@ -39,6 +39,9 @@ const editor = () =>
   screen.findByLabelText("Markdown") as Promise<HTMLTextAreaElement>;
 const type = (box: HTMLTextAreaElement, value: string) =>
   fireEvent.change(box, { target: { value } });
+/** The page's path, which is the title: a text field in the header, without its `.md`. */
+const pagePath = () =>
+  screen.getByRole("textbox", { name: "Page path" }) as HTMLInputElement;
 const saveButton = () =>
   screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
 
@@ -47,9 +50,7 @@ describe("Editor: loading", () => {
     serve({ "blog/hello.md": "# Hello\n\nText\n" });
     open("/pages/blog/hello.md");
     expect((await editor()).value).toBe("# Hello\n\nText\n");
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
-      "blog/hello.md",
-    );
+    expect(pagePath().value).toBe("blog/hello");
     expect(saveButton().disabled).toBe(true);
     expect(screen.getByText("No changes")).toBeDefined();
   });
@@ -60,9 +61,9 @@ describe("Editor: loading", () => {
     const box = await editor();
     expect(document.activeElement).not.toBe(box);
 
-    // The sheet is the page the heading sits on; a click on it, not on a control.
+    // The sheet is the page the text sits on; a click on it, not on a control.
     fireEvent.click(
-      screen.getByRole("heading", { level: 1 }).parentElement as HTMLElement,
+      box.closest("form")?.parentElement?.parentElement as HTMLElement,
     );
     expect(document.activeElement).toBe(box);
     expect(box.selectionStart).toBe(box.value.length);
@@ -343,7 +344,7 @@ describe("Editor: unsaved changes guard", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "Back to all pages" }));
     await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("a.md");
+    expect(pagePath().value).toBe("a");
     expect(box.value).toBe("two");
   });
 
@@ -400,26 +401,91 @@ describe("Editor: unsaved changes guard", () => {
 });
 
 describe("Editor: rename and delete", () => {
-  it("renames the page and opens it at its new path", async () => {
+  it("renames the page from the title field and opens it at its new path", async () => {
     const store = serve({ "blog/hello.md": "# Hello\n" });
     open("/pages/blog/hello.md");
     await editor();
-    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/Links to this page/)).toBeDefined();
-    fireEvent.change(within(dialog).getByLabelText("Path"), {
-      target: { value: "blog/renamed" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Rename" }));
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
-        "blog/renamed.md",
-      ),
-    );
+    fireEvent.change(pagePath(), { target: { value: "blog/renamed" } });
+    fireEvent.keyDown(pagePath(), { key: "Enter" });
+    await waitFor(() => expect(pagePath().value).toBe("blog/renamed"));
     expect((await editor()).value).toBe("# Hello\n");
     expect((await store.list()).map((e) => e.path)).toEqual([
       "blog/renamed.md",
     ]);
+  });
+
+  it("renames when the field is left, and puts the path back on Escape", async () => {
+    const store = serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    await editor();
+    fireEvent.change(pagePath(), { target: { value: "nope" } });
+    fireEvent.keyDown(pagePath(), { key: "Escape" });
+    expect(pagePath().value).toBe("a");
+    expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
+
+    fireEvent.change(pagePath(), { target: { value: "b" } });
+    fireEvent.blur(pagePath());
+    await waitFor(() => expect(pagePath().value).toBe("b"));
+    expect((await store.list()).map((e) => e.path)).toEqual(["b.md"]);
+  });
+
+  it("keeps the .md extension out of the field, and on the page", async () => {
+    const store = serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    await editor();
+    expect(screen.getByText(".md")).toBeDefined();
+    // Typing the extension changes nothing: it is already there.
+    fireEvent.change(pagePath(), { target: { value: "notes/b.md" } });
+    expect(pagePath().value).toBe("notes/b");
+    fireEvent.keyDown(pagePath(), { key: "Enter" });
+    await waitFor(() => expect(pagePath().value).toBe("notes/b"));
+    expect((await store.list()).map((e) => e.path)).toEqual(["notes/b.md"]);
+  });
+
+  it("warns about a path another page has, once the other pages are known", async () => {
+    const store = serve({ "a.md": "# A\n", "b.md": "# B\n" });
+    open("/pages/a.md");
+    await editor();
+    fireEvent.focus(pagePath());
+    fireEvent.change(pagePath(), { target: { value: "b" } });
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "A page already exists at b.md.",
+    );
+    // It is not renamed, and the reason stays while the path is wrong.
+    fireEvent.keyDown(pagePath(), { key: "Enter" });
+    expect(pagePath().value).toBe("b");
+    expect((await store.list()).map((e) => e.path)).toEqual(["a.md", "b.md"]);
+  });
+
+  it("shows what the server refuses, such as a page that changed meanwhile", async () => {
+    const store = serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    await editor();
+    // Someone else edits the page after it was loaded.
+    await store.write(
+      "a.md",
+      "# Changed\n",
+      (await store.read("a.md")).version,
+    );
+    fireEvent.change(pagePath(), { target: { value: "z" } });
+    fireEvent.keyDown(pagePath(), { key: "Enter" });
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "changed since it was read",
+    );
+    expect(pagePath().value).toBe("z");
+    expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
+  });
+
+  it("cannot rename or delete while there are unsaved changes", async () => {
+    serve({ "a.md": "# A\n" });
+    open("/pages/a.md");
+    type(await editor(), "# A\n\nmore");
+    const remove = screen.getByRole("button", {
+      name: "Delete",
+    }) as HTMLButtonElement;
+    expect(pagePath().readOnly).toBe(true);
+    expect(pagePath().title).toBe("Save your changes first.");
+    expect(remove.disabled).toBe(true);
   });
 
   it("asks before deleting, then deletes the page and goes back to the list", async () => {
@@ -448,34 +514,5 @@ describe("Editor: rename and delete", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);
-  });
-
-  it("warns about a path another page has, once the other pages are known", async () => {
-    serve({ "a.md": "# A\n", "b.md": "# B\n" });
-    open("/pages/a.md");
-    await editor();
-    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
-    const dialog = await screen.findByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText("Path"), {
-      target: { value: "b" },
-    });
-    expect((await within(dialog).findByRole("alert")).textContent).toContain(
-      "A page already exists at b.md.",
-    );
-  });
-
-  it("cannot rename or delete while there are unsaved changes", async () => {
-    serve({ "a.md": "# A\n" });
-    open("/pages/a.md");
-    type(await editor(), "# A\n\nmore");
-    const rename = screen.getByRole("button", {
-      name: "Rename",
-    }) as HTMLButtonElement;
-    const remove = screen.getByRole("button", {
-      name: "Delete",
-    }) as HTMLButtonElement;
-    expect(rename.disabled).toBe(true);
-    expect(remove.disabled).toBe(true);
-    expect(rename.title).toBe("Save your changes first.");
   });
 });

@@ -18,7 +18,7 @@ Both take the version the caller last read, like `write`, and fail with `Version
 
 **Pages that would share an address.** The build refuses two pages that would be written to the same output file (`about.md` and `about/index.md`). Creating or renaming a page through the API is refused with the same rule (`pagesCollidingWith` in `core`), so the admin cannot make a site that will not build, and the admin dialogs use the same function to say so while the path is typed.
 
-**Links are not rewritten.** After a rename, links to the page in other pages still point at the old path. The admin says so; rewriting them is a possible later feature.
+**Links are not rewritten.** After a rename, links to the page in other pages still point at the old path. The admin no longer says so (renaming is a field in the editor header, with no room for a note); saying so again, or rewriting them, is a possible later feature.
 
 ## Watching
 
