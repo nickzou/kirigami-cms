@@ -17,22 +17,29 @@ export class PortInUseError extends Error {
   }
 }
 
-/** Serves the files on localhost. Port 0 picks any free port. */
+export const LOOPBACK = "127.0.0.1";
+
+/**
+ * Serves the files, on this machine only unless a `host` is given (an address
+ * to listen on, such as 0.0.0.0 for every one). Port 0 picks any free port.
+ */
 export function startDevServer(
   getFiles: () => readonly OutputFile[],
   port: number,
   options: SiteAppOptions = {},
+  host: string = LOOPBACK,
 ): Promise<DevServer> {
   return new Promise((resolve, reject) => {
     const server = serve(
       {
         fetch: createSiteApp(getFiles, options).fetch,
         port,
-        hostname: "127.0.0.1",
+        hostname: host,
       },
       (info) =>
         resolve({
-          url: `http://localhost:${info.port}/`,
+          // Listening on every address, you still open it as localhost from here.
+          url: `http://${host === LOOPBACK || host === "0.0.0.0" || host === "::" ? "localhost" : host}:${info.port}/`,
           close: () =>
             new Promise<void>((done, fail) => {
               server.close((error) => (error ? fail(error) : done()));
