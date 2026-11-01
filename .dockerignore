@@ -1,0 +1,16 @@
+# Only what the build needs goes into the image.
+node_modules
+dist
+storybook-static
+coverage
+.git
+.claude
+.dev-site
+content
+kirigami.config.yaml
+*.log
+.env
+.env.*
+.DS_Store
+Dockerfile
+.dockerignore

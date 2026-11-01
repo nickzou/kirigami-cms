@@ -12,7 +12,7 @@ import {
 } from "../core/index.js";
 import { createAdminApp } from "../server/admin.js";
 import { createApiApp } from "../server/api.js";
-import { PortInUseError, startDevServer } from "../server/dev.js";
+import { LOOPBACK, PortInUseError, startDevServer } from "../server/dev.js";
 import { createEventHub } from "../server/events.js";
 import { createLiveSite } from "../server/live-site.js";
 import { findShadowedPages } from "../server/reserved.js";
@@ -34,7 +34,10 @@ export interface Io {
 const USAGE = `Usage:
   kirigami build [site] [--out <dir>]   Render the site to static HTML
   kirigami check [site]                 Validate the site without building it
-  kirigami dev [site] [--port <n>]      Preview the site locally (default port: 3000)
+  kirigami dev [site] [--port <n>] [--host <address>]
+                                        Preview the site locally (default port: 3000, and
+                                        this machine only; --host 0.0.0.0 listens on every
+                                        address, which has no sign-in yet)
   kirigami --help
 
 [site] is the folder of markdown files. Without it, the content is where
@@ -80,6 +83,15 @@ export async function run(argv: string[], io: Io): Promise<number> {
     io.err(`--port only applies to "dev".\n\n${USAGE}`);
     return 2;
   }
+  if (command !== "dev" && values.host !== undefined) {
+    io.err(`--host only applies to "dev".\n\n${USAGE}`);
+    return 2;
+  }
+  if (values.host !== undefined && values.host.trim() === "") {
+    io.err(`--host needs an address, such as 0.0.0.0.\n\n${USAGE}`);
+    return 2;
+  }
+  const host = values.host ?? LOOPBACK;
   const port = values.port === undefined ? 3000 : Number(values.port);
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     io.err(`--port must be a number from 0 to 65535.\n\n${USAGE}`);
@@ -105,7 +117,12 @@ export async function run(argv: string[], io: Io): Promise<number> {
     }
     if (command === "check") return await check(content.store, io);
     if (command === "dev")
-      return await dev(content, project.source !== undefined, port, io);
+      return await dev(
+        content,
+        project.source !== undefined,
+        { port, host },
+        io,
+      );
     return await build(content.store, project.outDir, io);
   } catch (error) {
     if (
@@ -127,6 +144,7 @@ function parse(argv: string[]) {
     options: {
       out: { type: "string" },
       port: { type: "string" },
+      host: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -186,7 +204,7 @@ async function build(
 async function dev(
   content: OpenedContent,
   chosen: boolean,
-  port: number,
+  listen: { port: number; host: string },
   io: Io,
 ): Promise<number> {
   const { store, dir: site, ignore } = content;
@@ -226,11 +244,21 @@ async function dev(
     },
   });
   warnShadowed(live.files());
-  const server = await startDevServer(live.files, port, {
-    hub,
-    api: createApiApp(store),
-    admin: createAdminApp(ADMIN_DIR),
-  });
+  const server = await startDevServer(
+    live.files,
+    listen.port,
+    {
+      hub,
+      api: createApiApp(store),
+      admin: createAdminApp(ADMIN_DIR),
+    },
+    listen.host,
+  );
+  if (listen.host !== LOOPBACK) {
+    io.err(
+      `Warning: listening on ${listen.host}, not just this machine. There is no sign-in yet, so anyone who can reach this address can read and change the content.`,
+    );
+  }
   const watcher = watchFolder(site, {
     ignore,
     relevant: isSourcePath,

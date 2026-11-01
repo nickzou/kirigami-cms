@@ -1,0 +1,11 @@
+# `docker compose up` builds Kirigami and serves ./content (made if it is not
+# there) with the admin at http://localhost:3000/admin/. Only Docker is needed:
+# no Node, no pnpm. There is no sign-in yet, so the port is published to this
+# machine only.
+services:
+  kirigami:
+    build: .
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./content:/content

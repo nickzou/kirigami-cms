@@ -392,6 +392,31 @@ describe("kirigami dev", () => {
     expect(await run(["dev", dir, "--out", "x"], capture(dir))).toBe(2);
   });
 
+  it("says so when asked to listen beyond this machine, and only then", async () => {
+    const dir = await site();
+    const abort = new AbortController();
+    const wide = { ...capture(dir), signal: abort.signal };
+    const local = { ...capture(dir), signal: abort.signal };
+    try {
+      expect(await run(["dev", dir, "--port=0", "--host=0.0.0.0"], wide)).toBe(
+        0,
+      );
+      expect(wide.lines.err.join("\n")).toContain("no sign-in");
+      expect(await run(["dev", dir, "--port=0"], local)).toBe(0);
+      expect(local.lines.err.join("\n")).not.toContain("sign-in");
+    } finally {
+      abort.abort();
+    }
+  });
+
+  it("only accepts --host for dev, and with an address", async () => {
+    const dir = await site();
+    expect(await run(["build", dir, "--host", "0.0.0.0"], capture(dir))).toBe(
+      2,
+    );
+    expect(await run(["dev", dir, "--host="], capture(dir))).toBe(2);
+  });
+
   it("exits 1 with the config problem instead of serving a broken site", async () => {
     const dir = await site();
     await writeFile(join(dir, "site.yaml"), "nope: 1\n");

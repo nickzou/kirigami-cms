@@ -29,3 +29,26 @@ describe("startDevServer", () => {
     }
   });
 });
+
+describe("startDevServer host", () => {
+  it("listens on this machine only unless a host is given", async () => {
+    const server = await startDevServer(() => files, 0);
+    try {
+      expect(server.url).toMatch(/^http:\/\/localhost:\d+\/$/);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("listens on the host it is given", async () => {
+    const server = await startDevServer(() => files, 0, {}, "0.0.0.0");
+    try {
+      const port = new URL(server.url).port;
+      // Reachable by the machine's own non-loopback address too, not only 127.0.0.1.
+      expect((await fetch(`http://127.0.0.1:${port}/`)).status).toBe(200);
+      expect(server.url).toMatch(/^http:\/\/localhost:\d+\/$/);
+    } finally {
+      await server.close();
+    }
+  });
+});
