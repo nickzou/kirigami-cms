@@ -46,7 +46,15 @@ Raw HTML in markdown is left out of the output. See [`test/fixtures/basic-site`]
 
 ### In a container
 
-The `Dockerfile` runs `kirigami dev` (the admin with its live preview) on the markdown folder mounted at `/content`:
+The quickest way to try it, with only Docker installed (no Node or pnpm): put your markdown in `./content` (it is made if it is not there), then
+
+```sh
+docker compose up
+```
+
+and open <http://localhost:3000/admin/>. Ctrl+C stops it; `docker compose up --build` picks up an update after a `git pull`.
+
+The same thing by hand: the `Dockerfile` runs `kirigami dev` (the admin with its live preview) on the markdown folder mounted at `/content`:
 
 ```sh
 docker build -t kirigami .
