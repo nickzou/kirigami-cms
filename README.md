@@ -37,12 +37,23 @@ pnpm build
 node dist/cli/main.js build my-site     # writes my-site/dist
 node dist/cli/main.js build             # the content kirigami.config.yaml names, or ./content
 node dist/cli/main.js check my-site     # validates without building
-node dist/cli/main.js dev my-site       # preview at http://localhost:3000, reloads the browser when you save; admin at /admin, JSON API at /api (OpenAPI: /api/openapi.json)
+node dist/cli/main.js dev my-site       # (--host <address> to listen beyond this machine) preview at http://localhost:3000, reloads the browser when you save; admin at /admin, JSON API at /api (OpenAPI: /api/openapi.json)
 ```
 
 The admin has a **Settings** screen that edits the theme in `site.yaml` with a live preview, keeping the file's comments ([ADR 0015](docs/adr/0015-settings-form-from-the-schema.md)).
 
 Raw HTML in markdown is left out of the output. See [`test/fixtures/basic-site`](test/fixtures/basic-site) for an example, and [`schema/site.schema.json`](schema/site.schema.json) for editor autocomplete in `site.yaml`.
+
+### In a container
+
+The `Dockerfile` runs `kirigami dev` (the admin with its live preview) on the markdown folder mounted at `/content`:
+
+```sh
+docker build -t kirigami .
+docker run --rm -p 127.0.0.1:3000:3000 -v "$PWD/my-site:/content" kirigami
+```
+
+Then open <http://localhost:3000/admin/>. The container runs as the `node` user (uid 1000), which needs to be able to write to the mounted folder; add `--user "$(id -u):$(id -g)"` if it is owned by someone else. There is **no sign-in yet**, so publish the port to your own machine only, as above, and do not expose it to a network. Inside the container the server listens on every address (`kirigami dev --host 0.0.0.0`), which is how the published port reaches it; by default `kirigami dev` listens on this machine only.
 
 ## License
 
