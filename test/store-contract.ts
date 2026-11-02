@@ -80,6 +80,66 @@ export function describeContentStore(
       );
     });
 
+    it("lets exactly one of two writes with the same version through", async () => {
+      const store = await create();
+      const { version } = await store.write("a.md", "one", null);
+      const results = await Promise.allSettled([
+        store.write("a.md", "two", version),
+        store.write("a.md", "three", version),
+      ]);
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      const failed = results.find((r) => r.status === "rejected");
+      expect(failed?.status === "rejected" && failed.reason).toBeInstanceOf(
+        VersionConflictError,
+      );
+      const written = results.findIndex((r) => r.status === "fulfilled");
+      expect((await store.read("a.md")).content).toBe(
+        ["two", "three"][written],
+      );
+    });
+
+    it("lets exactly one of two creates of the same file through", async () => {
+      const store = await create();
+      const results = await Promise.allSettled([
+        store.write("a.md", "one", null),
+        store.write("a.md", "two", null),
+      ]);
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    });
+
+    it("lets exactly one of a write and a delete with the same version through", async () => {
+      const store = await create();
+      const { version } = await store.write("a.md", "one", null);
+      const results = await Promise.allSettled([
+        store.write("a.md", "two", version),
+        store.delete("a.md", version),
+      ]);
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    });
+
+    it("lets exactly one of two renames of the same file through", async () => {
+      const store = await create();
+      const { version } = await store.write("a.md", "one", null);
+      const results = await Promise.allSettled([
+        store.rename("a.md", "b.md", version),
+        store.rename("a.md", "c.md", version),
+      ]);
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      expect(await store.list()).toHaveLength(1);
+    });
+
+    it("lets two renames in opposite directions finish", async () => {
+      const store = await create();
+      const a = await store.write("a.md", "a", null);
+      const b = await store.write("b.md", "b", null);
+      const results = await Promise.allSettled([
+        store.rename("a.md", "b.md", a.version),
+        store.rename("b.md", "a.md", b.version),
+      ]);
+      expect(results).toHaveLength(2);
+      expect((await store.list()).length).toBeGreaterThanOrEqual(1);
+    });
+
     it("lists entries sorted by path, with their versions", async () => {
       const store = await create();
       const b = await store.write("b.md", "b", null);
