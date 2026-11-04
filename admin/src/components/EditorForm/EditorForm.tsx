@@ -1,10 +1,12 @@
-import {
-  type ReactNode,
-  type Ref,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { lazy, type ReactNode, type Ref, Suspense } from "react";
+import type { EditorHandle } from "../../editor-handle.js";
+import { LoadingMessage } from "../LoadingMessage/LoadingMessage.js";
+
+// The editor is a library of its own, so it is fetched when a page is opened
+// to edit, and the other screens do not carry it.
+const MarkdownEditor = lazy(
+  () => import("../MarkdownEditor/MarkdownEditor.js"),
+);
 
 /** The `id` of the form, so a Save button elsewhere on the page can submit it. */
 export const EDITOR_FORM_ID = "page-editor";
@@ -13,45 +15,24 @@ export interface EditorFormProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
-  textareaRef?: Ref<HTMLTextAreaElement>;
-  /** Shown under the text box. */
+  editorRef?: Ref<EditorHandle>;
+  /** Shown under the text. */
   notice?: ReactNode;
 }
 
 /**
- * The text box, with nothing drawn around it: it takes the shape of the page
- * it sits on and grows with what is typed, so the page itself scrolls. It
- * holds no state of its own, and has no Save button: that lives in the header
- * (see `SaveControls`) and submits this form.
+ * The text of the page, with nothing drawn around it: it takes the shape of
+ * the page it sits on and grows with what is typed, so the page itself
+ * scrolls. It holds no state of its own, and has no Save button: that lives in
+ * the header (see `SaveControls`) and submits this form.
  */
 export function EditorForm({
   value,
   onChange,
   onSubmit,
-  textareaRef,
+  editorRef,
   notice,
 }: EditorFormProps) {
-  const box = useRef<HTMLTextAreaElement | null>(null);
-  // Our own reference (to size the box) and the caller's, both kept up to date.
-  const setBox = useCallback(
-    (element: HTMLTextAreaElement | null) => {
-      box.current = element;
-      if (typeof textareaRef === "function") textareaRef(element);
-      else if (textareaRef) textareaRef.current = element;
-    },
-    [textareaRef],
-  );
-
-  // Fit the box to its text. Its minimum height (in the class) still keeps the
-  // empty part of a short page inside the box, so a click there lands in it.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `value` is what changes the height.
-  useLayoutEffect(() => {
-    const element = box.current;
-    if (!element) return;
-    element.style.height = "auto";
-    element.style.height = `${element.scrollHeight}px`;
-  }, [value]);
-
   return (
     <form
       id={EDITOR_FORM_ID}
@@ -61,17 +42,9 @@ export function EditorForm({
         onSubmit();
       }}
     >
-      <label htmlFor="page-content" className=":uno: sr-only">
-        Markdown
-      </label>
-      <textarea
-        id="page-content"
-        ref={setBox}
-        value={value}
-        spellCheck
-        className=":uno: block min-h-[60vh] w-full resize-none overflow-hidden border-0 bg-transparent p-0 font-mono text-[0.9375rem] leading-relaxed text-text focus-visible:outline-none"
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <Suspense fallback={<LoadingMessage />}>
+        <MarkdownEditor ref={editorRef} value={value} onChange={onChange} />
+      </Suspense>
       {notice}
     </form>
   );

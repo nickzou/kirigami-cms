@@ -6,6 +6,7 @@ import {
   type Page,
   savePage,
 } from "../api.js";
+import type { EditorHandle } from "../editor-handle.js";
 import {
   detectLineEndings,
   forDisplay,
@@ -62,7 +63,7 @@ export function usePageEditor(path: string, changes = 0) {
   const [attempt, setAttempt] = useState(0);
   const [outside, setOutside] = useState<OutsideChange>();
   const [updatedOutside, setUpdatedOutside] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<EditorHandle>(null);
 
   const adopt = useCallback((page: Page) => {
     setBase({
@@ -170,8 +171,7 @@ export function usePageEditor(path: string, changes = 0) {
       await navigator.clipboard.writeText(forSaving(draft, base.endings));
     } catch {
       // No clipboard access: select the text so the user can copy it.
-      textareaRef.current?.focus();
-      textareaRef.current?.select();
+      editorRef.current?.selectAll();
     }
   }, [base, draft]);
 
@@ -187,7 +187,7 @@ export function usePageEditor(path: string, changes = 0) {
     /** The version last read or saved, which rename and delete must send back. */
     version: base?.version,
     ready: load.status === "ready" && base !== undefined,
-    textareaRef,
+    editorRef,
     submit: useCallback(() => void submit(), [submit]),
     /** Like `submit`, but waits, and says whether the page is saved afterwards. */
     saveNow: submit,

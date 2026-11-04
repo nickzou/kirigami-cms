@@ -12,6 +12,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
 import { createFakeApi } from "./fake-api.js";
 import { events, installFakeEvents } from "./fake-events.js";
+import { editorText } from "./test-editor.js";
+import { typeText } from "./test-typing.js";
 
 let restoreEvents: () => void;
 
@@ -86,14 +88,12 @@ describe("Editor: preview", () => {
 
   it("keeps the editor's text and shows no error after a reload", async () => {
     open("/pages/blog/hello.md", hello);
-    const box = (await screen.findByLabelText(
-      "Markdown",
-    )) as HTMLTextAreaElement;
-    fireEvent.change(box, { target: { value: "# Hello\n\nMore" } });
+    const box = (await screen.findByLabelText("Markdown")) as HTMLElement;
+    typeText(box, "# Hello\n\nMore");
     await waitFor(() => expect(events.listeners()).toBe(1));
     act(() => events.reload());
     expect(box.isConnected).toBe(true);
-    expect(box.value).toBe("# Hello\n\nMore");
+    expect(editorText(box)).toBe("# Hello\n\nMore");
     expect(screen.queryByText("The site failed to build")).toBeNull();
   });
 
@@ -140,14 +140,12 @@ describe("Editor: preview", () => {
 
   it("keeps the text box, and what was typed in it, while the preview shows", async () => {
     open("/pages/blog/hello.md", hello);
-    const box = (await screen.findByLabelText(
-      "Markdown",
-    )) as HTMLTextAreaElement;
-    fireEvent.change(box, { target: { value: "# Hello\n\nMore" } });
+    const box = (await screen.findByLabelText("Markdown")) as HTMLElement;
+    typeText(box, "# Hello\n\nMore");
     await showPreview();
     await frame();
     expect(box.isConnected).toBe(true);
-    expect(box.value).toBe("# Hello\n\nMore");
+    expect(editorText(box)).toBe("# Hello\n\nMore");
   });
 });
 

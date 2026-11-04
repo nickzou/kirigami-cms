@@ -6,7 +6,7 @@ Status: accepted
 
 The admin UI is a React 19 single-page app built with Vite, served by the same server and built as part of the single package.
 
-The editor starts as a plain textarea. A CodeMirror 6 live-preview markdown editor is planned as a spike once `core` and the API work.
+The editor started as a plain textarea. It is now a CodeMirror 6 editor (still plain text, loaded as its own chunk when a page is opened to edit); live formatting of the markdown, built on it, follows. What it holds is exactly what is saved, so it never changes a character that was not typed.
 
 ## Why
 

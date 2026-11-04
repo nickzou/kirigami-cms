@@ -11,6 +11,8 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App.js";
 import { createFakeApi, type FakeApiOptions } from "../../fake-api.js";
+import { editorText } from "../../test-editor.js";
+import { typeText } from "../../test-typing.js";
 import { AuthGate } from "./AuthGate.js";
 
 afterEach(() => {
@@ -88,9 +90,9 @@ describe("AuthGate with a password", () => {
     await screen.findByLabelText("Password");
     typePassword(PASSWORD);
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(
-      ((await screen.findByLabelText("Markdown")) as HTMLTextAreaElement).value,
-    ).toBe("# Hello\n");
+    expect(editorText(await screen.findByLabelText("Markdown"))).toBe(
+      "# Hello\n",
+    );
   });
 
   it("goes straight in when already signed in", async () => {
@@ -119,15 +121,15 @@ describe("AuthGate with a password", () => {
     const box = (await screen.findByLabelText(
       "Markdown",
     )) as HTMLTextAreaElement;
-    fireEvent.change(box, { target: { value: "# Hello\n\nUnsaved words\n" } });
+    typeText(box, "# Hello\n\nUnsaved words\n");
 
     api.expireSession();
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Sign in again" });
-    expect(
-      (screen.getByLabelText("Markdown") as HTMLTextAreaElement).value,
-    ).toBe("# Hello\n\nUnsaved words\n");
+    expect(editorText(screen.getByLabelText("Markdown"))).toBe(
+      "# Hello\n\nUnsaved words\n",
+    );
 
     fireEvent.change(within(dialog).getByLabelText("Password"), {
       target: { value: PASSWORD },
@@ -136,9 +138,9 @@ describe("AuthGate with a password", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
     // Back in, the text is still there and now it saves.
-    expect(
-      (screen.getByLabelText("Markdown") as HTMLTextAreaElement).value,
-    ).toBe("# Hello\n\nUnsaved words\n");
+    expect(editorText(screen.getByLabelText("Markdown"))).toBe(
+      "# Hello\n\nUnsaved words\n",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(async () =>
       expect((await api.store.read("blog/hello.md")).content).toBe(

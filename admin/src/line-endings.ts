@@ -1,4 +1,4 @@
-// A textarea always hands back "\n", whatever the file used. To keep a page
+// The editor always holds "\n", whatever the file used. To keep a page
 // byte-for-byte as it was, remember how it ended its lines and put that back
 // when saving.
 
@@ -9,7 +9,7 @@ export interface LineEndings {
   mixed: boolean;
 }
 
-/** The text as a textarea shows it: every line break is "\n". */
+/** The text as the editor holds it: every line break is "\n". */
 export const forDisplay = (content: string): string =>
   content.replace(/\r\n?/g, "\n");
 
@@ -20,6 +20,6 @@ export function detectLineEndings(content: string): LineEndings {
   return { eol: "\r\n", mixed: lone > 0 };
 }
 
-/** Puts a page's line endings back on text taken from a textarea. */
+/** Puts a page's line endings back on text taken from the editor. */
 export const forSaving = (draft: string, { eol }: LineEndings): string =>
   eol === "\r\n" ? draft.replace(/\n/g, "\r\n") : draft;

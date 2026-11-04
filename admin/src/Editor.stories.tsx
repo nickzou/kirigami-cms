@@ -3,6 +3,7 @@ import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { Editor } from "./Editor.js";
 import { failures, installFakeApi } from "./fake-api.js";
 import { events } from "./fake-events.js";
+import { appendText, editorText } from "./test-editor.js";
 
 const meta = {
   title: "Screens/Editor",
@@ -19,7 +20,7 @@ const hello = { "blog/hello.md": "# Hello\n\nA page with **markdown**.\n" };
 async function editAndSave(canvasElement: HTMLElement, extra = " More text.") {
   const canvas = within(canvasElement);
   const box = await canvas.findByLabelText("Markdown");
-  await userEvent.type(box, extra);
+  appendText(box, extra);
   await userEvent.click(canvas.getByRole("button", { name: "Save" }));
   return canvas;
 }
@@ -81,7 +82,7 @@ export const EditedOutsideNothingUnsaved: Story = {
     await canvas.findByLabelText("Markdown");
     await editOutside("# Changed in another editor\n");
     await waitFor(async () =>
-      expect(await canvas.findByLabelText("Markdown")).toHaveValue(
+      expect(editorText(await canvas.findByLabelText("Markdown"))).toBe(
         "# Changed in another editor\n",
       ),
     );
@@ -100,15 +101,15 @@ export const EditedOutsideWhileTyping: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Markdown"), " mine");
+    appendText(await canvas.findByLabelText("Markdown"), " mine");
     await editOutside("# Changed in another editor\n");
     await expect(
       await canvas.findByText(/This page changed outside the admin/),
     ).toBeVisible();
     // What was typed is still there, and the other editor's text is not.
-    const box = canvas.getByLabelText<HTMLTextAreaElement>("Markdown");
-    await expect(box.value).toContain(" mine");
-    await expect(box.value).not.toContain("another editor");
+    const text = editorText(canvas.getByLabelText("Markdown"));
+    await expect(text).toContain(" mine");
+    await expect(text).not.toContain("another editor");
   },
 };
 
@@ -269,10 +270,12 @@ export const RenameAndDeleteWaitForASave: Story = {
   beforeEach: () => installFakeApi(hello).restore,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Markdown"), " more");
-    await expect(
-      canvas.getByRole("textbox", { name: "Page path" }),
-    ).toHaveAttribute("readonly");
+    appendText(await canvas.findByLabelText("Markdown"), " more");
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("textbox", { name: "Page path" }),
+      ).toHaveAttribute("readonly"),
+    );
     await expect(canvas.getByRole("button", { name: "Delete" })).toBeDisabled();
   },
 };
@@ -282,8 +285,10 @@ export const SavesWhenSwitchingToPreview: Story = {
   beforeEach: () => installFakeApi(hello).restore,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Markdown"), " More.");
-    await expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled();
+    appendText(await canvas.findByLabelText("Markdown"), " More.");
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled(),
+    );
     await expect(await showPreview(canvas)).toBeVisible();
     await waitFor(() => expect(canvas.getByText("Saved.")).toBeVisible());
     await expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -295,7 +300,7 @@ export const StaysOnTheTextWhenTheSaveFails: Story = {
   beforeEach: () => installFakeApi(hello, failures.conflictOnSave).restore,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Markdown"), " More.");
+    appendText(await canvas.findByLabelText("Markdown"), " More.");
     await userEvent.click(canvas.getByRole("radio", { name: "Preview" }));
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "changed since you opened it",
