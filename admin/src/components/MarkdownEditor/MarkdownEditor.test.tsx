@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { undo } from "@codemirror/commands";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EditorHandle } from "../../editor-handle.js";
@@ -108,5 +114,82 @@ describe("MarkdownEditor", () => {
     );
     unmount();
     expect(screen.queryByLabelText("Markdown")).toBeNull();
+  });
+
+  describe("formatting", () => {
+    const keyDown = (key: string, init: KeyboardEventInit = {}) =>
+      act(() => {
+        fireEvent.keyDown(editorView(box()).contentDOM, {
+          key,
+          keyCode: key.length === 1 ? key.toUpperCase().charCodeAt(0) : 13,
+          ...init,
+        });
+      });
+    const select = (from: number, to = from) =>
+      act(() =>
+        editorView(box()).dispatch({ selection: { anchor: from, head: to } }),
+      );
+
+    it("does a formatting action to the selection when the handle is asked", () => {
+      const onChange = vi.fn();
+      const ref = createRef<EditorHandle>();
+      render(
+        <MarkdownEditor ref={ref} value="a word here" onChange={onChange} />,
+      );
+      select(2, 6);
+      act(() => ref.current?.format("bold"));
+      expect(editorText(box())).toBe("a **word** here");
+      expect(onChange).toHaveBeenLastCalledWith("a **word** here");
+      expect(box().contains(document.activeElement)).toBe(true);
+    });
+
+    it("makes the formatting one step to undo", () => {
+      const ref = createRef<EditorHandle>();
+      render(
+        <MarkdownEditor ref={ref} value="a word here" onChange={() => {}} />,
+      );
+      select(2, 6);
+      act(() => ref.current?.format("bold"));
+      act(() => {
+        undo(editorView(box()));
+      });
+      expect(editorText(box())).toBe("a word here");
+    });
+
+    it("has Mod-b, Mod-i and Mod-k", () => {
+      render(<MarkdownEditor value="one two three" onChange={() => {}} />);
+      select(0, 3);
+      keyDown("b", { ctrlKey: true });
+      expect(editorText(box())).toBe("**one** two three");
+      select(8, 11);
+      keyDown("i", { ctrlKey: true });
+      expect(editorText(box())).toBe("**one** *two* three");
+      select(14, 19);
+      keyDown("k", { ctrlKey: true });
+      expect(editorText(box())).toBe("**one** *two* [three](url)");
+    });
+
+    it("carries on a list when Enter is pressed at the end of an item", () => {
+      const onChange = vi.fn();
+      render(<MarkdownEditor value={"- one\n- two"} onChange={onChange} />);
+      select(11);
+      keyDown("Enter");
+      expect(editorText(box())).toBe("- one\n- two\n- ");
+      expect(onChange).toHaveBeenLastCalledWith("- one\n- two\n- ");
+      // On the empty item, Enter ends the list.
+      keyDown("Enter");
+      expect(editorText(box())).toBe("- one\n- two\n");
+    });
+
+    it("leaves Tab alone, so it moves focus out of the text", () => {
+      render(<MarkdownEditor value="- one" onChange={() => {}} />);
+      select(5);
+      const notHandled = fireEvent.keyDown(editorView(box()).contentDOM, {
+        key: "Tab",
+        keyCode: 9,
+      });
+      expect(notHandled).toBe(true);
+      expect(editorText(box())).toBe("- one");
+    });
   });
 });

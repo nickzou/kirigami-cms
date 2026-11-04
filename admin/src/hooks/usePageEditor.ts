@@ -101,7 +101,6 @@ export function usePageEditor(path: string, changes = 0) {
   const latest = useRef({ base, dirty, saving });
   latest.current = { base, dirty, saving };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when `changes` goes up; the rest is read from `latest`.
   useEffect(() => {
     if (changes === 0) return;
     const { base: known, saving: busy } = latest.current;

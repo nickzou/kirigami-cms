@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -120,6 +121,53 @@ describe("Editor: loading", () => {
     fail = false;
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(editorText(await editor())).toBe("# A\n");
+  });
+});
+
+describe("Editor: formatting buttons", () => {
+  it("change the selected text, which then needs saving, and keep the focus in it", async () => {
+    serve({ "a.md": "# A\n\nsome words here\n" });
+    open("/pages/a.md");
+    const box = await editor();
+    const toolbar = await screen.findByRole("toolbar", { name: "Formatting" });
+    const view = editorView(box);
+    act(() => view.dispatch({ selection: { anchor: 10, head: 15 } }));
+    fireEvent.click(within(toolbar).getByRole("button", { name: "Bold" }));
+    expect(editorText(box)).toBe("# A\n\nsome **words** here\n");
+    expect(saveButton().disabled).toBe(false);
+    expect(box.contains(document.activeElement)).toBe(true);
+  });
+
+  it("make a link, a heading and a list", async () => {
+    serve({ "a.md": "one\n\ntwo\n" });
+    open("/pages/a.md");
+    const box = await editor();
+    const toolbar = await screen.findByRole("toolbar");
+    const view = editorView(box);
+    const press = (name: string) =>
+      fireEvent.click(within(toolbar).getByRole("button", { name }));
+    act(() => view.dispatch({ selection: { anchor: 1 } }));
+    press("Heading");
+    expect(editorText(box)).toBe("# one\n\ntwo\n");
+    act(() => view.dispatch({ selection: { anchor: 7, head: 10 } }));
+    press("Bulleted list");
+    expect(editorText(box)).toBe("# one\n\n- two\n");
+    act(() => view.dispatch({ selection: { anchor: 9, head: 12 } }));
+    press("Link");
+    expect(editorText(box)).toBe("# one\n\n- [two](url)\n");
+  });
+
+  it("go with the editor: hidden along with it while the preview shows", async () => {
+    serve({ "a.md": "text\n" });
+    open("/pages/a.md");
+    await editor();
+    const toolbar = await screen.findByRole("toolbar");
+    const wrapper = toolbar.parentElement?.parentElement as HTMLElement;
+    const inEditor = wrapper.className;
+    fireEvent.click(await screen.findByRole("radio", { name: "Preview" }));
+    await waitFor(() => expect(wrapper.className).not.toBe(inEditor));
+    fireEvent.click(await screen.findByRole("radio", { name: "Editor" }));
+    await waitFor(() => expect(wrapper.className).toBe(inEditor));
   });
 });
 
