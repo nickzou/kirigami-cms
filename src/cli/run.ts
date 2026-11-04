@@ -9,10 +9,17 @@ import {
   type ContentStore,
   checkSite,
   isSourcePath,
+  passwordProblem,
 } from "../core/index.js";
 import { createAdminApp } from "../server/admin.js";
 import { createApiApp } from "../server/api.js";
-import { LOOPBACK, PortInUseError, startDevServer } from "../server/dev.js";
+import { createAuth } from "../server/auth.js";
+import {
+  isLoopback,
+  LOOPBACK,
+  PortInUseError,
+  startDevServer,
+} from "../server/dev.js";
 import { createEventHub } from "../server/events.js";
 import { createLiveSite } from "../server/live-site.js";
 import { findShadowedPages } from "../server/reserved.js";
@@ -25,6 +32,8 @@ const ADMIN_DIR = fileURLToPath(new URL("../admin", import.meta.url));
 
 export interface Io {
   cwd: string;
+  /** The environment variables (`KIRIGAMI_PASSWORD` is read from here). */
+  env?: Readonly<Record<string, string | undefined>>;
   out: (line: string) => void;
   err: (line: string) => void;
   /** Stops a running `dev` server. Without it, `dev` runs until the process ends. */
@@ -37,8 +46,11 @@ const USAGE = `Usage:
   kirigami dev [site] [--port <n>] [--host <address>]
                                         Preview the site locally (default port: 3000, and
                                         this machine only; --host 0.0.0.0 listens on every
-                                        address, which has no sign-in yet)
+                                        address, and needs KIRIGAMI_PASSWORD set)
   kirigami --help
+
+KIRIGAMI_PASSWORD (at least 8 characters) turns on sign-in for the admin and
+the API. Listening beyond this machine without it is refused.
 
 [site] is the folder of markdown files. Without it, the content is where
 kirigami.config.yaml says (found in this folder or one above it), or ./content
@@ -208,6 +220,21 @@ async function dev(
   io: Io,
 ): Promise<number> {
   const { store, dir: site, ignore } = content;
+  // Checked first, before anything is made or started.
+  const password = io.env?.KIRIGAMI_PASSWORD || undefined;
+  if (password !== undefined) {
+    const problem = passwordProblem(password);
+    if (problem) {
+      io.err(`KIRIGAMI_PASSWORD is not usable. ${problem}`);
+      return 2;
+    }
+  } else if (!isLoopback(listen.host)) {
+    io.err(
+      `Refusing to listen on ${listen.host} without a password: anyone who could reach it could read and change your content.\nSet KIRIGAMI_PASSWORD to a password of your choice and start again, or listen on 127.0.0.1 only.`,
+    );
+    return 2;
+  }
+  const auth = password === undefined ? undefined : createAuth(password);
   // A folder named on the command line that is not there is a mistake worth
   // seeing. One chosen by the config (or the default) is made, since the admin
   // creates the first page in it.
@@ -249,16 +276,13 @@ async function dev(
     listen.port,
     {
       hub,
-      api: createApiApp(store),
+      api: createApiApp(store, { allowAnyHost: auth !== undefined }),
       admin: createAdminApp(ADMIN_DIR),
+      auth,
     },
     listen.host,
   );
-  if (listen.host !== LOOPBACK) {
-    io.err(
-      `Warning: listening on ${listen.host}, not just this machine. There is no sign-in yet, so anyone who can reach this address can read and change the content.`,
-    );
-  }
+  if (auth) io.out("Sign-in is on (the password is KIRIGAMI_PASSWORD).");
   const watcher = watchFolder(site, {
     ignore,
     relevant: isSourcePath,

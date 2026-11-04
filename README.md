@@ -37,7 +37,7 @@ pnpm build
 node dist/cli/main.js build my-site     # writes my-site/dist
 node dist/cli/main.js build             # the content kirigami.config.yaml names, or ./content
 node dist/cli/main.js check my-site     # validates without building
-node dist/cli/main.js dev my-site       # (--host <address> to listen beyond this machine) preview at http://localhost:3000, reloads the browser when you save; admin at /admin, JSON API at /api (OpenAPI: /api/openapi.json)
+node dist/cli/main.js dev my-site       # (--host <address> to listen beyond this machine, which needs KIRIGAMI_PASSWORD) preview at http://localhost:3000, reloads the browser when you save; admin at /admin, JSON API at /api (OpenAPI: /api/openapi.json)
 ```
 
 The admin has a **Settings** screen that edits the theme in `site.yaml` with a live preview, keeping the file's comments ([ADR 0015](docs/adr/0015-settings-form-from-the-schema.md)).
@@ -46,22 +46,34 @@ Raw HTML in markdown is left out of the output. See [`test/fixtures/basic-site`]
 
 ### In a container
 
-The quickest way to try it, with only Docker installed (no Node or pnpm): put your markdown in `./content` (it is made if it is not there), then
+The quickest way to try it, with only Docker installed (no Node or pnpm): put your markdown in `./content` (it is made if it is not there), choose a password for the admin, then
 
 ```sh
+cp .env.example .env     # then open .env and set KIRIGAMI_PASSWORD (at least 8 characters)
 docker compose up
 ```
 
-and open <http://localhost:3000/admin/>. Ctrl+C stops it; `docker compose up --build` picks up an update after a `git pull`.
+and open <http://localhost:3000/admin/>, which asks for that password. Ctrl+C stops it; `docker compose up --build` picks up an update after a `git pull`.
 
 The same thing by hand: the `Dockerfile` runs `kirigami dev` (the admin with its live preview) on the markdown folder mounted at `/content`:
 
 ```sh
 docker build -t kirigami .
-docker run --rm -p 127.0.0.1:3000:3000 -v "$PWD/my-site:/content" kirigami
+docker run --rm -p 127.0.0.1:3000:3000 -e KIRIGAMI_PASSWORD=choose-a-password -v "$PWD/my-site:/content" kirigami
 ```
 
-Then open <http://localhost:3000/admin/>. The container runs as the `node` user (uid 1000), which needs to be able to write to the mounted folder; add `--user "$(id -u):$(id -g)"` if it is owned by someone else. There is **no sign-in yet**, so publish the port to your own machine only, as above, and do not expose it to a network. Inside the container the server listens on every address (`kirigami dev --host 0.0.0.0`), which is how the published port reaches it; by default `kirigami dev` listens on this machine only.
+Then open <http://localhost:3000/admin/>. The container runs as the `node` user (uid 1000), which needs to be able to write to the mounted folder; add `--user "$(id -u):$(id -g)"` if it is owned by someone else. Inside the container the server listens on every address (`kirigami dev --host 0.0.0.0`), which is how the published port reaches it, so it refuses to start without `KIRIGAMI_PASSWORD`.
+
+### Signing in
+
+Set `KIRIGAMI_PASSWORD` (at least 8 characters) in the environment where Kirigami runs and the admin and the API ask for it. It is one password for the whole site; there are no user accounts yet. It is only ever read from the environment, never from `kirigami.config.yaml`.
+
+- **On this machine** (`kirigami dev` with no `--host`), nothing is asked unless you set the password.
+- **Beyond this machine** (`--host 0.0.0.0` and the like), `kirigami dev` refuses to start without it.
+- **The built site is public.** Only the admin and the API (`/api`, and the live-reload stream) are behind the password. The admin's own files are public too; they hold no content.
+- **Scripts** can send `Authorization: Bearer <the password>` instead of signing in.
+- **Use HTTPS beyond a network you trust.** Kirigami speaks plain HTTP; put a proxy that terminates HTTPS in front of it (the session cookie is marked `Secure` when the request came over HTTPS or the proxy sends `X-Forwarded-Proto: https`).
+- **Wrong guesses are not slowed down yet**, so choose a password that is hard to guess. Changing the password signs everyone out.
 
 ## License
 

@@ -56,6 +56,7 @@ The quickest way to work on anything is one command:
 pnpm dev                    # watches the code and serves .dev-site/ on http://localhost:3000/admin/
 pnpm dev path/to/my-site    # the same, for a site of your own
 pnpm dev --port 4000
+KIRIGAMI_PASSWORD=choose-one pnpm dev   # try the sign-in (at least 8 characters)
 ```
 
 It compiles the server and CLI when `src/` changes, rebuilds the admin when `admin/` changes, and runs `kirigami dev` on the site, restarting it when the compiled code changes. Edits to the site's pages are rebuilt by `kirigami dev` as usual. It also runs Vite, which serves the admin with hot reloading (it prints its own address, `http://localhost:5173/admin/` unless that port is taken) and takes the API and the preview from the site above. Each line is labelled `tsc`, `admin`, `dev` or `vite`. Ctrl+C stops them all. With no site it uses the content `kirigami.config.yaml` names, if the project root has one (see [ADR 0014](docs/adr/0014-project-configuration.md)), and otherwise `.dev-site/` (ignored by git), copied from the test fixture the first time, so trying things in the admin never changes the fixtures the tests use. Work on the admin at Vite's address; the built admin on port 3000 needs a refresh after a change.
