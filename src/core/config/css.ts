@@ -10,32 +10,67 @@ const size = (scale: number, steps: number): string =>
 /** How many steps up the scale each heading level is, unless it is given a size. */
 const STEPS = { h1: 4, h2: 3, h3: 2, h4: 1, h5: 0, h6: 0 } as const;
 
+/** The heading levels, h1 to h6. */
+export const HEADING_LEVELS = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
+export type HeadingLevel = (typeof HEADING_LEVELS)[number];
+
+/**
+ * How a heading is set, from the theme: its size (a length, in terms of
+ * `--k-font-size` unless the theme gives one) and its weight. The stylesheet
+ * and anything else that has to look like the site (the editor) share this.
+ */
+export function headingStyle(
+  theme: Theme,
+  level: HeadingLevel,
+): { fontSize: string; fontWeight: number } {
+  const { headings, type } = theme;
+  return {
+    fontSize:
+      headings[level].size === "auto"
+        ? size(type.scale, STEPS[level])
+        : headings[level].size,
+    fontWeight: headings[level].weight,
+  };
+}
+
+/**
+ * The theme's tokens as CSS custom properties, `--k-*` to value. The
+ * stylesheet puts them on `:root`; the editor puts them on its own page, so
+ * it can use the same fonts, colors, sizes and spacing as the site.
+ */
+export function themeVariables(theme: Theme): Record<string, string> {
+  const { colors, fonts, type, spacing, layout } = theme;
+  return {
+    "--k-color-background": colors.background,
+    "--k-color-text": colors.text,
+    "--k-color-muted": colors.muted,
+    "--k-color-link": colors.link,
+    "--k-color-border": colors.border,
+    "--k-color-code-background": colors.codeBackground,
+    "--k-font-body": fonts.body,
+    "--k-font-heading": fonts.heading,
+    "--k-font-mono": fonts.mono,
+    "--k-font-size": type.baseSize,
+    "--k-line-height": String(type.lineHeight),
+    "--k-space": spacing.unit,
+    "--k-max-width": layout.maxWidth,
+  };
+}
+
 /**
  * Generates the site stylesheet from the theme: every token becomes a CSS
  * variable on `:root`, and the element rules below use only those variables.
  */
 export function generateStylesheet(theme: Theme): string {
-  const { colors, fonts, type, spacing, layout, headings } = theme;
-  const s = type.scale;
-  const headingSize = (level: keyof typeof STEPS): string =>
-    headings[level].size === "auto"
-      ? size(s, STEPS[level])
-      : headings[level].size;
+  const { headings } = theme;
+  const headingSize = (level: HeadingLevel): string =>
+    headingStyle(theme, level).fontSize;
+  const variables = Object.entries(themeVariables(theme))
+    .map(([name, value]) => `  ${name}: ${value};`)
+    .join("\n");
 
   return `:root {
-  --k-color-background: ${colors.background};
-  --k-color-text: ${colors.text};
-  --k-color-muted: ${colors.muted};
-  --k-color-link: ${colors.link};
-  --k-color-border: ${colors.border};
-  --k-color-code-background: ${colors.codeBackground};
-  --k-font-body: ${fonts.body};
-  --k-font-heading: ${fonts.heading};
-  --k-font-mono: ${fonts.mono};
-  --k-font-size: ${type.baseSize};
-  --k-line-height: ${type.lineHeight};
-  --k-space: ${spacing.unit};
-  --k-max-width: ${layout.maxWidth};
+${variables}
 }
 
 *,

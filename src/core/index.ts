@@ -14,7 +14,13 @@ export {
   type SiteProblem,
   STYLESHEET_PATH,
 } from "./build/site.js";
-export { generateStylesheet } from "./config/css.js";
+export {
+  generateStylesheet,
+  HEADING_LEVELS,
+  type HeadingLevel,
+  headingStyle,
+  themeVariables,
+} from "./config/css.js";
 export { type ConfigChange, editConfigText } from "./config/edit.js";
 export {
   ConfigError,
