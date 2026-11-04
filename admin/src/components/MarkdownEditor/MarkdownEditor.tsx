@@ -14,7 +14,13 @@ import type { Theme } from "../../../../src/core/config/schema.js";
 import type { EditorHandle } from "../../editor-handle.js";
 import { defaultTheme, editorVariables } from "../../editor-theme.js";
 import {
+  safeLinkTarget,
+  stepIntoTables,
+  tableWidgets,
+} from "../../editor-widgets.js";
+import {
   formatPieces,
+  linkAt,
   markdownSupport,
   toDecorations,
 } from "../../markdown-format.js";
@@ -80,8 +86,10 @@ const look = EditorView.theme({
     overflow: "visible",
   },
   ".cm-content": {
-    // Short pages keep the empty part inside the editor, so a click there lands in it.
-    minHeight: "60vh",
+    // No minimum height here: the editor re-measures its lines when its
+    // content changes height, which a minimum would hide for a short page (an
+    // image that loads later would then leave the cursor keys confused). The
+    // page around it keeps the room, and a click there focuses the text.
     padding: "0",
     caretColor: "var(--k-color-text)",
   },
@@ -149,6 +157,47 @@ const look = EditorView.theme({
   },
   ".kcm-fence, .kcm-code-info": { color: "var(--k-color-muted)" },
   ".kcm-hr": { borderBottom: "1px solid var(--k-color-border)" },
+  // Tables and images are set the way the site's stylesheet sets them.
+  ".kcm-table": {
+    display: "block",
+    maxWidth: "100%",
+    borderCollapse: "collapse",
+    overflowX: "auto",
+    margin: "0",
+  },
+  ".kcm-table-block": { paddingBottom: "var(--k-space)" },
+  ".kcm-table th, .kcm-table td": {
+    padding: "calc(var(--k-space) * 0.4) calc(var(--k-space) * 0.75)",
+    border: "1px solid var(--k-color-border)",
+    textAlign: "left",
+  },
+  ".kcm-table th": { backgroundColor: "var(--k-color-code-background)" },
+  ".kcm-table code": {
+    padding: "0.15em 0.35em",
+    borderRadius: "4px",
+    backgroundColor: "var(--k-color-code-background)",
+    fontFamily: "var(--k-font-mono)",
+    fontSize: "0.9em",
+  },
+  ".kcm-table del": { color: "var(--k-color-muted)" },
+  ".kcm-image": { maxWidth: "100%", height: "auto", verticalAlign: "bottom" },
+  ".kcm-image-missing": {
+    display: "inline-flex",
+    flexDirection: "column",
+    gap: "0.15em",
+    maxWidth: "100%",
+    padding: "0.5em 0.75em",
+    border: "1px dashed var(--k-color-border)",
+    borderRadius: "4px",
+    color: "var(--k-color-muted)",
+    fontSize: "0.9em",
+    overflowWrap: "anywhere",
+  },
+  ".kcm-image-missing-title": {
+    fontWeight: "bold",
+    color: "var(--k-color-text)",
+  },
+  ".kcm-checkbox": { marginRight: "0.4em", cursor: "pointer" },
 });
 
 /**
@@ -184,6 +233,29 @@ export function MarkdownEditor({
           history(),
           markdownSupport(),
           formatting,
+          tableWidgets(),
+          stepIntoTables,
+          // Cmd/Ctrl-click opens a link in a new tab; a plain click is for editing.
+          EditorView.domEventHandlers({
+            mousedown(event, view) {
+              if (event.button !== 0 || !(event.metaKey || event.ctrlKey)) {
+                return false;
+              }
+              const at = view.posAtCoords({
+                x: event.clientX,
+                y: event.clientY,
+              });
+              const url = at === null ? undefined : linkAt(view.state, at);
+              const target =
+                url === undefined
+                  ? undefined
+                  : safeLinkTarget(url, window.location.href);
+              if (target === undefined) return false;
+              event.preventDefault();
+              window.open(target, "_blank", "noopener,noreferrer");
+              return true;
+            },
+          }),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({
@@ -250,7 +322,23 @@ export function MarkdownEditor({
   // The page the text sits on: the site's background and text color, and its
   // content width, centred, the way a reader sees it.
   return (
+    // A click on the page itself (the room around and below the text) puts the
+    // cursor at the end of the text. A shortcut for the mouse: the text is
+    // already reachable by keyboard.
+    // biome-ignore lint/a11y/noStaticElementInteractions: see above.
+    // biome-ignore lint/a11y/useKeyWithClickEvents: see above.
     <div
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          const editor = view.current;
+          if (!editor) return;
+          editor.dispatch({
+            selection: { anchor: editor.state.doc.length },
+            scrollIntoView: true,
+          });
+          editor.focus();
+        }
+      }}
       style={{
         ...variables,
         minHeight: "60vh",

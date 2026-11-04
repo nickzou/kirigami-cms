@@ -152,3 +152,53 @@ export const ReachingAMark: Story = {
     await expect(box.textContent).not.toContain("**");
   },
 };
+
+const rich = `A table, an image and some tasks.
+
+| Feature | Status | Notes |
+|:--------|:------:|------:|
+| **Tables** | done | drawn as a table |
+| \`Images\` | done | web ones load |
+| [Links](https://example.com) | done | click to edit |
+
+![A cat on a chair](photos/cat.png "Not in the content store yet")
+
+![An image that does not load](https://example.invalid/missing.png)
+
+- [x] write the page
+- [ ] check the table
+- [ ] add the photo
+`;
+
+/** Tables, images and tasks are drawn as what they are; the cursor in one shows its markdown. */
+export const TablesImagesAndTasks: Story = {
+  args: { value: rich },
+  play: async ({ canvasElement }) => {
+    const box = within(canvasElement).getByLabelText("Markdown");
+    await expect(box.querySelectorAll("table.kcm-table th")).toHaveLength(3);
+    await expect(box.querySelectorAll("input.kcm-checkbox")).toHaveLength(3);
+    await expect(box.querySelector(".kcm-image-missing")).not.toBeNull();
+    await expect(box.textContent).not.toContain("|:--");
+    await expect(editorText(box)).toBe(rich);
+  },
+};
+
+/** Clicking a checkbox changes the one character in the text, and nothing else. */
+export const TogglingATask: Story = {
+  args: { value: "- [ ] one\n- [x] two\n" },
+  render: (args) => {
+    const [value, setValue] = useState(args.value);
+    return <MarkdownEditor {...args} value={value} onChange={setValue} />;
+  },
+  play: async ({ canvasElement }) => {
+    const box = within(canvasElement).getByLabelText("Markdown");
+    const first = box.querySelector<HTMLInputElement>("input.kcm-checkbox");
+    first?.click();
+    await expect(editorText(box)).toBe("- [x] one\n- [x] two\n");
+  },
+};
+
+/** A site's own theme on tables and images too. */
+export const TablesInASitesOwnTheme: Story = {
+  args: { value: rich, theme: ASitesOwnTheme.args?.theme },
+};

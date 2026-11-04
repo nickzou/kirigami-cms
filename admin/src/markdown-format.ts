@@ -9,6 +9,8 @@ import type { EditorState } from "@codemirror/state";
 import { Decoration, type DecorationSet } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 import { GFM, parser } from "@lezer/markdown";
+import { CheckboxWidget, ImageWidget } from "./editor-widgets.js";
+import { titleText } from "./table-model.js";
 
 // Markdown with the GitHub extras (strikethrough, tables, task lists, bare
 // links), built on the parser alone. `@codemirror/lang-markdown` would do the
@@ -34,7 +36,18 @@ export type Piece =
   /** A class for a stretch of text on one line. */
   | { kind: "mark"; from: number; to: number; className: string }
   /** Marks (`**`, `#`, `](url)`) left out of sight until the cursor is on them. */
-  | { kind: "hide"; from: number; to: number };
+  | { kind: "hide"; from: number; to: number }
+  /** An image, shown in place of its markdown. */
+  | {
+      kind: "image";
+      from: number;
+      to: number;
+      alt: string;
+      src: string;
+      title?: string;
+    }
+  /** A task's `[ ]` or `[x]`, shown as a checkbox. */
+  | { kind: "checkbox"; from: number; to: number; checked: boolean };
 
 /**
  * Works out how the markdown in `state` is drawn, for the part of the text
@@ -187,7 +200,35 @@ export function formatPieces(
         case "ListMark":
           return markClass(node.from, node.to, "kcm-list-mark");
         case "TaskMarker":
-          return markClass(node.from, node.to, "kcm-task-marker");
+          if (touches(node.from, node.to)) {
+            return markClass(node.from, node.to, "kcm-task-marker");
+          }
+          return add({
+            kind: "checkbox",
+            from: node.from,
+            to: node.to,
+            checked: /x/i.test(doc.sliceString(node.from, node.to)),
+          });
+        case "Image": {
+          const [open, close] = node.getChildren("LinkMark");
+          const url = node.getChild("URL");
+          if (!open || !close || !url || touches(node.from, node.to)) return;
+          const title = node.getChild("LinkTitle");
+          return add({
+            kind: "image",
+            from: node.from,
+            to: node.to,
+            alt: doc.sliceString(open.to, close.from),
+            src: doc.sliceString(url.from, url.to),
+            ...(title
+              ? { title: titleText(doc.sliceString(title.from, title.to)) }
+              : {}),
+          });
+        }
+        // A table is drawn (or shown as text) by `tableWidgets`; its cells are
+        // not formatted here, so its text shows as it is written.
+        case "Table":
+          return false;
         case "FencedCode": {
           eachLine(node, (at, index, last) => {
             lineClass(at, "kcm-code-block");
@@ -230,8 +271,37 @@ export function toDecorations(pieces: readonly Piece[]): DecorationSet {
               piece.from,
               piece.to,
             )
-          : Decoration.replace({}).range(piece.from, piece.to),
+          : piece.kind === "hide"
+            ? Decoration.replace({}).range(piece.from, piece.to)
+            : piece.kind === "image"
+              ? Decoration.replace({
+                  widget: new ImageWidget(piece.src, piece.alt, piece.title),
+                }).range(piece.from, piece.to)
+              : Decoration.replace({
+                  widget: new CheckboxWidget(piece.checked),
+                }).range(piece.from, piece.to),
     ),
     true,
   );
+}
+
+/**
+ * The address of the link at `pos` (a link's text or address, an autolink, or
+ * a bare address), as written; an image alone is not a link.
+ */
+export function linkAt(state: EditorState, pos: number): string | undefined {
+  const { doc } = state;
+  const tree = ensureSyntaxTree(state, doc.length, 50) ?? syntaxTree(state);
+  for (
+    let node: SyntaxNode | null = tree.resolveInner(pos, 1);
+    node;
+    node = node.parent
+  ) {
+    if (node.name === "Link" || node.name === "Autolink") {
+      const url = node.getChild("URL");
+      return url ? doc.sliceString(url.from, url.to) : undefined;
+    }
+    if (node.name === "URL") return doc.sliceString(node.from, node.to);
+  }
+  return undefined;
 }
