@@ -12,6 +12,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
 import { createFakeApi } from "./fake-api.js";
 import { events, installFakeEvents } from "./fake-events.js";
+import { editorText } from "./test-editor.js";
+import { typeText } from "./test-typing.js";
 
 let restoreEvents: () => void;
 
@@ -35,10 +37,7 @@ function open(path: string, files: Record<string, string>) {
   return store;
 }
 
-const editor = () =>
-  screen.findByLabelText("Markdown") as Promise<HTMLTextAreaElement>;
-const type = (box: HTMLTextAreaElement, value: string) =>
-  fireEvent.change(box, { target: { value } });
+const editor = () => screen.findByLabelText("Markdown") as Promise<HTMLElement>;
 const saveButton = () =>
   screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
 
@@ -58,7 +57,7 @@ describe("Editor: edits made outside the admin", () => {
     const store = open("/pages/a.md", { "a.md": "one\n" });
     const box = await editor();
     await editOutside(store, "a.md", "two\n");
-    await waitFor(() => expect(box.value).toBe("two\n"));
+    await waitFor(() => expect(editorText(box)).toBe("two\n"));
     expect(
       (await screen.findByText(/changed outside the admin/)).closest(
         '[role="status"]',
@@ -72,23 +71,23 @@ describe("Editor: edits made outside the admin", () => {
   it("keeps unsaved text and offers a choice instead", async () => {
     const store = open("/pages/a.md", { "a.md": "one\n" });
     const box = await editor();
-    type(box, "mine\n");
+    typeText(box, "mine\n");
     await editOutside(store, "a.md", "theirs\n");
 
     expect(
       await screen.findByText(/This page changed outside the admin/),
     ).toBeDefined();
     // Nothing was lost, and nothing was loaded over it.
-    expect(box.value).toBe("mine\n");
+    expect(editorText(box)).toBe("mine\n");
 
     fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
     expect(screen.queryByText(/changed outside the admin/)).toBeNull();
-    expect(box.value).toBe("mine\n");
+    expect(editorText(box)).toBe("mine\n");
   });
 
   it("loads the latest when asked, discarding what was unsaved", async () => {
     const store = open("/pages/a.md", { "a.md": "one\n" });
-    type(await editor(), "mine\n");
+    typeText(await editor(), "mine\n");
     await editOutside(store, "a.md", "theirs\n");
     fireEvent.click(
       await screen.findByRole("button", {
@@ -96,14 +95,16 @@ describe("Editor: edits made outside the admin", () => {
       }),
     );
     // The page loads again, as a new text box.
-    await waitFor(async () => expect((await editor()).value).toBe("theirs\n"));
+    await waitFor(async () =>
+      expect(editorText(await editor())).toBe("theirs\n"),
+    );
     expect(screen.queryByText(/changed outside the admin/)).toBeNull();
   });
 
   it("says when the page is gone, and does not offer to load it", async () => {
     const store = open("/pages/a.md", { "a.md": "one\n", "b.md": "b\n" });
     const box = await editor();
-    type(box, "mine\n");
+    typeText(box, "mine\n");
     await store.delete("a.md", (await store.read("a.md")).version);
     await waitFor(() => expect(events.listeners()).toBe(1));
     act(() => events.changed());
@@ -115,13 +116,13 @@ describe("Editor: edits made outside the admin", () => {
         name: "Load the latest and discard my changes",
       }),
     ).toBeNull();
-    expect(box.value).toBe("mine\n");
+    expect(editorText(box)).toBe("mine\n");
   });
 
   it("does nothing for the admin's own save", async () => {
     const store = open("/pages/a.md", { "a.md": "one\n" });
     const box = await editor();
-    type(box, "mine\n");
+    typeText(box, "mine\n");
     fireEvent.click(saveButton());
     await screen.findByText("Saved.");
     await waitFor(() => expect(events.listeners()).toBe(1));
@@ -130,18 +131,18 @@ describe("Editor: edits made outside the admin", () => {
     await waitFor(async () =>
       expect((await store.read("a.md")).content).toBe("mine\n"),
     );
-    expect(box.value).toBe("mine\n");
+    expect(editorText(box)).toBe("mine\n");
     expect(screen.queryByText(/outside the admin/)).toBeNull();
   });
 
   it("does nothing when the change was to another page", async () => {
     const store = open("/pages/a.md", { "a.md": "one\n", "b.md": "b\n" });
     const box = await editor();
-    type(box, "mine\n");
+    typeText(box, "mine\n");
     await editOutside(store, "b.md", "changed b\n");
     // Give the check time to run.
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByText(/outside the admin/)).toBeNull();
-    expect(box.value).toBe("mine\n");
+    expect(editorText(box)).toBe("mine\n");
   });
 });

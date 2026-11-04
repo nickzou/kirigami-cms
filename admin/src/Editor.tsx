@@ -88,11 +88,7 @@ export function Editor({ path }: { path: string }) {
   }
 
   // A click on the bare sheet (not on a control) puts the cursor in the text.
-  const focusText = () => {
-    const box = editor.textareaRef.current;
-    box?.focus();
-    box?.setSelectionRange(box.value.length, box.value.length);
-  };
+  const focusText = () => editor.editorRef.current?.focusEnd();
 
   return (
     <>
@@ -170,13 +166,13 @@ export function Editor({ path }: { path: string }) {
             onKeepEditing={editor.dismissSave}
           />
         )}
-        {/* Kept in the page while the preview shows, so the text box keeps its cursor and scroll. */}
+        {/* Kept in the page while the preview shows, so the text keeps its cursor, selection and undo history. */}
         <div className={view === "editor" ? "" : ":uno: hidden"}>
           <EditorForm
             value={editor.draft}
             onChange={editor.setDraft}
             onSubmit={editor.submit}
-            textareaRef={editor.textareaRef}
+            editorRef={editor.editorRef}
             notice={
               editor.endings?.mixed && (
                 <LineEndingsNotice eol={editor.endings.eol} />

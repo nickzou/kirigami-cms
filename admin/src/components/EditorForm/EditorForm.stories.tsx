@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, within } from "storybook/test";
+import { appendText, editorText } from "../../test-editor.js";
 import { LineEndingsNotice } from "../LineEndingsNotice/LineEndingsNotice.js";
 import { EditorForm } from "./EditorForm.js";
 
@@ -31,7 +32,7 @@ export const Interactive: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const box = canvas.getByLabelText("Markdown");
-    await userEvent.type(box, " more");
-    await expect(box).toHaveValue("# Hello\n\nSome **markdown**.\n more");
+    appendText(box, " more");
+    await expect(editorText(box)).toBe("# Hello\n\nSome **markdown**.\n more");
   },
 };

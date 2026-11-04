@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { App } from "../../App.js";
 import { installFakeApi } from "../../fake-api.js";
+import { appendText, editorText } from "../../test-editor.js";
 import { AuthGate } from "./AuthGate.js";
 
 const files = {
@@ -89,15 +90,15 @@ export const SessionEndsWhileEditing: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const box = await canvas.findByLabelText("Markdown");
-    await userEvent.type(box, " More words.");
+    appendText(box, " More words.");
     (globalThis as { __expire?: () => void }).__expire?.();
     await userEvent.click(canvas.getByRole("button", { name: "Save" }));
     const dialog = await within(document.body).findByRole("dialog", {
       name: "Sign in again",
     });
     await expect(dialog).toBeVisible();
-    await expect(
-      (canvas.getByLabelText("Markdown") as HTMLTextAreaElement).value,
-    ).toContain("More words.");
+    await expect(editorText(canvas.getByLabelText("Markdown"))).toContain(
+      "More words.",
+    );
   },
 };
