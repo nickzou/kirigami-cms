@@ -2,6 +2,7 @@ import { EditorSelection, EditorState } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
 import {
   formatPieces,
+  linkAt,
   markdownSupport,
   type Piece,
 } from "./markdown-format.js";
@@ -174,9 +175,37 @@ describe("links", () => {
     expect(hidden("<https://x.test> x|")).toEqual(["<", ">"]);
   });
 
-  it("leaves an image alone (it has its own pass later)", () => {
+  it("shows an image in place of its markdown, unless the cursor is in it", () => {
+    const image = (source: string) =>
+      format(source).pieces.filter((p) => p.kind === "image");
+    expect(image('![alt text](https://x.test/i.png "A title") x|')).toEqual([
+      {
+        kind: "image",
+        from: 0,
+        to: 43,
+        alt: "alt text",
+        src: "https://x.test/i.png",
+        title: "A title",
+      },
+    ]);
+    expect(image("![](rel.png) x|")).toMatchObject([
+      { alt: "", src: "rel.png" },
+    ]);
+    expect(image("![alt](https://x.test/i.png) x|")).toHaveLength(1);
+    expect(image("![al|t](https://x.test/i.png) x")).toEqual([]);
+    expect(image("![alt](https://x.test/i.png)| x")).toEqual([]);
+  });
+
+  it("does not make a link of an image", () => {
     expect(marked("![alt](https://x.test/i.png) x|", "kcm-link")).toEqual([]);
     expect(hidden("![alt](https://x.test/i.png) x|")).toEqual([]);
+  });
+
+  it("leaves a table's cells to the table: no formatting inside it", () => {
+    const source =
+      "| **a** | ![i](http://x.test/i.png) |\n|---|---|\n| `b` | [l](u) |\n\nx|";
+    const { pieces } = format(source);
+    expect(pieces).toEqual([]);
   });
 });
 
@@ -191,11 +220,27 @@ describe("blocks", () => {
     expect(hidden("> one\n> tw|o\n\ntext")).toEqual(["> "]);
   });
 
-  it("styles list markers and task markers, and hides nothing", () => {
-    const source = "- one\n1. two\n- [x] done\n\ntext|";
-    expect(marked(source, "kcm-list-mark")).toEqual(["-", "1.", "-"]);
-    expect(marked(source, "kcm-task-marker")).toEqual(["[x]"]);
+  it("styles list markers, and hides nothing", () => {
+    const source = "- one\n1. two\n\ntext|";
+    expect(marked(source, "kcm-list-mark")).toEqual(["-", "1."]);
     expect(hidden(source)).toEqual([]);
+  });
+
+  it("shows a task's [ ] or [x] as a checkbox, unless the cursor is on it", () => {
+    const boxes = (source: string) =>
+      format(source)
+        .pieces.filter((p) => p.kind === "checkbox")
+        .map((p) => (p as { checked: boolean }).checked);
+    expect(boxes("- [ ] a\n- [x] b\n- [X] c\n\ntext|")).toEqual([
+      false,
+      true,
+      true,
+    ]);
+    // On the marker, it is text again, styled.
+    expect(boxes("- [|x] b\n\ntext")).toEqual([]);
+    expect(marked("- [|x] b\n\ntext", "kcm-task-marker")).toEqual(["[x]"]);
+    // Elsewhere on the same line does not show the marker.
+    expect(boxes("- [x] b|\n\ntext")).toEqual([true]);
   });
 
   it("gives a fenced block its lines, keeps the fences visible, and names the language", () => {
@@ -274,5 +319,41 @@ describe("what it leaves alone", () => {
         if (next) expect(next.from).toBeGreaterThanOrEqual(h.to);
       }
     }
+  });
+});
+
+describe("linkAt", () => {
+  const at = (source: string): string | undefined => {
+    const bar = source.indexOf("|");
+    const doc = source.replace("|", "");
+    return linkAt(
+      EditorState.create({ doc, extensions: [markdownSupport()] }),
+      bar,
+    );
+  };
+
+  it("finds the address from a link's text or its address", () => {
+    expect(at("see [the |docs](https://x.test/a) now")).toBe(
+      "https://x.test/a",
+    );
+    expect(at("see [the docs](https://x|.test/a) now")).toBe(
+      "https://x.test/a",
+    );
+  });
+
+  it("finds an autolink and a bare address", () => {
+    expect(at("<https://x|.test>")).toBe("https://x.test");
+    expect(at("go to https://x|.test/b now")).toBe("https://x.test/b");
+  });
+
+  it("finds nothing in plain text or in an image on its own", () => {
+    expect(at("just te|xt")).toBeUndefined();
+    expect(at("![al|t](https://x.test/i.png)")).toBeUndefined();
+  });
+
+  it("finds the link around an image", () => {
+    expect(at("[![al|t](https://x.test/i.png)](https://x.test/page)")).toBe(
+      "https://x.test/page",
+    );
   });
 });
