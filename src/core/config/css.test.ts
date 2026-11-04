@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { generateStylesheet } from "./css.js";
+import {
+  generateStylesheet,
+  HEADING_LEVELS,
+  headingStyle,
+  themeVariables,
+} from "./css.js";
 import { defaultSiteConfig, parseSiteConfig } from "./load.js";
 import { themeSchema } from "./schema.js";
 
@@ -154,5 +159,46 @@ describe("generateStylesheet: headings", () => {
     expect(() => themeWith({ h1: { size: "huge" } })).toThrow();
     expect(() => themeWith({ h1: { size: "1rem; color: red" } })).toThrow();
     expect(() => themeWith({ h1: { weight: 650 } })).toThrow();
+  });
+});
+
+describe("themeVariables", () => {
+  it("names every token the stylesheet puts on :root, with the same values", () => {
+    const variables = themeVariables(defaults);
+    const css = generateStylesheet(defaults);
+    expect(Object.keys(variables)).toHaveLength(13);
+    for (const [name, value] of Object.entries(variables)) {
+      expect(css).toContain(`  ${name}: ${value};`);
+    }
+  });
+
+  it("follows the theme", () => {
+    const variables = themeVariables(
+      themeFrom(
+        "theme:\n  colors:\n    background: '#101010'\n  layout:\n    maxWidth: 40rem\n",
+      ),
+    );
+    expect(variables["--k-color-background"]).toBe("#101010");
+    expect(variables["--k-max-width"]).toBe("40rem");
+  });
+});
+
+describe("headingStyle", () => {
+  it("is what the stylesheet sets for each heading", () => {
+    const theme = themeFrom(
+      "theme:\n  type:\n    scale: 1.5\n  headings:\n    h2:\n      size: 3rem\n      weight: 500\n",
+    );
+    const css = generateStylesheet(theme);
+    for (const level of HEADING_LEVELS) {
+      const { fontSize, fontWeight } = headingStyle(theme, level);
+      const rule =
+        new RegExp(`\\n\\n${level} \\{[^}]*\\}`).exec(css)?.[0] ?? "";
+      expect(rule).toContain(`font-size: ${fontSize};`);
+      expect(rule).toContain(`font-weight: ${fontWeight};`);
+    }
+    expect(headingStyle(theme, "h2")).toEqual({
+      fontSize: "3rem",
+      fontWeight: 500,
+    });
   });
 });

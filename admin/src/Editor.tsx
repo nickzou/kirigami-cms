@@ -26,6 +26,7 @@ import { Toast } from "./components/Toast/Toast.js";
 import { useBuildEvents } from "./hooks/useBuildEvents.js";
 import { usePageEditor } from "./hooks/usePageEditor.js";
 import { useSaveShortcut } from "./hooks/useSaveShortcut.js";
+import { useSiteTheme } from "./hooks/useSiteTheme.js";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard.js";
 
 const views = [
@@ -37,6 +38,8 @@ const views = [
 export function Editor({ path }: { path: string }) {
   const build = useBuildEvents();
   const editor = usePageEditor(path, build.changes);
+  // The text is shown in the site's own theme, and follows edits to it.
+  const theme = useSiteTheme(build.reloads);
   useSaveShortcut(editor.submit);
   useUnsavedChangesGuard(editor.dirty);
 
@@ -173,6 +176,7 @@ export function Editor({ path }: { path: string }) {
             onChange={editor.setDraft}
             onSubmit={editor.submit}
             editorRef={editor.editorRef}
+            theme={theme}
             notice={
               editor.endings?.mixed && (
                 <LineEndingsNotice eol={editor.endings.eol} />
