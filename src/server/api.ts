@@ -29,6 +29,7 @@ import {
   SiteConfigSaveRequest,
   SiteConfigSchema,
 } from "./api-schemas.js";
+import { isSameOrigin } from "./origin.js";
 
 const MAX_BODY_BYTES = 10 * 1024 * 1024;
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -211,9 +212,13 @@ const titleOf = (path: string, content: string): string =>
  * The pages API. It is meant for a server that only listens on this machine:
  * it refuses requests addressed to any other host name, and requests from a
  * page served from a different origin, so another website open in the
- * browser cannot call it.
+ * browser cannot call it. `allowAnyHost` lifts the host-name rule (not the
+ * origin one) for a server that signs people in, which guards it instead.
  */
-export function createApiApp(store: ContentStore) {
+export function createApiApp(
+  store: ContentStore,
+  { allowAnyHost = false }: { allowAnyHost?: boolean } = {},
+) {
   const api = new OpenAPIHono({
     defaultHook: (result, c) => {
       if (result.success) return;
@@ -228,16 +233,10 @@ export function createApiApp(store: ContentStore) {
 
   api.use("/api/*", async (c, next) => {
     const url = new URL(c.req.url);
-    const origin = c.req.header("origin");
-    let sameOrigin = true;
-    if (origin !== undefined) {
-      try {
-        sameOrigin = new URL(origin).host === url.host;
-      } catch {
-        sameOrigin = false;
-      }
-    }
-    if (!LOCAL_HOSTNAMES.has(url.hostname) || !sameOrigin) {
+    if (
+      (!allowAnyHost && !LOCAL_HOSTNAMES.has(url.hostname)) ||
+      !isSameOrigin(c)
+    ) {
       return c.json(
         {
           error: {

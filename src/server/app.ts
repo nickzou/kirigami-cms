@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { type OutputFile, renderPage, STYLESHEET_PATH } from "../core/index.js";
 import type { createApiApp } from "./api.js";
+import { type Auth, createSessionApp, requireSignIn } from "./auth.js";
 import {
   CLIENT_SCRIPT,
   CLIENT_SCRIPT_PATH,
@@ -50,6 +51,12 @@ export interface SiteAppOptions {
   api?: ReturnType<typeof createApiApp>;
   /** When given, its routes (the admin app, under `/admin`) are served ahead of the site. */
   admin?: Hono;
+  /**
+   * When given, the API and the event stream need a session (or the password
+   * as a Bearer token). The site itself and the admin's own files stay open:
+   * the admin shows its sign-in screen when the API says it is signed out.
+   */
+  auth?: Auth;
 }
 
 /**
@@ -59,10 +66,17 @@ export interface SiteAppOptions {
  */
 export function createSiteApp(
   getFiles: () => readonly OutputFile[],
-  { hub, api, admin }: SiteAppOptions = {},
+  { hub, api, admin, auth }: SiteAppOptions = {},
 ) {
   const app = new Hono();
   const page = (html: string): string => (hub ? withClientScript(html) : html);
+
+  // Signing in comes before the gate that needs it.
+  if (api) app.route("/", createSessionApp(auth));
+  if (auth) {
+    app.use("/api/*", requireSignIn(auth));
+    app.use(EVENTS_PATH, requireSignIn(auth));
+  }
 
   if (hub) {
     app.get(CLIENT_SCRIPT_PATH, (c) =>

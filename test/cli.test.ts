@@ -31,11 +31,12 @@ async function site(): Promise<string> {
   return folder;
 }
 
-function capture(cwd: string) {
+function capture(cwd: string, env: Record<string, string> = {}) {
   const out: string[] = [];
   const err: string[] = [];
   return {
     cwd,
+    env,
     out: (l: string) => out.push(l),
     err: (l: string) => err.push(l),
     lines: { out, err },
@@ -392,18 +393,74 @@ describe("kirigami dev", () => {
     expect(await run(["dev", dir, "--out", "x"], capture(dir))).toBe(2);
   });
 
-  it("says so when asked to listen beyond this machine, and only then", async () => {
+  it("refuses to listen beyond this machine without a password", async () => {
+    const dir = await site();
+    for (const host of ["0.0.0.0", "::", "192.168.1.5"]) {
+      const io = capture(dir);
+      expect(await run(["dev", dir, "--port=0", `--host=${host}`], io)).toBe(2);
+      const message = io.lines.err.join("\n");
+      expect(message).toContain(
+        `Refusing to listen on ${host} without a password`,
+      );
+      expect(message).toContain("Set KIRIGAMI_PASSWORD");
+      expect(message).toContain("listen on 127.0.0.1 only");
+    }
+  });
+
+  it("treats an empty KIRIGAMI_PASSWORD as none", async () => {
+    const dir = await site();
+    const io = capture(dir, { KIRIGAMI_PASSWORD: "" });
+    expect(await run(["dev", dir, "--port=0", "--host=0.0.0.0"], io)).toBe(2);
+  });
+
+  it("refuses a password that is too short, on this machine too", async () => {
+    const dir = await site();
+    for (const host of ["127.0.0.1", "0.0.0.0"]) {
+      const io = capture(dir, { KIRIGAMI_PASSWORD: "short" });
+      expect(await run(["dev", dir, "--port=0", `--host=${host}`], io)).toBe(2);
+      expect(io.lines.err.join("\n")).toContain("at least 8 characters");
+    }
+  });
+
+  it("listens beyond this machine with a password, and asks for it", async () => {
     const dir = await site();
     const abort = new AbortController();
-    const wide = { ...capture(dir), signal: abort.signal };
-    const local = { ...capture(dir), signal: abort.signal };
+    const wide = {
+      ...capture(dir, { KIRIGAMI_PASSWORD: "correct horse" }),
+      signal: abort.signal,
+    };
     try {
       expect(await run(["dev", dir, "--port=0", "--host=0.0.0.0"], wide)).toBe(
         0,
       );
-      expect(wide.lines.err.join("\n")).toContain("no sign-in");
+      expect(wide.lines.out.join("\n")).toContain("Sign-in is on");
+      const url = /http:\/\/localhost:\d+\//.exec(
+        wide.lines.out.join("\n"),
+      )?.[0];
+      expect(url).toBeDefined();
+      expect((await fetch(`${url}api/pages`)).status).toBe(401);
+      const ok = await fetch(`${url}api/pages`, {
+        headers: { authorization: "Bearer correct horse" },
+      });
+      expect(ok.status).toBe(200);
+      expect((await fetch(url as string)).status).toBe(200);
+    } finally {
+      abort.abort();
+    }
+  });
+
+  it("leaves this machine open with no password", async () => {
+    const dir = await site();
+    const abort = new AbortController();
+    const local = { ...capture(dir), signal: abort.signal };
+    try {
       expect(await run(["dev", dir, "--port=0"], local)).toBe(0);
-      expect(local.lines.err.join("\n")).not.toContain("sign-in");
+      expect(local.lines.out.join("\n")).not.toContain("Sign-in");
+      expect(local.lines.err).toEqual([]);
+      const url = /http:\/\/localhost:\d+\//.exec(
+        local.lines.out.join("\n"),
+      )?.[0];
+      expect((await fetch(`${url}api/pages`)).status).toBe(200);
     } finally {
       abort.abort();
     }

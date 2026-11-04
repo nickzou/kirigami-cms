@@ -19,6 +19,10 @@ export class PortInUseError extends Error {
 
 export const LOOPBACK = "127.0.0.1";
 
+/** Whether an address to listen on reaches only this machine. */
+export const isLoopback = (host: string): boolean =>
+  host === LOOPBACK || host === "localhost" || host === "::1";
+
 /**
  * Serves the files, on this machine only unless a `host` is given (an address
  * to listen on, such as 0.0.0.0 for every one). Port 0 picks any free port.

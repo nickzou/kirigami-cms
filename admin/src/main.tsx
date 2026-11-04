@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { App } from "./App.js";
+import { AuthGate } from "./components/AuthGate/AuthGate.js";
 import "virtual:uno.css";
 import "@fontsource/amiko/400.css";
 import "@fontsource/amiko/700.css";
@@ -18,6 +19,8 @@ const router = createBrowserRouter([{ path: "*", element: <App /> }], {
 
 createRoot(root).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <AuthGate>
+      <RouterProvider router={router} />
+    </AuthGate>
   </StrictMode>,
 );

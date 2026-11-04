@@ -4,6 +4,7 @@ import { useStoredFlag } from "../../hooks/useStoredFlag.js";
 import { AppHeader } from "../AppHeader/AppHeader.js";
 import { BrandLink } from "../BrandLink/BrandLink.js";
 import { MainMenu } from "../MainMenu/MainMenu.js";
+import { SignOutButton } from "../SignOutButton/SignOutButton.js";
 import { HeaderSlot, HeaderTitleSlot } from "./header-slot.js";
 
 /**
@@ -37,17 +38,24 @@ export function AppShell({ children }: { children: ReactNode }) {
               <BrandLink compact={thin} onDark />
             </div>
             <MainMenu compact={thin} />
-            <button
-              type="button"
-              aria-label={thin ? "Expand the sidebar" : "Thin the sidebar"}
-              aria-controls={sidebarId}
-              aria-expanded={!thin}
-              title={thin ? "Expand the sidebar" : "Thin the sidebar"}
-              onClick={() => setThin(!thin)}
-              className=":uno: mt-auto flex min-h-10 cursor-pointer items-center gap-3 rounded border-0 bg-transparent px-[11px] py-2 text-left text-side-muted [font:inherit] whitespace-nowrap transition-colors duration-200 ease-[ease-in-out] hover:bg-side-hover hover:text-side-text motion-reduce:transition-none"
-            >
-              <Toggle size={18} aria-hidden="true" className=":uno: shrink-0" />
-            </button>
+            <div className=":uno: mt-auto flex flex-col gap-1">
+              <SignOutButton placement="sidebar" compact={thin} />
+              <button
+                type="button"
+                aria-label={thin ? "Expand the sidebar" : "Thin the sidebar"}
+                aria-controls={sidebarId}
+                aria-expanded={!thin}
+                title={thin ? "Expand the sidebar" : "Thin the sidebar"}
+                onClick={() => setThin(!thin)}
+                className=":uno: flex min-h-10 cursor-pointer items-center gap-3 rounded border-0 bg-transparent px-[11px] py-2 text-left text-side-muted [font:inherit] whitespace-nowrap transition-colors duration-200 ease-[ease-in-out] hover:bg-side-hover hover:text-side-text motion-reduce:transition-none"
+              >
+                <Toggle
+                  size={18}
+                  aria-hidden="true"
+                  className=":uno: shrink-0"
+                />
+              </button>
+            </div>
           </aside>
           <div className=":uno: min-w-0 flex-1">
             <AppHeader

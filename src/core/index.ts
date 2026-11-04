@@ -1,3 +1,4 @@
+export { MIN_PASSWORD_LENGTH, passwordProblem } from "./auth/password.js";
 export {
   type Collision,
   findCollisions,

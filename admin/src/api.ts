@@ -35,7 +35,33 @@ export class ConflictError extends ApiRequestError {
   }
 }
 
-async function failure(response: Response): Promise<ApiRequestError> {
+/** What the server says about signing in (`GET /api/session`). */
+export interface Session {
+  /** A password is set, so the admin must be signed in to. */
+  required: boolean;
+  signedIn: boolean;
+}
+
+const signedOutListeners = new Set<() => void>();
+
+/**
+ * Calls `listener` whenever the server turns a request away because there is
+ * no session (it expired, or the password changed). Returns how to stop.
+ */
+export function onSignedOut(listener: () => void): () => void {
+  signedOutListeners.add(listener);
+  return () => {
+    signedOutListeners.delete(listener);
+  };
+}
+
+async function failure(
+  response: Response,
+  announceSignedOut = true,
+): Promise<ApiRequestError> {
+  if (announceSignedOut && response.status === 401) {
+    for (const listener of signedOutListeners) listener();
+  }
   try {
     const body = (await response.json()) as ApiError | Conflict;
     if (
@@ -141,4 +167,26 @@ export async function saveSiteConfig(
   });
   if (!response.ok) throw await failure(response);
   return (await response.json()) as SiteConfig;
+}
+
+export async function getSession(signal?: AbortSignal): Promise<Session> {
+  const response = await fetch("/api/session", { signal });
+  if (!response.ok) throw await failure(response, false);
+  return (await response.json()) as Session;
+}
+
+/** Signs in. A wrong password is an `ApiRequestError` (status 401) with the message to show. */
+export async function signIn(password: string): Promise<Session> {
+  const response = await fetch("/api/session", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  if (!response.ok) throw await failure(response, false);
+  return (await response.json()) as Session;
+}
+
+export async function signOut(): Promise<void> {
+  const response = await fetch("/api/session", { method: "DELETE" });
+  if (!response.ok) throw await failure(response, false);
 }

@@ -1,11 +1,16 @@
 # `docker compose up` builds Kirigami and serves ./content (made if it is not
 # there) with the admin at http://localhost:3000/admin/. Only Docker is needed:
-# no Node, no pnpm. There is no sign-in yet, so the port is published to this
-# machine only.
+# no Node, no pnpm.
+#
+# It needs a password (at least 8 characters) for the admin: copy .env.example
+# to .env and fill it in. The port is published to this machine only; to reach
+# it from elsewhere, put a proxy that terminates HTTPS in front of it.
 services:
   kirigami:
     build: .
     ports:
       - "127.0.0.1:3000:3000"
+    environment:
+      KIRIGAMI_PASSWORD: ${KIRIGAMI_PASSWORD:?Copy .env.example to .env and set KIRIGAMI_PASSWORD (at least 8 characters)}
     volumes:
       - ./content:/content
