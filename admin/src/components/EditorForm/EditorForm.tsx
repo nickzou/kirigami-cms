@@ -1,4 +1,5 @@
 import { lazy, type ReactNode, type Ref, Suspense } from "react";
+import type { Theme } from "../../../../src/core/config/schema.js";
 import type { EditorHandle } from "../../editor-handle.js";
 import { LoadingMessage } from "../LoadingMessage/LoadingMessage.js";
 
@@ -16,6 +17,8 @@ export interface EditorFormProps {
   onChange: (value: string) => void;
   onSubmit: () => void;
   editorRef?: Ref<EditorHandle>;
+  /** The site's theme, which the text is shown in. Until it is known, the form shows it is loading. */
+  theme?: Theme;
   /** Shown under the text. */
   notice?: ReactNode;
 }
@@ -31,6 +34,7 @@ export function EditorForm({
   onChange,
   onSubmit,
   editorRef,
+  theme,
   notice,
 }: EditorFormProps) {
   return (
@@ -42,9 +46,18 @@ export function EditorForm({
         onSubmit();
       }}
     >
-      <Suspense fallback={<LoadingMessage />}>
-        <MarkdownEditor ref={editorRef} value={value} onChange={onChange} />
-      </Suspense>
+      {theme === undefined ? (
+        <LoadingMessage />
+      ) : (
+        <Suspense fallback={<LoadingMessage />}>
+          <MarkdownEditor
+            ref={editorRef}
+            value={value}
+            onChange={onChange}
+            theme={theme}
+          />
+        </Suspense>
+      )}
       {notice}
     </form>
   );
