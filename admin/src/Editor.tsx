@@ -10,6 +10,7 @@ import {
   EDITOR_FORM_ID,
   EditorForm,
 } from "./components/EditorForm/EditorForm.js";
+import { EditorToolbar } from "./components/EditorToolbar/EditorToolbar.js";
 import { ErrorPanel } from "./components/ErrorPanel/ErrorPanel.js";
 import { HeaderActions } from "./components/HeaderActions/HeaderActions.js";
 import { HeaderTitle } from "./components/HeaderTitle/HeaderTitle.js";
@@ -171,6 +172,15 @@ export function Editor({ path }: { path: string }) {
         )}
         {/* Kept in the page while the preview shows, so the text keeps its cursor, selection and undo history. */}
         <div className={view === "editor" ? "" : ":uno: hidden"}>
+          {/* Stays in reach as a long page scrolls: under the header from a
+              tablet up (it is pinned there), at the top of the screen on a phone. */}
+          {theme !== undefined && (
+            <div className=":uno: sticky top-0 z-10 mb-3 flex justify-center md:top-[68px]">
+              <EditorToolbar
+                onAction={(action) => editor.editorRef.current?.format(action)}
+              />
+            </div>
+          )}
           <EditorForm
             value={editor.draft}
             onChange={editor.setDraft}

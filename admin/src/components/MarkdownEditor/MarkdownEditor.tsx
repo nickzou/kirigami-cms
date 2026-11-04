@@ -1,6 +1,6 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { syntaxTree } from "@codemirror/language";
-import { Annotation, EditorState, Transaction } from "@codemirror/state";
+import { Annotation, EditorState, Prec, Transaction } from "@codemirror/state";
 import {
   type DecorationSet,
   EditorView,
@@ -18,6 +18,7 @@ import {
   stepIntoTables,
   tableWidgets,
 } from "../../editor-widgets.js";
+import { applyFormat, continueMarkup } from "../../markdown-edit.js";
 import {
   formatPieces,
   linkAt,
@@ -235,6 +236,16 @@ export function MarkdownEditor({
           formatting,
           tableWidgets(),
           stepIntoTables,
+          // Formatting shortcuts, and Enter carrying on a list or a quote.
+          // (Tab is left alone: it moves focus out of the text.)
+          Prec.high(
+            keymap.of([
+              { key: "Mod-b", run: (v) => applyFormat(v, "bold") },
+              { key: "Mod-i", run: (v) => applyFormat(v, "italic") },
+              { key: "Mod-k", run: (v) => applyFormat(v, "link") },
+              { key: "Enter", run: continueMarkup },
+            ]),
+          ),
           // Cmd/Ctrl-click opens a link in a new tab; a plain click is for editing.
           EditorView.domEventHandlers({
             mousedown(event, view) {
@@ -302,6 +313,10 @@ export function MarkdownEditor({
         scrollIntoView: true,
       });
       editor.focus();
+    },
+    format: (action) => {
+      const editor = view.current;
+      if (editor) applyFormat(editor, action);
     },
     selectAll: () => {
       const editor = view.current;

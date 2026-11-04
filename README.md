@@ -40,6 +40,12 @@ node dist/cli/main.js check my-site     # validates without building
 node dist/cli/main.js dev my-site       # (--host <address> to listen beyond this machine, which needs KIRIGAMI_PASSWORD) preview at http://localhost:3000, reloads the browser when you save; admin at /admin, JSON API at /api (OpenAPI: /api/openapi.json)
 ```
 
+### Writing in the admin
+
+The page editor shows your markdown formatted, in the site's own theme (fonts, sizes, colors, content width), and hides the marks (`**`, `#`, `[…](…)`) until the cursor reaches them. Tables, images and task boxes are drawn as what they are, and show their markdown while the cursor is in them. It never changes a character you did not type: what you see is plain markdown, and what is saved is exactly that ([ADR 0006](docs/adr/0006-react-and-vite-for-the-admin.md)).
+
+A small toolbar adds the usual marks to the selection (bold, italic, heading, link, bulleted list, code; it is one Tab stop, and the arrow keys move along it). **Cmd/Ctrl+B**, **I** and **K** do bold, italic and a link, **Cmd/Ctrl+S** saves, and **Enter** at the end of a list item or quote starts the next one (twice ends the list). **Tab** moves focus out of the text rather than indenting. **Cmd/Ctrl-click** opens a link in a new tab. Tables are edited as markdown for now: click one, or arrow onto it. An image shows if its address is a web one (`https://…`); a file next to the page cannot be served yet, so it shows a note instead.
+
 The admin has a **Settings** screen that edits the theme in `site.yaml` with a live preview, keeping the file's comments ([ADR 0015](docs/adr/0015-settings-form-from-the-schema.md)).
 
 Raw HTML in markdown is left out of the output. See [`test/fixtures/basic-site`](test/fixtures/basic-site) for an example, and [`schema/site.schema.json`](schema/site.schema.json) for editor autocomplete in `site.yaml`.
