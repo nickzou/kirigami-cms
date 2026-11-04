@@ -2,6 +2,7 @@ import { Route, Routes, useParams } from "react-router";
 import { AppShell } from "./components/AppShell/AppShell.js";
 import { HeaderActions } from "./components/HeaderActions/HeaderActions.js";
 import { SettingsLink } from "./components/SettingsLink/SettingsLink.js";
+import { SignOutButton } from "./components/SignOutButton/SignOutButton.js";
 import { Editor } from "./Editor.js";
 import { PageList } from "./PageList.js";
 import { Settings } from "./Settings.js";
@@ -11,6 +12,7 @@ function PagesScreen() {
     <>
       <HeaderActions>
         <SettingsLink />
+        <SignOutButton placement="header" />
       </HeaderActions>
       <h1>Pages</h1>
       <PageList />

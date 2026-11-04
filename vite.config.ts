@@ -15,6 +15,11 @@ export default defineConfig({
   server: {
     // Everything outside /admin goes to `kirigami dev`: the API, the build
     // events, and the site's own pages, which the editor shows in its preview.
-    proxy: { "^/(?!admin(/|$)).*": devServer },
+    // The server compares a browser's Origin with the Host it was asked on
+    // (it refuses writes from another site), so the proxy must pass the Host on
+    // as the browser sent it (changeOrigin off) for sign-in and saves to work.
+    proxy: {
+      "^/(?!admin(/|$)).*": { target: devServer, changeOrigin: false },
+    },
   },
 });
