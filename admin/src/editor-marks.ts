@@ -1,3 +1,4 @@
+import { syntaxTree } from "@codemirror/language";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { formatPieces } from "./markdown-format.js";
@@ -104,3 +105,103 @@ export function enterAtLineStart(view: EditorView): boolean {
   });
   return true;
 }
+
+interface Fence {
+  /** The line with the opening fence and the language. */
+  open: number;
+  /** The line with the closing fence, if the block has one. */
+  close?: number;
+}
+
+/** The fenced code block that holds `pos`, as the numbers of the lines of its fences. */
+function fenceAt(state: EditorState, pos: number): Fence | undefined {
+  // A position at the very end of the block belongs to what comes after it
+  // when looked at from the right, so look from both sides.
+  for (const side of [1, -1] as const) {
+    for (
+      let node = syntaxTree(state).resolveInner(pos, side);
+      node;
+      node = node.parent as typeof node
+    ) {
+      if (node.name !== "FencedCode") continue;
+      const marks = node.getChildren("CodeMark");
+      return {
+        open: state.doc.lineAt(node.from).number,
+        ...(marks[1] ? { close: state.doc.lineAt(marks[1].from).number } : {}),
+      };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The closing fence of a code block is not shown (it is only the block's
+ * bottom edge), so a cursor is never left on it: typing there would break the
+ * block. It goes on to the line after the block when it was moving forward,
+ * and back to the end of the code when it was not.
+ */
+export const keepOffClosingFence = EditorState.transactionFilter.of((tr) => {
+  if (!tr.selection && !tr.docChanged) return tr;
+  const { doc } = tr.state;
+  let moved = false;
+  const before = tr.startState.selection.main.head;
+  const ranges = tr.newSelection.ranges.map((range) => {
+    if (!range.empty) return range;
+    const fence = fenceAt(tr.state, range.head);
+    if (fence?.close === undefined) return range;
+    const line = doc.line(fence.close);
+    if (range.head < line.from || range.head > line.to) return range;
+    moved = true;
+    if (range.head > before && fence.close < doc.lines) {
+      return EditorSelection.cursor(doc.line(fence.close + 1).from);
+    }
+    return EditorSelection.cursor(doc.line(Math.max(1, fence.close - 1)).to);
+  });
+  if (!moved) return tr;
+  return [
+    tr,
+    {
+      selection: EditorSelection.create(ranges, tr.newSelection.mainIndex),
+      sequential: true,
+    },
+  ];
+});
+
+/**
+ * Backspace at the start of a code block's first line of code, and Delete at
+ * the end of its last, would join the code to a fence line, which is not
+ * shown; they move the cursor across the fence instead and delete nothing.
+ */
+export const stepOverFence =
+  (direction: 1 | -1) =>
+  (view: EditorView): boolean => {
+    const { state } = view;
+    const { main } = state.selection;
+    if (state.selection.ranges.length !== 1 || !main.empty) return false;
+    const line = state.doc.lineAt(main.head);
+    const edge =
+      direction === -1 ? main.head === line.from : main.head === line.to;
+    const nextNumber = line.number + direction;
+    if (!edge || nextNumber < 1 || nextNumber > state.doc.lines) return false;
+    const next = state.doc.line(nextNumber);
+    const fence = fenceAt(state, next.from);
+    if (!fence || (fence.open !== nextNumber && fence.close !== nextNumber)) {
+      return false;
+    }
+    // Over the fence, to the code (or to what is outside) on its far side.
+    const beyond = state.doc.line(
+      Math.min(Math.max(nextNumber + direction, 1), state.doc.lines),
+    );
+    const at =
+      fence.open === nextNumber && direction === -1
+        ? next.to
+        : direction === -1
+          ? beyond.to
+          : beyond.from;
+    view.dispatch({
+      selection: { anchor: at },
+      scrollIntoView: true,
+      userEvent: "select",
+    });
+    return true;
+  };

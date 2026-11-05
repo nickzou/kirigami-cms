@@ -22,7 +22,9 @@ import type { Theme } from "../../../../src/core/config/schema.js";
 import type { EditorHandle } from "../../editor-handle.js";
 import {
   enterAtLineStart,
+  keepOffClosingFence,
   keepOffOpeningMarks,
+  stepOverFence,
   stepOverMark,
 } from "../../editor-marks.js";
 import { defaultTheme, editorVariables } from "../../editor-theme.js";
@@ -182,7 +184,52 @@ const look = EditorView.theme({
     borderBottomLeftRadius: "6px",
     borderBottomRightRadius: "6px",
   },
-  ".kcm-fence, .kcm-code-info": { color: "var(--k-color-muted)" },
+  // The language, as the block's label.
+  ".kcm-code-info": {
+    color: "var(--k-color-muted)",
+    fontSize: "0.8em",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  // The closing fence line is only the block's bottom edge.
+  ".kcm-code-closing": {
+    height: "calc(var(--k-space) * 0.5)",
+    padding: "0 var(--k-space)",
+    overflow: "hidden",
+    lineHeight: "0",
+  },
+  // Raw HTML: shown as text, set apart and labelled, since the site leaves it out.
+  ".kcm-html-block": {
+    position: "relative",
+    fontFamily: "var(--k-font-mono)",
+    fontSize: "0.875em",
+    color: "var(--k-color-muted)",
+    borderLeft: "2px dashed var(--k-color-border)",
+    borderRight: "2px dashed var(--k-color-border)",
+    paddingLeft: "var(--k-space)",
+    paddingRight: "var(--k-space)",
+  },
+  ".kcm-html-first": {
+    borderTop: "2px dashed var(--k-color-border)",
+    borderTopLeftRadius: "6px",
+    borderTopRightRadius: "6px",
+    paddingTop: "calc(var(--k-space) * 0.5)",
+  },
+  ".kcm-html-first::after": {
+    content: '"HTML: not shown on the site"',
+    position: "absolute",
+    top: "0.15em",
+    right: "var(--k-space)",
+    fontSize: "0.75em",
+    fontFamily: "var(--k-font-body)",
+    pointerEvents: "none",
+  },
+  ".kcm-html-last": {
+    borderBottom: "2px dashed var(--k-color-border)",
+    borderBottomLeftRadius: "6px",
+    borderBottomRightRadius: "6px",
+    paddingBottom: "calc(var(--k-space) * 0.5)",
+  },
   ".kcm-hr": { borderBottom: "1px solid var(--k-color-border)" },
   // Tables and images are set the way the site's stylesheet sets them.
   ".kcm-table": {
@@ -351,6 +398,7 @@ export function MarkdownEditor({
           markdownSupport(),
           formatting,
           keepOffOpeningMarks,
+          keepOffClosingFence,
           tableWidgets(),
           stepIntoTables,
           // Formatting shortcuts, and Enter carrying on a list or a quote.
@@ -364,8 +412,14 @@ export function MarkdownEditor({
                 key: "Enter",
                 run: (v) => enterAtLineStart(v) || continueMarkup(v),
               },
-              { key: "Backspace", run: stepOverMark(-1) },
-              { key: "Delete", run: stepOverMark(1) },
+              {
+                key: "Backspace",
+                run: (v) => stepOverFence(-1)(v) || stepOverMark(-1)(v),
+              },
+              {
+                key: "Delete",
+                run: (v) => stepOverFence(1)(v) || stepOverMark(1)(v),
+              },
             ]),
           ),
           // Cmd/Ctrl-click opens a link in a new tab; a plain click is for editing.
