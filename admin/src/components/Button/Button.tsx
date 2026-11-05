@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 import { Link, type LinkProps } from "react-router";
 
 // Full class strings (not built up piece by piece) so UnoCSS can find and hash them.
@@ -28,19 +28,31 @@ interface Common {
 }
 
 export type ButtonAsButtonProps = Common &
-  ButtonHTMLAttributes<HTMLButtonElement> & { to?: undefined };
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    to?: undefined;
+    href?: undefined;
+  };
+
+/** Given `href`, the button is a plain link, for an address outside the admin. */
+export type ButtonAsAnchorProps = Common &
+  AnchorHTMLAttributes<HTMLAnchorElement> & { to?: undefined; href: string };
 
 /** Given `to`, the button is a link to another screen (it has an address). */
 export type ButtonAsLinkProps = Common &
-  Omit<LinkProps, "className"> & { className?: string };
+  Omit<LinkProps, "className"> & { className?: string; href?: undefined };
 
-export type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
+export type ButtonProps =
+  | ButtonAsButtonProps
+  | ButtonAsLinkProps
+  | ButtonAsAnchorProps;
 
 const isLink = (props: ButtonProps): props is ButtonAsLinkProps =>
   props.to !== undefined;
+const isAnchor = (props: ButtonProps): props is ButtonAsAnchorProps =>
+  props.href !== undefined;
 
 /**
- * Looks like a button either way. Without `to` it is a `<button>` for an
+ * Looks like a button either way. Without `to` or `href` it is a `<button>` for an
  * action (and never submits a form unless `type="submit"`). With `to` it is a
  * link, for going somewhere.
  */
@@ -54,6 +66,21 @@ export function Button(props: ButtonProps) {
     } = props;
     return (
       <Link
+        className={`${base} ${sizes[size]} ${variants[variant]}${className ? ` ${className}` : ""}`}
+        {...rest}
+      />
+    );
+  }
+  if (isAnchor(props)) {
+    const {
+      variant = "secondary",
+      size = "normal",
+      className,
+      ...rest
+    } = props;
+    return (
+      // biome-ignore lint/a11y/useAnchorContent: the caller gives the children.
+      <a
         className={`${base} ${sizes[size]} ${variants[variant]}${className ? ` ${className}` : ""}`}
         {...rest}
       />

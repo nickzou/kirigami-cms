@@ -147,38 +147,11 @@ export const MissingPage: Story = {
   beforeEach: () => installFakeApi(hello).restore,
 };
 
-/** Picks the Preview view, as a user does. */
-async function showPreview(canvas: ReturnType<typeof within>) {
-  await userEvent.click(await canvas.findByRole("radio", { name: "Preview" }));
-  return canvas.findByTitle("Preview of blog/hello.md");
-}
-
-/** The new frame loads unseen over the old one, and takes its place when it has loaded. */
-export const PreviewReloadsAfterABuild: Story = {
-  beforeEach: () => installFakeApi(hello).restore,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const before = await showPreview(canvas);
-    await waitFor(() => expect(events.listeners()).toBe(1));
-    events.reload();
-    // Once the new frame has loaded it is the only one, in the old one's place.
-    // (Where frames do not really load, as in the test runner, this plays the
-    // browser's part.)
-    await waitFor(() => {
-      const frames = canvas.getAllByTitle("Preview of blog/hello.md");
-      if (frames.length === 2) fireEvent.load(frames[1] as Element);
-      expect(frames).toHaveLength(1);
-      expect(frames[0]).not.toBe(before);
-    });
-    await expect(before.isConnected).toBe(false);
-  },
-};
-
 export const BuildFailed: Story = {
   beforeEach: () => installFakeApi(hello).restore,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await showPreview(canvas);
+    await canvas.findByLabelText("Markdown");
     await waitFor(() => expect(events.listeners()).toBe(1));
     events.fail(
       "Cannot build the site:\n  site.yaml (theme.colours): unknown field",
@@ -189,34 +162,15 @@ export const BuildFailed: Story = {
   },
 };
 
-/** The control picks one view at a time, on a laptop and on a phone alike. */
-export const SwitchesViews: Story = {
+/** The live page opens in a new tab. */
+export const OpensThePage: Story = {
   beforeEach: () => installFakeApi(hello).restore,
-  parameters: { viewport: { defaultViewport: "laptop" } },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByLabelText("Markdown")).toBeVisible();
-    await expect(
-      canvas.queryByTitle("Preview of blog/hello.md"),
-    ).not.toBeInTheDocument();
-    await expect(await showPreview(canvas)).toBeVisible();
-    await userEvent.click(canvas.getByRole("radio", { name: "Editor" }));
-    await expect(canvas.getByLabelText("Markdown")).toBeVisible();
-    await expect(
-      canvas.queryByTitle("Preview of blog/hello.md"),
-    ).not.toBeInTheDocument();
-  },
-};
-
-export const SwitchesViewsOnAPhone: Story = {
-  beforeEach: () => installFakeApi(hello).restore,
-  parameters: { viewport: { defaultViewport: "phone" } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByLabelText("Markdown");
-    await expect(await showPreview(canvas)).toBeVisible();
-    await userEvent.click(canvas.getByRole("radio", { name: "Editor" }));
-    await expect(canvas.getByLabelText("Markdown")).toBeVisible();
+    const link = await within(canvasElement).findByRole("link", {
+      name: "Open page",
+    });
+    await expect(link).toHaveAttribute("href", "/blog/hello/");
+    await expect(link).toHaveAttribute("target", "_blank");
   },
 };
 
@@ -277,37 +231,5 @@ export const RenameAndDeleteWaitForASave: Story = {
       ).toHaveAttribute("readonly"),
     );
     await expect(canvas.getByRole("button", { name: "Delete" })).toBeDisabled();
-  },
-};
-
-/** The preview shows the saved page, so unsaved text is saved when you switch to it. */
-export const SavesWhenSwitchingToPreview: Story = {
-  beforeEach: () => installFakeApi(hello).restore,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    appendText(await canvas.findByLabelText("Markdown"), " More.");
-    await waitFor(() =>
-      expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled(),
-    );
-    await expect(await showPreview(canvas)).toBeVisible();
-    await waitFor(() => expect(canvas.getByText("Saved.")).toBeVisible());
-    await expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled();
-  },
-};
-
-/** If the save is refused, the view stays on the text, where the problem is shown. */
-export const StaysOnTheTextWhenTheSaveFails: Story = {
-  beforeEach: () => installFakeApi(hello, failures.conflictOnSave).restore,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    appendText(await canvas.findByLabelText("Markdown"), " More.");
-    await userEvent.click(canvas.getByRole("radio", { name: "Preview" }));
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "changed since you opened it",
-    );
-    await expect(canvas.getByRole("radio", { name: "Editor" })).toBeChecked();
-    await expect(
-      canvas.queryByTitle("Preview of blog/hello.md"),
-    ).not.toBeInTheDocument();
   },
 };

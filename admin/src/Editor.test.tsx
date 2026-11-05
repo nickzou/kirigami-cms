@@ -156,19 +156,6 @@ describe("Editor: formatting buttons", () => {
     press("Link");
     expect(editorText(box)).toBe("# one\n\n- [two](url)\n");
   });
-
-  it("go with the editor: hidden along with it while the preview shows", async () => {
-    serve({ "a.md": "text\n" });
-    open("/pages/a.md");
-    await editor();
-    const toolbar = await screen.findByRole("toolbar");
-    const wrapper = toolbar.parentElement?.parentElement as HTMLElement;
-    const inEditor = wrapper.className;
-    fireEvent.click(await screen.findByRole("radio", { name: "Preview" }));
-    await waitFor(() => expect(wrapper.className).not.toBe(inEditor));
-    fireEvent.click(await screen.findByRole("radio", { name: "Editor" }));
-    await waitFor(() => expect(wrapper.className).toBe(inEditor));
-  });
 });
 
 describe("Editor: saving", () => {
