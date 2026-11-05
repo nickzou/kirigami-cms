@@ -1,6 +1,6 @@
 # 0013: Live preview in the editor
 
-Status: accepted
+Status: superseded in part. The page editor no longer has a Preview view: the editor draws the page in the site's theme, and an "Open page" link opens the live page in a new tab. The Settings screen still previews as described in ADR 0015.
 
 ## Decision
 

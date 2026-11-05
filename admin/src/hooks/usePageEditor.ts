@@ -188,8 +188,6 @@ export function usePageEditor(path: string, changes = 0) {
     ready: load.status === "ready" && base !== undefined,
     editorRef,
     submit: useCallback(() => void submit(), [submit]),
-    /** Like `submit`, but waits, and says whether the page is saved afterwards. */
-    saveNow: submit,
     reload,
     dismissSave,
     /** Set when the page changed outside the admin and there is unsaved text (or the page is gone). */

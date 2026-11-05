@@ -19,21 +19,14 @@ import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
 import { OutsideChangePanel } from "./components/OutsideChangePanel/OutsideChangePanel.js";
 import { pageHref } from "./components/PageListView/PageListView.js";
 import { PagePathField } from "./components/PagePathField/PagePathField.js";
-import { PreviewFrame } from "./components/PreviewFrame/PreviewFrame.js";
 import { SaveControls } from "./components/SaveControls/SaveControls.js";
 import { SaveFailedPanel } from "./components/SaveFailedPanel/SaveFailedPanel.js";
-import { SegmentedControl } from "./components/SegmentedControl/SegmentedControl.js";
 import { Toast } from "./components/Toast/Toast.js";
 import { useBuildEvents } from "./hooks/useBuildEvents.js";
 import { usePageEditor } from "./hooks/usePageEditor.js";
 import { useSaveShortcut } from "./hooks/useSaveShortcut.js";
 import { useSiteTheme } from "./hooks/useSiteTheme.js";
 import { useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard.js";
-
-const views = [
-  { value: "editor", label: "Editor" },
-  { value: "preview", label: "Preview" },
-];
 
 /** The screen for editing one page. The work is in `usePageEditor`. */
 export function Editor({ path }: { path: string }) {
@@ -44,8 +37,6 @@ export function Editor({ path }: { path: string }) {
   useSaveShortcut(editor.submit);
   useUnsavedChangesGuard(editor.dirty);
 
-  // One view at a time, chosen with the segmented control.
-  const [view, setView] = useState<"editor" | "preview">("editor");
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
   // The other pages' paths, fetched when the title field is first focused, so
@@ -108,6 +99,16 @@ export function Editor({ path }: { path: string }) {
         <div className=":uno: mb-4 flex items-center justify-end gap-3">
           {editor.version !== undefined && (
             <div className=":uno: flex gap-2">
+              {editor.url && (
+                <Button
+                  size="small"
+                  href={editor.url}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Open page
+                </Button>
+              )}
               <Button
                 size="small"
                 disabled={editor.dirty || editor.saving}
@@ -170,8 +171,7 @@ export function Editor({ path }: { path: string }) {
             onKeepEditing={editor.dismissSave}
           />
         )}
-        {/* Kept in the page while the preview shows, so the text keeps its cursor, selection and undo history. */}
-        <div className={view === "editor" ? "" : ":uno: hidden"}>
+        <div>
           {/* Stays in reach as a long page scrolls: under the header from a
               tablet up (it is pinned there), at the top of the screen on a phone. */}
           {theme !== undefined && (
@@ -194,13 +194,6 @@ export function Editor({ path }: { path: string }) {
             }
           />
         </div>
-        {editor.url && view === "preview" && (
-          <PreviewFrame
-            url={editor.url}
-            version={build.reloads}
-            title={`Preview of ${path}`}
-          />
-        )}
       </div>
       {deleting && editor.version !== undefined && (
         <DeleteDialog
@@ -211,22 +204,6 @@ export function Editor({ path }: { path: string }) {
             navigate("/", { replace: true });
           }}
         />
-      )}
-      {editor.url && (
-        // Fixed to the bottom centre at every size, over the page as it scrolls.
-        <div className=":uno: fixed bottom-4 left-1/2 z-10 w-[min(22.5rem,calc(100%-2rem))] -translate-x-1/2">
-          <SegmentedControl
-            label="View"
-            options={views}
-            value={view}
-            onChange={async (next) => {
-              if (next !== "preview") return setView("editor");
-              // The preview shows the saved page, so save what was typed first.
-              // If that fails, stay with the text, where the problem is shown.
-              if (await editor.saveNow()) setView("preview");
-            }}
-          />
-        </div>
       )}
     </>
   );
