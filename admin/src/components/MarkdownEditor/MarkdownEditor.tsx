@@ -188,8 +188,6 @@ const look = EditorView.theme({
   ".kcm-code-info": {
     color: "var(--k-color-muted)",
     fontSize: "0.8em",
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
   },
   // The closing fence line is only the block's bottom edge.
   ".kcm-code-closing": {
