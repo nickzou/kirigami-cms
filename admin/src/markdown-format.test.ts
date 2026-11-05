@@ -1,4 +1,4 @@
-import { EditorSelection, EditorState } from "@codemirror/state";
+import { EditorState } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
 import {
   formatPieces,
@@ -8,8 +8,9 @@ import {
 } from "./markdown-format.js";
 
 /**
- * Formats `doc` with the cursor at the `|` in it (there is no `|` in the text
- * the editor sees), or at the very end when there is none.
+ * Formats `doc`, with the cursor at the `|` in it (there is no `|` in the text
+ * the editor sees), or at the very end when there is none. The cursor changes
+ * nothing: marks are hidden wherever it is.
  */
 function format(source: string): { doc: string; pieces: Piece[] } {
   const bar = source.indexOf("|");
@@ -49,14 +50,14 @@ describe("headings", () => {
     }
   });
 
-  it("hides the # and the space after it while the cursor is elsewhere", () => {
+  it("hides the # and the space after it", () => {
     expect(hidden("## Title\n\ntext|")).toEqual(["## "]);
   });
 
-  it("shows them while the cursor is on the line, at either end", () => {
-    expect(hidden("## Ti|tle\n\ntext")).toEqual([]);
-    expect(hidden("|## Title\n\ntext")).toEqual([]);
-    expect(hidden("## Title|\n\ntext")).toEqual([]);
+  it("hides them with the cursor on the line, at either end", () => {
+    expect(hidden("## Ti|tle\n\ntext")).toEqual(["## "]);
+    expect(hidden("|## Title\n\ntext")).toEqual(["## "]);
+    expect(hidden("## Title|\n\ntext")).toEqual(["## "]);
   });
 
   it("also hides closing hashes", () => {
@@ -76,16 +77,12 @@ describe("headings", () => {
 });
 
 describe("inline marks", () => {
-  it("styles bold, and hides the ** except at the cursor", () => {
+  it("styles bold, and hides the **, wherever the cursor is", () => {
     expect(marked("a **bold** b|", "kcm-strong")).toEqual(["**bold**"]);
     expect(hidden("a **bold** b|")).toEqual(["**", "**"]);
-    expect(hidden("a **bo|ld** b")).toEqual([]);
-  });
-
-  it("reveals the marks when the cursor touches either end of the element", () => {
-    expect(hidden("a |**bold** b")).toEqual([]);
-    expect(hidden("a **bold**| b")).toEqual([]);
-    expect(hidden("a **bold** |b")).toEqual(["**", "**"]);
+    expect(hidden("a **bo|ld** b")).toEqual(["**", "**"]);
+    expect(hidden("a |**bold** b")).toEqual(["**", "**"]);
+    expect(hidden("a **bold**| b")).toEqual(["**", "**"]);
   });
 
   it("styles italic with * or _", () => {
@@ -107,44 +104,27 @@ describe("inline marks", () => {
     expect(marked("*a **b** c* x|", "kcm-em")).toEqual(["*a **b** c*"]);
     expect(marked("*a **b** c* x|", "kcm-strong")).toEqual(["**b**"]);
     expect(hidden("*a **b** c* x|")).toEqual(["*", "*", "**", "**"]);
-    // The cursor in the bold shows the bold's marks and the italic's.
-    expect(hidden("*a **b|** c* x")).toEqual([]);
+    expect(hidden("*a **b|** c* x")).toEqual(["*", "*", "**", "**"]);
   });
 
-  it("only reveals the element the cursor is in, on a line with others", () => {
-    expect(hidden("**a** and **b|**")).toEqual(["**", "**"]);
+  it("hides the marks of every element on a line", () => {
+    expect(hidden("**a** and **b|**")).toEqual(["**", "**", "**", "**"]);
   });
 
-  it("treats a selection as touching what it overlaps", () => {
+  it("does not look at a selection", () => {
     const state = EditorState.create({
       doc: "x **bold** y",
       selection: { anchor: 0, head: 5 },
       extensions: [markdownSupport()],
     });
-    expect(formatPieces(state).some((p) => p.kind === "hide")).toBe(false);
-  });
-
-  it("treats every cursor of a multi-cursor selection", () => {
-    const state = EditorState.create({
-      doc: "**a** **b** end",
-      selection: EditorSelection.create(
-        [EditorSelection.cursor(3), EditorSelection.cursor(14)],
-        0,
-      ),
-      extensions: [
-        EditorState.allowMultipleSelections.of(true),
-        markdownSupport(),
-      ],
-    });
-    const gone = formatPieces(state)
-      .filter((p) => p.kind === "hide")
-      .map((p) => text(state.doc.toString(), p));
-    expect(gone).toEqual(["**", "**"]);
+    expect(formatPieces(state).filter((p) => p.kind === "hide")).toHaveLength(
+      2,
+    );
   });
 });
 
 describe("links", () => {
-  it("shows only the text, as a link, while the cursor is away", () => {
+  it("shows only the text, as a link", () => {
     expect(marked("see [the docs](https://x.test/a) now|", "kcm-link")).toEqual(
       ["the docs"],
     );
@@ -161,10 +141,10 @@ describe("links", () => {
     ]);
   });
 
-  it("shows everything, with the address quiet, while the cursor is in it", () => {
-    expect(hidden("see [the do|cs](https://x.test/a) now")).toEqual([]);
-    expect(marked("see [the do|cs](https://x.test/a) now", "kcm-url")).toEqual([
-      "https://x.test/a",
+  it("keeps the address out of sight with the cursor in the link", () => {
+    expect(hidden("see [the do|cs](https://x.test/a) now")).toEqual([
+      "[",
+      "](https://x.test/a)",
     ]);
   });
 
@@ -175,7 +155,7 @@ describe("links", () => {
     expect(hidden("<https://x.test> x|")).toEqual(["<", ">"]);
   });
 
-  it("shows an image in place of its markdown, unless the cursor is in it", () => {
+  it("shows an image in place of its markdown, wherever the cursor is", () => {
     const image = (source: string) =>
       format(source).pieces.filter((p) => p.kind === "image");
     expect(image('![alt text](https://x.test/i.png "A title") x|')).toEqual([
@@ -192,8 +172,8 @@ describe("links", () => {
       { alt: "", src: "rel.png" },
     ]);
     expect(image("![alt](https://x.test/i.png) x|")).toHaveLength(1);
-    expect(image("![al|t](https://x.test/i.png) x")).toEqual([]);
-    expect(image("![alt](https://x.test/i.png)| x")).toEqual([]);
+    expect(image("![al|t](https://x.test/i.png) x")).toHaveLength(1);
+    expect(image("![alt](https://x.test/i.png)| x")).toHaveLength(1);
   });
 
   it("does not make a link of an image", () => {
@@ -210,14 +190,14 @@ describe("links", () => {
 });
 
 describe("blocks", () => {
-  it("marks each line of a quote and hides its > when the cursor is elsewhere", () => {
+  it("marks each line of a quote and hides its >", () => {
     const source = "> one\n> two\n\ntext|";
     expect(linesWith(source, "kcm-quote")).toEqual([0, 6]);
     expect(hidden(source)).toEqual(["> ", "> "]);
   });
 
-  it("shows the > only on the line the cursor is on", () => {
-    expect(hidden("> one\n> tw|o\n\ntext")).toEqual(["> "]);
+  it("hides the > on the line the cursor is on, too", () => {
+    expect(hidden("> one\n> tw|o\n\ntext")).toEqual(["> ", "> "]);
   });
 
   it("styles list markers, and hides nothing", () => {
@@ -226,7 +206,7 @@ describe("blocks", () => {
     expect(hidden(source)).toEqual([]);
   });
 
-  it("shows a task's [ ] or [x] as a checkbox, unless the cursor is on it", () => {
+  it("shows a task's [ ] or [x] as a checkbox, wherever the cursor is", () => {
     const boxes = (source: string) =>
       format(source)
         .pieces.filter((p) => p.kind === "checkbox")
@@ -236,10 +216,7 @@ describe("blocks", () => {
       true,
       true,
     ]);
-    // On the marker, it is text again, styled.
-    expect(boxes("- [|x] b\n\ntext")).toEqual([]);
-    expect(marked("- [|x] b\n\ntext", "kcm-task-marker")).toEqual(["[x]"]);
-    // Elsewhere on the same line does not show the marker.
+    expect(boxes("- [|x] b\n\ntext")).toEqual([true]);
     expect(boxes("- [x] b|\n\ntext")).toEqual([true]);
   });
 
@@ -264,35 +241,10 @@ describe("blocks", () => {
     ]);
   });
 
-  it("turns a rule into a line, and shows the --- when the cursor is on it", () => {
+  it("turns a rule into a line, hiding the ---", () => {
     expect(linesWith("a\n\n---\n\nb|", "kcm-hr")).toEqual([3]);
     expect(hidden("a\n\n---\n\nb|")).toEqual(["---"]);
-    expect(hidden("a\n\n--|-\n\nb")).toEqual([]);
-  });
-});
-
-describe("when the editor is not being used", () => {
-  it("hides every mark, wherever the cursor is", () => {
-    const source =
-      "## Ti|tle\n\nSome **bo|ld** and [a link](https://x.test).\n";
-    const doc = source.replaceAll("|", "");
-    const state = EditorState.create({
-      doc,
-      selection: { anchor: 4 },
-      extensions: [markdownSupport()],
-    });
-    const hides = (reveal: boolean) =>
-      formatPieces(state, 0, doc.length, reveal).filter(
-        (p) => p.kind === "hide",
-      );
-    expect(hides(true).length).toBeLessThan(hides(false).length);
-    expect(hides(false).map((p) => text(doc, p))).toEqual([
-      "## ",
-      "**",
-      "**",
-      "[",
-      "](https://x.test)",
-    ]);
+    expect(hidden("a\n\n--|-\n\nb")).toEqual(["---"]);
   });
 });
 

@@ -154,7 +154,7 @@ describe("Editor: formatting buttons", () => {
     expect(editorText(box)).toBe("# one\n\n- two\n");
     act(() => view.dispatch({ selection: { anchor: 9, head: 12 } }));
     press("Link");
-    expect(editorText(box)).toBe("# one\n\n- [two](url)\n");
+    expect(editorText(box)).toBe("# one\n\n- [two]()\n");
   });
 });
 

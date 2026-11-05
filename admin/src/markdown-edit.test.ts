@@ -5,6 +5,7 @@ import {
   continueMarkup,
   type FormatAction,
   formatChange,
+  unlink,
 } from "./markdown-edit.js";
 import { markdownSupport } from "./markdown-format.js";
 
@@ -154,14 +155,12 @@ describe("heading", () => {
 });
 
 describe("link", () => {
-  it("makes a link of the selected text and selects the address to type", () => {
-    expect(apply("see «the docs» now", "link")).toBe(
-      "see [the docs](«url») now",
-    );
+  it("makes a link of the selected text, leaving the address to the popover", () => {
+    expect(apply("see «the docs» now", "link")).toBe("see [«the docs»]() now");
   });
 
   it("makes a link with text to type when nothing is selected", () => {
-    expect(apply("see ¦ now", "link")).toBe("see [«link text»](url) now");
+    expect(apply("see ¦ now", "link")).toBe("see [«link text»]() now");
   });
 
   it("makes the selected web address the link's address", () => {
@@ -170,10 +169,29 @@ describe("link", () => {
     );
   });
 
+  it("leaves a link that is there to its popover", () => {
+    const state = parse("see [the d¦ocs](https://x.test) now");
+    expect(formatChange(state, "link")).toBeUndefined();
+  });
+
   it("takes a link off, keeping its text", () => {
-    expect(apply("see [the d¦ocs](https://x.test) now", "link")).toBe(
+    const state = parse("see [the d¦ocs](https://x.test) now");
+    const spec = unlink(state);
+    expect(spec).toBeDefined();
+    expect(show(state.update(spec as never).state)).toBe("see «the docs» now");
+  });
+
+  it("takes off a link with no address yet", () => {
+    const state = parse("see [the d¦ocs]() now");
+    expect(show(state.update(unlink(state) as never).state)).toBe(
       "see «the docs» now",
     );
+  });
+
+  it("finds no link to take off in plain text, or at the link's edges", () => {
+    expect(unlink(parse("plain ¦ text"))).toBeUndefined();
+    expect(unlink(parse("a ¦[t](u) b"))).toBeUndefined();
+    expect(unlink(parse("a [t](u)¦ b"))).toBeUndefined();
   });
 });
 

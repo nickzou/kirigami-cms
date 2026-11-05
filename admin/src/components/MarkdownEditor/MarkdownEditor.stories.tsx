@@ -129,8 +129,8 @@ export const ASitesOwnTheme: Story = {
   },
 };
 
-/** Marks are hidden until the cursor reaches them: put it in the bold text. */
-export const ReachingAMark: Story = {
+/** The marks are never on screen, not even with the cursor on the bold text or in the link. */
+export const MarksNeverShow: Story = {
   args: {
     value:
       "# Title\n\nSome **bold** words and a [link](https://example.com).\n",
@@ -138,18 +138,15 @@ export const ReachingAMark: Story = {
   play: async ({ canvasElement }) => {
     const box = within(canvasElement).getByLabelText("Markdown");
     const view = (await import("../../test-editor.js")).editorView(box);
-    // Away from the marks: the ** are not in the text on screen.
     await expect(box.textContent).not.toContain("**");
     await expect(box.textContent).not.toContain("](https");
-    // The cursor only shows marks while the editor is being used.
     view.focus();
-    const at = view.state.doc.toString().indexOf("bold") + 2;
-    view.dispatch({ selection: { anchor: at } });
-    await expect(box.textContent).toContain("**bold**");
-    // The link's marks are still hidden, since the cursor is not in it.
-    await expect(box.textContent).not.toContain("](https");
-    view.dispatch({ selection: { anchor: view.state.doc.length } });
+    const text = view.state.doc.toString();
+    view.dispatch({ selection: { anchor: text.indexOf("bold") + 2 } });
     await expect(box.textContent).not.toContain("**");
+    view.dispatch({ selection: { anchor: text.indexOf("link") + 2 } });
+    await expect(box.textContent).not.toContain("](https");
+    await expect(box.textContent).not.toContain("# ");
   },
 };
 

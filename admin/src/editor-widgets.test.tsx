@@ -289,14 +289,14 @@ describe("images in the editor", () => {
     expect(box().querySelector("img.kcm-image")).toBeNull();
   });
 
-  it("shows the markdown while the cursor is in the image", async () => {
+  it("keeps drawing the image with the cursor beside it, never as markdown", async () => {
     const source = "![A cat](https://x.test/cat.png) text\n";
     open(source);
     const view = editorView(box());
     await focus(view);
-    act(() => view.dispatch({ selection: { anchor: 5 } }));
-    expect(box().querySelector("img.kcm-image")).toBeNull();
-    expect(box().textContent).toContain("![A cat](https://x.test/cat.png)");
+    act(() => view.dispatch({ selection: { anchor: 0 } }));
+    expect(box().querySelector("img.kcm-image")).not.toBeNull();
+    expect(box().textContent).not.toContain("![A cat]");
     expect(editorText(box())).toBe(source);
   });
 });
@@ -345,13 +345,13 @@ describe("task boxes in the editor", () => {
     expect(editorText(box())).toBe(source);
   });
 
-  it("shows the marker as text while the cursor is on it", async () => {
+  it("keeps the checkboxes with the cursor on a marker", async () => {
     open(source);
     const view = editorView(box());
     await focus(view);
     act(() => view.dispatch({ selection: { anchor: 4 } }));
-    expect(box().querySelectorAll("input.kcm-checkbox")).toHaveLength(1);
-    expect(box().textContent).toContain("[ ]");
+    expect(box().querySelectorAll("input.kcm-checkbox")).toHaveLength(2);
+    expect(box().textContent).not.toContain("[ ]");
   });
 
   it("is not a stop in the tab order", () => {

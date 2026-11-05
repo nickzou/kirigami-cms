@@ -2,29 +2,46 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { syntaxTree } from "@codemirror/language";
 import { Annotation, EditorState, Prec, Transaction } from "@codemirror/state";
 import {
+  Decoration,
   type DecorationSet,
   EditorView,
   keymap,
   ViewPlugin,
   type ViewUpdate,
 } from "@codemirror/view";
-import { type Ref, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  type Ref,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { HEADING_LEVELS } from "../../../../src/core/config/css.js";
 import type { Theme } from "../../../../src/core/config/schema.js";
 import type { EditorHandle } from "../../editor-handle.js";
+import {
+  enterAtLineStart,
+  keepOffOpeningMarks,
+  stepOverMark,
+} from "../../editor-marks.js";
 import { defaultTheme, editorVariables } from "../../editor-theme.js";
 import {
   safeLinkTarget,
   stepIntoTables,
   tableWidgets,
 } from "../../editor-widgets.js";
-import { applyFormat, continueMarkup } from "../../markdown-edit.js";
+import { applyFormat, continueMarkup, unlink } from "../../markdown-edit.js";
 import {
   formatPieces,
+  type LinkRange,
   linkAt,
+  linkRangeAt,
   markdownSupport,
+  type Piece,
   toDecorations,
 } from "../../markdown-format.js";
+import { LinkPopover } from "../LinkPopover/LinkPopover.js";
 
 export interface MarkdownEditorProps {
   /** The text. It is the editor's own state: set it to replace what is there. */
@@ -39,36 +56,47 @@ export interface MarkdownEditorProps {
 
 /**
  * Draws the markdown's formatting (see `formatPieces`) for what is on screen,
- * and again when the text, the cursor, the focus or the parse changes. Marks
- * show at the cursor only while the editor has the focus, so a page just
- * opened looks like the site.
+ * and again when the text or the parse changes. The marks are never shown.
+ * What it hides (and the images and boxes it draws) is atomic: the cursor
+ * steps over it as one piece, never into the middle of an address.
  */
 const formatting = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
+    atoms: DecorationSet;
     constructor(view: EditorView) {
-      this.decorations = this.build(view);
+      ({ decorations: this.decorations, atoms: this.atoms } = this.build(view));
     }
     update(update: ViewUpdate) {
       if (
         update.docChanged ||
-        update.selectionSet ||
-        update.focusChanged ||
         update.viewportChanged ||
         syntaxTree(update.startState) !== syntaxTree(update.state)
       ) {
-        this.decorations = this.build(update.view);
+        ({ decorations: this.decorations, atoms: this.atoms } = this.build(
+          update.view,
+        ));
       }
     }
-    build(view: EditorView): DecorationSet {
-      return toDecorations(
-        view.visibleRanges.flatMap(({ from, to }) =>
-          formatPieces(view.state, from, to, view.hasFocus),
-        ),
+    build(view: EditorView) {
+      const pieces: Piece[] = view.visibleRanges.flatMap(({ from, to }) =>
+        formatPieces(view.state, from, to),
       );
+      return {
+        decorations: toDecorations(pieces),
+        atoms: toDecorations(
+          pieces.filter((p) => p.kind !== "line" && p.kind !== "mark"),
+        ),
+      };
     }
   },
-  { decorations: (plugin) => plugin.decorations },
+  {
+    decorations: (plugin) => plugin.decorations,
+    provide: (plugin) =>
+      EditorView.atomicRanges.of(
+        (view) => view.plugin(plugin)?.atoms ?? Decoration.none,
+      ),
+  },
 );
 
 /** Marks a change that came from `value`, so it is not reported back or made undoable. */
@@ -131,14 +159,12 @@ const look = EditorView.theme({
     textDecoration: "underline",
     textUnderlineOffset: "0.15em",
   },
-  ".kcm-url": { color: "var(--k-color-muted)" },
   ".kcm-quote": {
     paddingLeft: "var(--k-space)",
     borderLeft: "4px solid var(--k-color-border)",
     color: "var(--k-color-muted)",
   },
   ".kcm-list-mark": { color: "var(--k-color-muted)" },
-  ".kcm-task-marker": { fontFamily: "var(--k-font-mono)" },
   ".kcm-code-block": {
     fontFamily: "var(--k-font-mono)",
     fontSize: "0.875em",
@@ -216,12 +242,102 @@ export function MarkdownEditor({
   ref,
 }: MarkdownEditorProps) {
   const host = useRef<HTMLDivElement>(null);
+  const page = useRef<HTMLDivElement>(null);
+  const popover = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
+  // The link the cursor is in, for its popover, and where to put it.
+  const [link, setLink] = useState<{
+    range: LinkRange;
+    left: number;
+    top: number;
+  } | null>(null);
+  // The link whose popover was dismissed with Escape, until the cursor leaves it.
+  const dismissed = useRef<number | null>(null);
+  // While the text is being typed the popover fades out of the way.
+  const [typing, setTyping] = useState(false);
+  const typingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Raised to ask the popover to take the focus (Cmd/Ctrl+K, the toolbar's link button).
+  const [focusTick, setFocusTick] = useState(0);
   // The latest callback, so the editor is made once and never rebuilt for it.
   const report = useRef(onChange);
   report.current = onChange;
   // What it starts with; later changes to `value` go through the effect below.
   const first = useRef({ value, label });
+
+  const popoverHasFocus = useCallback(
+    () => popover.current?.contains(document.activeElement) ?? false,
+    [],
+  );
+
+  /** Shows the popover for the link the selection is in, or takes it away. */
+  const syncLink = useCallback(
+    (editor: EditorView, focusChanged = false) => {
+      const { from, to } = editor.state.selection.main;
+      const range =
+        editor.state.selection.ranges.length === 1
+          ? linkRangeAt(editor.state, from, to)
+          : undefined;
+      if (!range) {
+        dismissed.current = null;
+        return setLink(null);
+      }
+      // The focus is in the text or in the popover; elsewhere there is no popover.
+      if (!editor.hasFocus && !popoverHasFocus()) {
+        return focusChanged ? setLink(null) : undefined;
+      }
+      if (dismissed.current === range.from) return setLink(null);
+      const origin = page.current?.getBoundingClientRect();
+      if (!origin) return setLink(null);
+      // Under the link's text (at the top of the page if the browser cannot say where that is).
+      const coords = editor.coordsAtPos(range.textFrom) ?? {
+        left: origin.left,
+        bottom: origin.top,
+      };
+      setLink({
+        range,
+        left: Math.max(0, coords.left - origin.left),
+        top: coords.bottom - origin.top + 6,
+      });
+    },
+    [popoverHasFocus],
+  );
+
+  /** Follows the cursor to a link (and the typing, to fade the popover while it goes on). */
+  const followLink = useCallback(
+    (update: ViewUpdate) => {
+      if (
+        update.docChanged &&
+        update.transactions.some(
+          (t) => t.isUserEvent("input") && !t.isUserEvent("input.link"),
+        )
+      ) {
+        setTyping(true);
+        clearTimeout(typingTimer.current);
+        typingTimer.current = setTimeout(() => setTyping(false), 700);
+      } else if (update.selectionSet) {
+        clearTimeout(typingTimer.current);
+        setTyping(false);
+      }
+      if (update.docChanged || update.selectionSet || update.focusChanged) {
+        syncLink(update.view, update.focusChanged);
+      }
+    },
+    [syncLink],
+  );
+
+  /** Cmd/Ctrl+K and the toolbar's link button: make a link, or go to the address of this one. */
+  const formatLink = useCallback(
+    (editor: EditorView): boolean => {
+      applyFormat(editor, "link");
+      dismissed.current = null;
+      syncLink(editor);
+      setFocusTick((tick) => tick + 1);
+      return true;
+    },
+    [syncLink],
+  );
+  const formatLinkRef = useRef(formatLink);
+  formatLinkRef.current = formatLink;
 
   useEffect(() => {
     const parent = host.current;
@@ -234,6 +350,7 @@ export function MarkdownEditor({
           history(),
           markdownSupport(),
           formatting,
+          keepOffOpeningMarks,
           tableWidgets(),
           stepIntoTables,
           // Formatting shortcuts, and Enter carrying on a list or a quote.
@@ -242,13 +359,21 @@ export function MarkdownEditor({
             keymap.of([
               { key: "Mod-b", run: (v) => applyFormat(v, "bold") },
               { key: "Mod-i", run: (v) => applyFormat(v, "italic") },
-              { key: "Mod-k", run: (v) => applyFormat(v, "link") },
-              { key: "Enter", run: continueMarkup },
+              { key: "Mod-k", run: (v) => formatLink(v) },
+              {
+                key: "Enter",
+                run: (v) => enterAtLineStart(v) || continueMarkup(v),
+              },
+              { key: "Backspace", run: stepOverMark(-1) },
+              { key: "Delete", run: stepOverMark(1) },
             ]),
           ),
           // Cmd/Ctrl-click opens a link in a new tab; a plain click is for editing.
           EditorView.domEventHandlers({
             mousedown(event, view) {
+              // A click in the link asks for its popover again.
+              dismissed.current = null;
+              setTimeout(() => syncLink(view), 0);
               if (event.button !== 0 || !(event.metaKey || event.ctrlKey)) {
                 return false;
               }
@@ -274,6 +399,7 @@ export function MarkdownEditor({
             spellcheck: "true",
           }),
           EditorView.updateListener.of((update) => {
+            followLink(update);
             if (
               update.docChanged &&
               !update.transactions.some((t) => t.annotation(fromOutside))
@@ -290,7 +416,7 @@ export function MarkdownEditor({
       editor.destroy();
       view.current = null;
     };
-  }, []);
+  }, [followLink, formatLink, syncLink]);
 
   // Replaces the text when `value` is changed from outside (the page was
   // loaded again), keeping the cursor where it can be.
@@ -316,7 +442,9 @@ export function MarkdownEditor({
     },
     format: (action) => {
       const editor = view.current;
-      if (editor) applyFormat(editor, action);
+      if (!editor) return;
+      if (action === "link") formatLinkRef.current(editor);
+      else applyFormat(editor, action);
     },
     selectAll: () => {
       const editor = view.current;
@@ -343,6 +471,7 @@ export function MarkdownEditor({
     // biome-ignore lint/a11y/noStaticElementInteractions: see above.
     // biome-ignore lint/a11y/useKeyWithClickEvents: see above.
     <div
+      ref={page}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           const editor = view.current;
@@ -356,6 +485,7 @@ export function MarkdownEditor({
       }}
       style={{
         ...variables,
+        position: "relative",
         minHeight: "60vh",
         padding: "calc(var(--k-space) * 2) var(--k-space)",
         borderRadius: "0.5rem",
@@ -368,6 +498,47 @@ export function MarkdownEditor({
         ref={host}
         style={{ maxWidth: "var(--k-max-width)", margin: "0 auto" }}
       />
+      <div ref={popover} style={{ display: "contents" }}>
+        {link && (
+          <LinkPopover
+            left={link.left}
+            top={link.top}
+            url={link.range.url}
+            faded={typing}
+            focusTick={focusTick}
+            openHref={safeLinkTarget(link.range.url, window.location.href)}
+            onUrlChange={(value) => {
+              const editor = view.current;
+              if (!editor) return;
+              const { from, to } = editor.state.selection.main;
+              const now = linkRangeAt(editor.state, from, to);
+              // An address with a space would stop being a link: spaces are written as %20.
+              if (now) {
+                editor.dispatch({
+                  changes: {
+                    from: now.urlFrom,
+                    to: now.urlTo,
+                    insert: value.replace(/\s/g, "%20"),
+                  },
+                  userEvent: "input.link",
+                });
+              }
+            }}
+            onRemove={() => {
+              const editor = view.current;
+              const spec = editor && unlink(editor.state);
+              if (!editor || !spec) return;
+              editor.dispatch({ ...spec, userEvent: "input" });
+              editor.focus();
+            }}
+            onDone={() => {
+              dismissed.current = link.range.from;
+              setLink(null);
+              view.current?.focus();
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
