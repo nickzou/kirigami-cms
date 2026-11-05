@@ -33,7 +33,12 @@ import {
   stepIntoTables,
   tableWidgets,
 } from "../../editor-widgets.js";
-import { applyFormat, continueMarkup, unlink } from "../../markdown-edit.js";
+import {
+  applyFormat,
+  continueMarkup,
+  indentLines,
+  unlink,
+} from "../../markdown-edit.js";
 import {
   formatPieces,
   type LinkRange,
@@ -404,12 +409,16 @@ export function MarkdownEditor({
           tableWidgets(),
           stepIntoTables,
           // Formatting shortcuts, and Enter carrying on a list or a quote.
-          // (Tab is left alone: it moves focus out of the text.)
           Prec.high(
             keymap.of([
               { key: "Mod-b", run: (v) => applyFormat(v, "bold") },
               { key: "Mod-i", run: (v) => applyFormat(v, "italic") },
               { key: "Mod-k", run: (v) => formatLink(v) },
+              // Tab nests a list item and indents code; elsewhere it moves
+              // focus on. (CodeMirror itself lets Tab through for a moment
+              // after Escape, so the keyboard is never trapped.)
+              { key: "Tab", run: (v) => indentLines(v, 1) },
+              { key: "Shift-Tab", run: (v) => indentLines(v, -1) },
               {
                 key: "Enter",
                 run: (v) => enterAtLineStart(v) || continueMarkup(v),

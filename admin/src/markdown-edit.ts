@@ -433,3 +433,69 @@ export function continueMarkup(view: EditorView): boolean {
   });
   return true;
 }
+
+/** The text of an item's marker and the space after it, e.g. `- ` or `10. `. */
+const MARKER = /^\s*(?:[-*+]|\d{1,9}[.)])[ \t]+/;
+
+/** Is `pos` in code: a fenced block or an indented one? */
+function inCode(state: EditorState, pos: number): boolean {
+  for (
+    let node: SyntaxNode | null = treeOf(state).resolveInner(pos, 1);
+    node;
+    node = node.parent
+  ) {
+    if (node.name === "FencedCode" || node.name === "CodeBlock") return true;
+  }
+  return false;
+}
+
+/**
+ * Tab (direction 1) indents the lines the selection touches; Shift-Tab (-1)
+ * takes an indent off. It works on list items, which it nests (by the width of
+ * the item's marker, so the text stays under the parent's text), and in code,
+ * where it indents by two spaces. Anywhere else it does nothing and returns
+ * false, so Tab keeps its job of moving focus out of the text.
+ */
+export function indentLines(view: EditorView, direction: 1 | -1): boolean {
+  const { state } = view;
+  const { from, to } = state.selection.main;
+  const first = state.doc.lineAt(from);
+  // A selection that ends at the start of a line does not include that line.
+  const last = state.doc.lineAt(
+    to > from && to === state.doc.lineAt(to).from ? to - 1 : to,
+  );
+  const changes: { from: number; to?: number; insert?: string }[] = [];
+  let touched = false;
+  for (let n = first.number; n <= last.number; n++) {
+    const line = state.doc.line(n);
+    const code = inCode(state, line.from);
+    const marker = MARKER.exec(line.text);
+    if (!code && !marker) continue;
+    touched = true;
+    // Under the parent's text: the marker's width for a numbered item, two for a bullet.
+    const width =
+      !code && marker && /\d/.test(marker[0])
+        ? marker[0].trimStart().length
+        : 2;
+    if (direction === 1) {
+      if (line.length > 0 || code) {
+        changes.push({ from: line.from, insert: " ".repeat(width) });
+      }
+    } else {
+      const spaces = /^ */.exec(line.text)?.[0].length ?? 0;
+      const remove = Math.min(spaces, width);
+      if (remove > 0) changes.push({ from: line.from, to: line.from + remove });
+    }
+  }
+  if (!touched) return false;
+  if (changes.length > 0) {
+    const set = state.changes(changes);
+    view.dispatch({
+      changes: set,
+      selection: state.selection.map(set, 1),
+      userEvent: direction === 1 ? "input.indent" : "delete.dedent",
+      scrollIntoView: true,
+    });
+  }
+  return true;
+}
