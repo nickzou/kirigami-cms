@@ -48,12 +48,13 @@ describe("LinkPopover", () => {
     expect(onRemove).toHaveBeenCalled();
   });
 
-  it("is done on Escape and on Enter", () => {
+  it("is done on Escape, on Enter and on Save", () => {
     const { onDone } = setup();
     const field = screen.getByRole("textbox", { name: "Address" });
     fireEvent.keyDown(field, { key: "Escape" });
     fireEvent.keyDown(field, { key: "Enter" });
-    expect(onDone).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onDone).toHaveBeenCalledTimes(3);
   });
 
   it("cannot open an address that is not safe to open", () => {

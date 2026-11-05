@@ -281,6 +281,17 @@ describe("MarkdownEditor", () => {
       expect(group()).toBeNull();
     });
 
+    it("closes with Save, back in the text, with the address kept", async () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      await focus();
+      select(inLink);
+      fireEvent.change(field(), { target: { value: "https://y.test" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(group()).toBeNull();
+      expect(editorText(box())).toBe("see [the docs](https://y.test) now");
+      expect(box().contains(document.activeElement)).toBe(true);
+    });
+
     it("closes on Escape, and the cursor stays in the text", async () => {
       render(<MarkdownEditor value={doc} onChange={() => {}} />);
       await focus();

@@ -10,7 +10,7 @@ export interface LinkPopoverProps {
   url: string;
   onUrlChange: (url: string) => void;
   onRemove: () => void;
-  /** Escape or Enter: done here, back to the text. */
+  /** Escape, Enter or the Save button: done here, back to the text. */
   onDone: () => void;
   /** Where "Open" goes: only an address that is safe to open (not `javascript:`). */
   openHref?: string;
@@ -91,6 +91,14 @@ export function LinkPopover({
         )}
         <Button size="small" onClick={onRemove}>
           Remove link
+        </Button>
+        <Button
+          size="small"
+          variant="primary"
+          className=":uno: ml-auto"
+          onClick={onDone}
+        >
+          Save
         </Button>
       </div>
     </fieldset>

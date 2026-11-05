@@ -46,7 +46,9 @@ export const Editing: Story = {
     await userEvent.type(field, "https://x.test");
     await expect(field).toHaveValue("https://x.test");
     await userEvent.keyboard("{Escape}");
-    await expect(args.onDone).toHaveBeenCalled();
+    await expect(args.onDone).toHaveBeenCalledTimes(1);
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await expect(args.onDone).toHaveBeenCalledTimes(2);
     await userEvent.click(canvas.getByRole("button", { name: "Remove link" }));
     await expect(args.onRemove).toHaveBeenCalled();
   },
