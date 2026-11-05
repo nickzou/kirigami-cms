@@ -79,7 +79,6 @@ export function Button(props: ButtonProps) {
       ...rest
     } = props;
     return (
-      // biome-ignore lint/a11y/useAnchorContent: the caller gives the children.
       <a
         className={`${base} ${sizes[size]} ${variants[variant]}${className ? ` ${className}` : ""}`}
         {...rest}

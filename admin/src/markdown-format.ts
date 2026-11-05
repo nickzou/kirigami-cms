@@ -35,7 +35,7 @@ export type Piece =
   | { kind: "line"; at: number; className: string }
   /** A class for a stretch of text on one line. */
   | { kind: "mark"; from: number; to: number; className: string }
-  /** Marks (`**`, `#`, `](url)`) left out of sight until the cursor is on them. */
+  /** Marks (`**`, `#`, `](url)`) left out of sight: the editor never shows them. */
   | { kind: "hide"; from: number; to: number }
   /** An image, shown in place of its markdown. */
   | {
@@ -52,26 +52,17 @@ export type Piece =
 /**
  * Works out how the markdown in `state` is drawn, for the part of the text
  * from `from` to `to`. Headings, bold, italic, strikethrough, inline code,
- * links, quotes, code fences and rules get a look; their marks are hidden
- * except where the cursor (or a selection) is, while `reveal` is on: the line for a heading or a
- * quote, the whole element for the rest. Tables and images are not handled.
+ * links, quotes, code fences and rules get a look, and their marks are hidden
+ * wherever the cursor is: nothing here depends on the selection. Images and
+ * task boxes are drawn as what they are. Tables are not handled.
  */
 export function formatPieces(
   state: EditorState,
   from = 0,
   to = state.doc.length,
-  reveal = true,
 ): Piece[] {
   const { doc } = state;
-  // With `reveal` off (the editor is not being used) there is no cursor to show marks for.
-  const ranges = reveal ? state.selection.ranges : [];
-  const touches = (a: number, b: number): boolean =>
-    ranges.some((range) => range.from <= b && range.to >= a);
   const lineOf = (pos: number) => doc.lineAt(pos);
-  const lineTouched = (pos: number): boolean => {
-    const line = lineOf(pos);
-    return touches(line.from, line.to);
-  };
 
   const pieces: Piece[] = [];
   const seen = new Set<string>();
@@ -119,7 +110,6 @@ export function formatPieces(
   /** An element drawn between marks, like bold between `**`. */
   const pair = (node: SyntaxNode, className: string, markName: string) => {
     markClass(node.from, node.to, className);
-    if (touches(node.from, node.to)) return;
     for (const mark of node.getChildren(markName)) hide(mark.from, mark.to);
   };
 
@@ -136,13 +126,10 @@ export function formatPieces(
       const atx = /^ATXHeading([1-6])$/.exec(name);
       if (atx) {
         lineClass(node.from, `kcm-h${atx[1]}`);
-        if (!lineTouched(node.from)) {
-          const marks = node.getChildren("HeaderMark");
-          marks.forEach((mark, index) => {
-            if (index === 0) hide(mark.from, spacesAfter(mark.to));
-            else hide(spacesBefore(mark.from), mark.to);
-          });
-        }
+        node.getChildren("HeaderMark").forEach((mark, index) => {
+          if (index === 0) hide(mark.from, spacesAfter(mark.to));
+          else hide(spacesBefore(mark.from), mark.to);
+        });
         return;
       }
 
@@ -169,22 +156,15 @@ export function formatPieces(
           const close = marks[1];
           if (!open || !close) return;
           markClass(open.to, close.from, "kcm-link");
-          if (touches(node.from, node.to)) {
-            const url = node.getChild("URL");
-            if (url) markClass(url.from, url.to, "kcm-url");
-          } else {
-            hide(open.from, open.to);
-            hide(close.from, node.to);
-          }
+          hide(open.from, open.to);
+          hide(close.from, node.to);
           return;
         }
         case "Autolink": {
           const url = node.getChild("URL");
           if (url) markClass(url.from, url.to, "kcm-link");
-          if (!touches(node.from, node.to)) {
-            for (const mark of node.getChildren("LinkMark")) {
-              hide(mark.from, mark.to);
-            }
+          for (const mark of node.getChildren("LinkMark")) {
+            hide(mark.from, mark.to);
           }
           return;
         }
@@ -195,14 +175,11 @@ export function formatPieces(
         // A quote's later lines have their marks inside the paragraph, not
         // beside it, so every mark is handled on its own.
         case "QuoteMark":
-          if (!lineTouched(node.from)) hide(node.from, spacesAfter(node.to));
+          hide(node.from, spacesAfter(node.to));
           return;
         case "ListMark":
           return markClass(node.from, node.to, "kcm-list-mark");
         case "TaskMarker":
-          if (touches(node.from, node.to)) {
-            return markClass(node.from, node.to, "kcm-task-marker");
-          }
           return add({
             kind: "checkbox",
             from: node.from,
@@ -212,7 +189,7 @@ export function formatPieces(
         case "Image": {
           const [open, close] = node.getChildren("LinkMark");
           const url = node.getChild("URL");
-          if (!open || !close || !url || touches(node.from, node.to)) return;
+          if (!open || !close || !url) return;
           const title = node.getChild("LinkTitle");
           return add({
             kind: "image",
@@ -252,7 +229,7 @@ export function formatPieces(
         }
         case "HorizontalRule":
           lineClass(node.from, "kcm-hr");
-          if (!lineTouched(node.from)) hide(node.from, node.to);
+          hide(node.from, node.to);
           return;
       }
     },
@@ -302,6 +279,59 @@ export function linkAt(state: EditorState, pos: number): string | undefined {
       return url ? doc.sliceString(url.from, url.to) : undefined;
     }
     if (node.name === "URL") return doc.sliceString(node.from, node.to);
+  }
+  return undefined;
+}
+
+/** A link (`[text](address)`) and where its parts are in the text. */
+export interface LinkRange {
+  /** The whole link, from its `[` to its `)`. */
+  from: number;
+  to: number;
+  /** The link's text, between the brackets. */
+  textFrom: number;
+  textTo: number;
+  /** The address, which is empty (`[text]()`) when the two are equal. */
+  urlFrom: number;
+  urlTo: number;
+  url: string;
+}
+
+/**
+ * The link whose text or address holds the whole of `from` to `to` (edges
+ * outside the link do not count: a cursor just before the `[` or just after
+ * the `)` is not in it). Autolinks and bare addresses have no text to edit
+ * apart from the address, so they are not found here.
+ */
+export function linkRangeAt(
+  state: EditorState,
+  from: number,
+  to = from,
+): LinkRange | undefined {
+  const { doc } = state;
+  const tree = ensureSyntaxTree(state, doc.length, 50) ?? syntaxTree(state);
+  for (
+    let node: SyntaxNode | null = tree.resolveInner(from, 1);
+    node;
+    node = node.parent
+  ) {
+    if (node.name !== "Link") continue;
+    if (from <= node.from || to >= node.to) return undefined;
+    const marks = node.getChildren("LinkMark");
+    const [open, close, paren] = marks;
+    if (!open || !close) return undefined;
+    const url = node.getChild("URL");
+    const urlFrom = url ? url.from : (paren?.to ?? close.to);
+    const urlTo = url ? url.to : urlFrom;
+    return {
+      from: node.from,
+      to: node.to,
+      textFrom: open.to,
+      textTo: close.from,
+      urlFrom,
+      urlTo,
+      url: doc.sliceString(urlFrom, urlTo),
+    };
   }
   return undefined;
 }

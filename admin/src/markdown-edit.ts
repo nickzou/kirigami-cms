@@ -8,6 +8,7 @@ import {
 } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
+import { linkRangeAt } from "./markdown-format.js";
 
 /** What the formatting buttons and shortcuts do. */
 export type FormatAction =
@@ -257,41 +258,48 @@ function toggleBullets(state: EditorState): TransactionSpec {
 
 const WEB = /^https?:\/\/\S+$/;
 
-/** Makes a link of the selection, or takes the link off if the cursor is in one. */
-function toggleLink(state: EditorState): TransactionSpec {
+/**
+ * Takes the link the selection is in off, keeping its text. (`undefined` when
+ * it is not in one.)
+ */
+export function unlink(state: EditorState): TransactionSpec | undefined {
+  const { from, to } = state.selection.main;
+  const link = linkRangeAt(state, from, to);
+  if (!link) return undefined;
+  const removed = link.textFrom - link.from;
+  return {
+    changes: state.changes([
+      { from: link.from, to: link.textFrom },
+      { from: link.textTo, to: link.to },
+    ]),
+    // What was the link's text, now without the brackets.
+    selection: EditorSelection.range(link.from, link.textTo - removed),
+  };
+}
+
+/**
+ * Makes a link of the selected text, with its address left to type in the
+ * link's popover. Does nothing in a link that is there already: the popover
+ * edits that one.
+ */
+function toggleLink(state: EditorState): TransactionSpec | undefined {
+  const { from, to } = state.selection.main;
+  if (linkRangeAt(state, from, to)) return undefined;
   return state.changeByRange((range) => {
-    const link = enclosing(state, range, "Link");
-    if (link) {
-      const marks = link.getChildren("LinkMark");
-      const open = marks[0];
-      const close = marks[1];
-      if (open && close) {
-        const changes = state.changes([
-          { from: open.from, to: open.to },
-          { from: close.from, to: link.to },
-        ]);
-        return {
-          changes,
-          // What was the link's text, now without the brackets.
-          range: EditorSelection.range(
-            open.from,
-            close.from - (open.to - open.from),
-          ),
-        };
-      }
-    }
     const selected = state.doc.sliceString(range.from, range.to);
     const text = selected && !WEB.test(selected) ? selected : "link text";
-    const address = WEB.test(selected) ? selected : "url";
-    const insert = `[${text}](${address})`;
-    // What to type next is selected: the address when there is text, the text when there is none.
-    const typed = selected !== "" && !WEB.test(selected);
-    const start = range.from + (typed ? text.length + 3 : 1);
+    const address = WEB.test(selected) ? selected : "";
     return {
-      changes: { from: range.from, to: range.to, insert },
-      range: typed
-        ? EditorSelection.range(start, start + address.length)
-        : EditorSelection.range(range.from + 1, range.from + 1 + text.length),
+      changes: {
+        from: range.from,
+        to: range.to,
+        insert: `[${text}](${address})`,
+      },
+      // The link's text is selected, so typing replaces it.
+      range: EditorSelection.range(
+        range.from + 1,
+        range.from + 1 + text.length,
+      ),
     };
   });
 }

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Editor } from "./Editor.js";
 import { failures, installFakeApi } from "./fake-api.js";
 import { events } from "./fake-events.js";

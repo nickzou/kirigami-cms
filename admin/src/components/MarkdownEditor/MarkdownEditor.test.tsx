@@ -166,7 +166,7 @@ describe("MarkdownEditor", () => {
       expect(editorText(box())).toBe("**one** *two* three");
       select(14, 19);
       keyDown("k", { ctrlKey: true });
-      expect(editorText(box())).toBe("**one** *two* [three](url)");
+      expect(editorText(box())).toBe("**one** *two* [three]()");
     });
 
     it("carries on a list when Enter is pressed at the end of an item", () => {
@@ -190,6 +190,155 @@ describe("MarkdownEditor", () => {
       });
       expect(notHandled).toBe(true);
       expect(editorText(box())).toBe("- one");
+    });
+  });
+
+  describe("links", () => {
+    const doc = "see [the docs](https://x.test/a) now";
+    const inLink = 8;
+    const group = () => screen.queryByRole("group", { name: "Link" });
+    const field = () =>
+      screen.getByRole("textbox", { name: "Address" }) as HTMLInputElement;
+    const focus = async () => {
+      act(() => editorView(box()).focus());
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+      });
+    };
+    const select = (from: number, to = from) =>
+      act(() =>
+        editorView(box()).dispatch({ selection: { anchor: from, head: to } }),
+      );
+
+    it("never shows a mark of the markdown, with the cursor in the link or not", async () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      await focus();
+      select(inLink);
+      expect(box().textContent).toBe("see the docs now");
+      select(0);
+      expect(box().textContent).toBe("see the docs now");
+    });
+
+    it("shows a popover with the address while the cursor is in a link", async () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      await focus();
+      expect(group()).toBeNull();
+      select(inLink);
+      expect(group()).not.toBeNull();
+      expect(field().value).toBe("https://x.test/a");
+      select(0);
+      expect(group()).toBeNull();
+      // Just after the link is not in it.
+      select(doc.indexOf(")") + 1);
+      expect(group()).toBeNull();
+    });
+
+    it("has no popover while the editor is not in use", () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      select(inLink);
+      expect(group()).toBeNull();
+    });
+
+    it("edits the address in the text, and nothing else", async () => {
+      const onChange = vi.fn();
+      render(<MarkdownEditor value={doc} onChange={onChange} />);
+      await focus();
+      select(inLink);
+      fireEvent.change(field(), { target: { value: "https://y.test" } });
+      expect(editorText(box())).toBe("see [the docs](https://y.test) now");
+      expect(onChange).toHaveBeenLastCalledWith(
+        "see [the docs](https://y.test) now",
+      );
+      // The cursor stays where it was, in the link text.
+      expect(editorView(box()).state.selection.main.head).toBe(inLink);
+    });
+
+    it("writes spaces in an address as %20, so the link stays a link", async () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      await focus();
+      select(inLink);
+      fireEvent.change(field(), { target: { value: "my page" } });
+      expect(editorText(box())).toBe("see [the docs](my%20page) now");
+      expect(group()).not.toBeNull();
+    });
+
+    it("keeps a link whose address is emptied", async () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      await focus();
+      select(inLink);
+      fireEvent.change(field(), { target: { value: "" } });
+      expect(editorText(box())).toBe("see [the docs]() now");
+      expect(group()).not.toBeNull();
+      expect(field().value).toBe("");
+    });
+
+    it("takes the link off, keeping its text, with Remove link", async () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      await focus();
+      select(inLink);
+      fireEvent.click(screen.getByRole("button", { name: "Remove link" }));
+      expect(editorText(box())).toBe("see the docs now");
+      expect(group()).toBeNull();
+    });
+
+    it("closes on Escape, and the cursor stays in the text", async () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      await focus();
+      select(inLink);
+      fireEvent.keyDown(field(), { key: "Escape" });
+      expect(group()).toBeNull();
+      expect(editorText(box())).toBe(doc);
+      // Moving out of the link and back brings it again.
+      select(0);
+      select(inLink);
+      expect(group()).not.toBeNull();
+    });
+
+    it("makes a link from the link button, with the address field ready", async () => {
+      const ref = createRef<EditorHandle>();
+      render(<MarkdownEditor ref={ref} value="a word" onChange={() => {}} />);
+      await focus();
+      select(2, 6);
+      act(() => ref.current?.format("link"));
+      expect(editorText(box())).toBe("a [word]()");
+      expect(group()).not.toBeNull();
+      expect(document.activeElement).toBe(field());
+    });
+
+    it("sends Cmd/Ctrl+K in a link to the popover and changes nothing", async () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      await focus();
+      select(inLink);
+      fireEvent.keyDown(field(), { key: "Escape" });
+      act(() => {
+        fireEvent.keyDown(editorView(box()).contentDOM, {
+          key: "k",
+          keyCode: 75,
+          ctrlKey: true,
+        });
+      });
+      expect(editorText(box())).toBe(doc);
+      expect(document.activeElement).toBe(field());
+    });
+
+    it("fades while the text is typed in, and comes back after a pause", async () => {
+      render(<MarkdownEditor value={doc} onChange={() => {}} />);
+      await focus();
+      select(inLink);
+      // Out of the tab order while it is out of the way.
+      const faded = () => field().tabIndex === -1;
+      expect(faded()).toBe(false);
+      act(() => {
+        editorView(box()).dispatch({
+          changes: { from: inLink, insert: "x" },
+          userEvent: "input.type",
+        });
+      });
+      expect(faded()).toBe(true);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      });
+      expect(faded()).toBe(false);
     });
   });
 });
