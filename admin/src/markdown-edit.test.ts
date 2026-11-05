@@ -5,6 +5,7 @@ import {
   continueMarkup,
   type FormatAction,
   formatChange,
+  indentLines,
   unlink,
 } from "./markdown-edit.js";
 import { markdownSupport } from "./markdown-format.js";
@@ -285,5 +286,57 @@ describe("Enter", () => {
     expect(after.replace("¦", "").replace("\n- \n", "\n")).toBe(
       "- one\n- two\n- three".replace("- two", "- two"),
     );
+  });
+});
+
+describe("indentLines", () => {
+  const run = (source: string, direction: 1 | -1) => {
+    const state = parse(source);
+    let latest = state;
+    const view = {
+      state,
+      dispatch(spec: Parameters<EditorState["update"]>[0]) {
+        latest = state.update(spec).state;
+      },
+    } as unknown as EditorView;
+    const handled = indentLines(view, direction);
+    return { handled, out: show(latest) };
+  };
+
+  it("nests a bullet by two spaces and a numbered item by its marker's width", () => {
+    expect(run("- one\n- t¦wo", 1).out).toBe("- one\n  - t¦wo");
+    expect(run("1. one\n2. t¦wo", 1).out).toBe("1. one\n   2. t¦wo");
+    expect(run("9. one\n10. t¦wo", 1).out).toBe("9. one\n    10. t¦wo");
+  });
+
+  it("brings an item back, as far as it can", () => {
+    expect(run("- one\n  - t¦wo", -1).out).toBe("- one\n- t¦wo");
+    expect(run("- a\n - t¦wo", -1).out).toBe("- a\n- t¦wo");
+    expect(run("- t¦wo", -1)).toEqual({ handled: true, out: "- t¦wo" });
+  });
+
+  it("works on every item the selection touches", () => {
+    expect(run("- «one\n- two»\n- three", 1).out).toBe(
+      "  - «one\n  - two»\n- three",
+    );
+  });
+
+  it("does not take in a line the selection only ends at the start of", () => {
+    expect(run("- «one\n»- two", 1).out).toBe("  - «one\n»- two");
+  });
+
+  it("indents code by two spaces, and takes it back", () => {
+    expect(run("```\nlet ¦a;\n```", 1).out).toBe("```\n  let ¦a;\n```");
+    expect(run("```\n  let ¦a;\n```", -1).out).toBe("```\nlet ¦a;\n```");
+    expect(run("```\n¦\n```", 1).out).toBe("```\n  ¦\n```");
+  });
+
+  it("keeps a cursor at the start of a line after the indent", () => {
+    expect(run("```\n¦a\n```", 1).out).toBe("```\n  ¦a\n```");
+  });
+
+  it("does nothing, and says so, in plain text", () => {
+    expect(run("some ¦text", 1)).toEqual({ handled: false, out: "some ¦text" });
+    expect(run("# Head¦ing", 1).handled).toBe(false);
   });
 });

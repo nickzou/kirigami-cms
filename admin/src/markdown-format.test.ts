@@ -220,14 +220,38 @@ describe("blocks", () => {
     expect(boxes("- [x] b|\n\ntext")).toEqual([true]);
   });
 
-  it("gives a fenced block its lines, keeps the fences visible, and names the language", () => {
+  it("gives a fenced block its lines, hides the fences, and keeps the language as its label", () => {
     const source = "```js\nlet a;\n```\n\ntext|";
     expect(linesWith(source, "kcm-code-block")).toEqual([0, 6, 13]);
     expect(linesWith(source, "kcm-code-first")).toEqual([0]);
     expect(linesWith(source, "kcm-code-last")).toEqual([13]);
-    expect(marked(source, "kcm-fence")).toEqual(["```", "```"]);
+    expect(linesWith(source, "kcm-code-closing")).toEqual([13]);
+    expect(hidden(source)).toEqual(["```", "```"]);
     expect(marked(source, "kcm-code-info")).toEqual(["js"]);
+  });
+
+  it("hides the space between the fence and the language, and the fence of a block with none", () => {
+    expect(hidden("``` js\nx\n```\n\ntext|")).toEqual(["``` ", "```"]);
+    expect(hidden("~~~\nx\n~~~\n\ntext|")).toEqual(["~~~", "~~~"]);
+  });
+
+  it("hides only the opening fence of a block that is not closed", () => {
+    const source = "```js\nlet a;";
+    expect(hidden(source)).toEqual(["```"]);
+    expect(linesWith(source, "kcm-code-closing")).toEqual([]);
+    expect(linesWith(source, "kcm-code-last")).toEqual([6]);
+  });
+
+  it("sets raw HTML apart as text, with its first and last lines marked", () => {
+    const source = "<div>\n<p>hi</p>\n</div>\n\ntext|";
+    expect(linesWith(source, "kcm-html-block")).toEqual([0, 6, 16]);
+    expect(linesWith(source, "kcm-html-first")).toEqual([0]);
+    expect(linesWith(source, "kcm-html-last")).toEqual([16]);
     expect(hidden(source)).toEqual([]);
+  });
+
+  it("does the same for an HTML comment", () => {
+    expect(linesWith("<!-- note -->\n\ntext|", "kcm-html-first")).toEqual([0]);
   });
 
   it("does not style the markdown inside a code block", () => {

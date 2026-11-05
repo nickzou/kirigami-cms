@@ -181,14 +181,47 @@ describe("MarkdownEditor", () => {
       expect(editorText(box())).toBe("- one\n- two\n");
     });
 
-    it("leaves Tab alone, so it moves focus out of the text", () => {
-      render(<MarkdownEditor value="- one" onChange={() => {}} />);
-      select(5);
-      const notHandled = fireEvent.keyDown(editorView(box()).contentDOM, {
+    const tab = (init: KeyboardEventInit = {}) =>
+      fireEvent.keyDown(editorView(box()).contentDOM, {
         key: "Tab",
         keyCode: 9,
+        ...init,
       });
-      expect(notHandled).toBe(true);
+
+    it("nests a list item with Tab and brings it back with Shift-Tab", () => {
+      const onChange = vi.fn();
+      render(<MarkdownEditor value={"- one\n- two"} onChange={onChange} />);
+      select(9);
+      expect(tab()).toBe(false);
+      expect(editorText(box())).toBe("- one\n  - two");
+      expect(onChange).toHaveBeenLastCalledWith("- one\n  - two");
+      expect(editorView(box()).state.selection.main.head).toBe(11);
+      expect(tab({ shiftKey: true })).toBe(false);
+      expect(editorText(box())).toBe("- one\n- two");
+    });
+
+    it("indents code with Tab", () => {
+      render(<MarkdownEditor value={"```\nlet a;\n```"} onChange={() => {}} />);
+      select(6);
+      tab();
+      expect(editorText(box())).toBe("```\n  let a;\n```");
+    });
+
+    it("leaves Tab to move focus out of plain text", () => {
+      render(<MarkdownEditor value="just text" onChange={() => {}} />);
+      select(3);
+      expect(tab()).toBe(true);
+      expect(editorText(box())).toBe("just text");
+    });
+
+    it("lets the next Tab leave the text after Escape, so the keyboard is not trapped", () => {
+      render(<MarkdownEditor value={"- one"} onChange={() => {}} />);
+      select(3);
+      fireEvent.keyDown(editorView(box()).contentDOM, {
+        key: "Escape",
+        keyCode: 27,
+      });
+      expect(tab()).toBe(true);
       expect(editorText(box())).toBe("- one");
     });
   });

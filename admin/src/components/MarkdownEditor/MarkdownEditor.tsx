@@ -22,7 +22,9 @@ import type { Theme } from "../../../../src/core/config/schema.js";
 import type { EditorHandle } from "../../editor-handle.js";
 import {
   enterAtLineStart,
+  keepOffClosingFence,
   keepOffOpeningMarks,
+  stepOverFence,
   stepOverMark,
 } from "../../editor-marks.js";
 import { defaultTheme, editorVariables } from "../../editor-theme.js";
@@ -31,7 +33,12 @@ import {
   stepIntoTables,
   tableWidgets,
 } from "../../editor-widgets.js";
-import { applyFormat, continueMarkup, unlink } from "../../markdown-edit.js";
+import {
+  applyFormat,
+  continueMarkup,
+  indentLines,
+  unlink,
+} from "../../markdown-edit.js";
 import {
   formatPieces,
   type LinkRange,
@@ -173,6 +180,7 @@ const look = EditorView.theme({
     paddingRight: "var(--k-space)",
   },
   ".kcm-code-first": {
+    position: "relative",
     paddingTop: "calc(var(--k-space) * 0.5)",
     borderTopLeftRadius: "6px",
     borderTopRightRadius: "6px",
@@ -182,7 +190,53 @@ const look = EditorView.theme({
     borderBottomLeftRadius: "6px",
     borderBottomRightRadius: "6px",
   },
-  ".kcm-fence, .kcm-code-info": { color: "var(--k-color-muted)" },
+  // The language, as the block's label.
+  ".kcm-code-info": {
+    position: "absolute",
+    top: "0.3em",
+    right: "var(--k-space)",
+    color: "var(--k-color-muted)",
+    fontSize: "0.7em",
+  },
+  // The closing fence line is only the block's bottom edge.
+  ".kcm-code-closing": {
+    height: "calc(var(--k-space) * 0.5)",
+    padding: "0 var(--k-space)",
+    overflow: "hidden",
+    lineHeight: "0",
+  },
+  // Raw HTML: shown as text, set apart and labelled, since the site leaves it out.
+  ".kcm-html-block": {
+    position: "relative",
+    fontFamily: "var(--k-font-mono)",
+    fontSize: "0.875em",
+    color: "var(--k-color-muted)",
+    borderLeft: "2px dashed var(--k-color-border)",
+    borderRight: "2px dashed var(--k-color-border)",
+    paddingLeft: "var(--k-space)",
+    paddingRight: "var(--k-space)",
+  },
+  ".kcm-html-first": {
+    borderTop: "2px dashed var(--k-color-border)",
+    borderTopLeftRadius: "6px",
+    borderTopRightRadius: "6px",
+    paddingTop: "calc(var(--k-space) * 0.5)",
+  },
+  ".kcm-html-first::after": {
+    content: '"HTML: not shown on the site"',
+    position: "absolute",
+    top: "0.15em",
+    right: "var(--k-space)",
+    fontSize: "0.75em",
+    fontFamily: "var(--k-font-body)",
+    pointerEvents: "none",
+  },
+  ".kcm-html-last": {
+    borderBottom: "2px dashed var(--k-color-border)",
+    borderBottomLeftRadius: "6px",
+    borderBottomRightRadius: "6px",
+    paddingBottom: "calc(var(--k-space) * 0.5)",
+  },
   ".kcm-hr": { borderBottom: "1px solid var(--k-color-border)" },
   // Tables and images are set the way the site's stylesheet sets them.
   ".kcm-table": {
@@ -351,21 +405,32 @@ export function MarkdownEditor({
           markdownSupport(),
           formatting,
           keepOffOpeningMarks,
+          keepOffClosingFence,
           tableWidgets(),
           stepIntoTables,
           // Formatting shortcuts, and Enter carrying on a list or a quote.
-          // (Tab is left alone: it moves focus out of the text.)
           Prec.high(
             keymap.of([
               { key: "Mod-b", run: (v) => applyFormat(v, "bold") },
               { key: "Mod-i", run: (v) => applyFormat(v, "italic") },
               { key: "Mod-k", run: (v) => formatLink(v) },
+              // Tab nests a list item and indents code; elsewhere it moves
+              // focus on. (CodeMirror itself lets Tab through for a moment
+              // after Escape, so the keyboard is never trapped.)
+              { key: "Tab", run: (v) => indentLines(v, 1) },
+              { key: "Shift-Tab", run: (v) => indentLines(v, -1) },
               {
                 key: "Enter",
                 run: (v) => enterAtLineStart(v) || continueMarkup(v),
               },
-              { key: "Backspace", run: stepOverMark(-1) },
-              { key: "Delete", run: stepOverMark(1) },
+              {
+                key: "Backspace",
+                run: (v) => stepOverFence(-1)(v) || stepOverMark(-1)(v),
+              },
+              {
+                key: "Delete",
+                run: (v) => stepOverFence(1)(v) || stepOverMark(1)(v),
+              },
             ]),
           ),
           // Cmd/Ctrl-click opens a link in a new tab; a plain click is for editing.

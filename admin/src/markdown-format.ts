@@ -207,16 +207,21 @@ export function formatPieces(
         case "Table":
           return false;
         case "FencedCode": {
+          const [open, close] = node.getChildren("CodeMark");
+          const info = node.getChild("CodeInfo");
           eachLine(node, (at, index, last) => {
             lineClass(at, "kcm-code-block");
             if (index === 0) lineClass(at, "kcm-code-first");
             if (last) lineClass(at, "kcm-code-last");
           });
-          for (const mark of node.getChildren("CodeMark")) {
-            markClass(mark.from, mark.to, "kcm-fence");
-          }
-          const info = node.getChild("CodeInfo");
+          // The fences are not shown: the block is drawn as a block, and its
+          // language (the text after the opening fence) is its label.
+          if (open) hide(open.from, info ? info.from : open.to);
           if (info) markClass(info.from, info.to, "kcm-code-info");
+          if (close) {
+            lineClass(close.from, "kcm-code-closing");
+            hide(lineOf(close.from).from, lineOf(close.from).to);
+          }
           return;
         }
         case "CodeBlock": {
@@ -227,6 +232,16 @@ export function formatPieces(
           });
           return;
         }
+        // Raw HTML is left out of the built page, so it is drawn as the quiet
+        // text it is, labelled, and edited as text.
+        case "HTMLBlock":
+        case "CommentBlock":
+          eachLine(node, (at, index, last) => {
+            lineClass(at, "kcm-html-block");
+            if (index === 0) lineClass(at, "kcm-html-first");
+            if (last) lineClass(at, "kcm-html-last");
+          });
+          return false;
         case "HorizontalRule":
           lineClass(node.from, "kcm-hr");
           hide(node.from, node.to);

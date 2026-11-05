@@ -4,7 +4,9 @@ import { EditorView } from "@codemirror/view";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   enterAtLineStart,
+  keepOffClosingFence,
   keepOffOpeningMarks,
+  stepOverFence,
   stepOverMark,
 } from "./editor-marks.js";
 import { markdownSupport } from "./markdown-format.js";
@@ -23,7 +25,7 @@ function open(source: string): EditorView {
     state: EditorState.create({
       doc,
       selection: { anchor: at === -1 ? 0 : at },
-      extensions: [markdownSupport(), keepOffOpeningMarks],
+      extensions: [markdownSupport(), keepOffOpeningMarks, keepOffClosingFence],
     }),
   });
   views.push(view);
@@ -113,5 +115,72 @@ describe("enterAtLineStart", () => {
     expect(enterAtLineStart(view)).toBe(false);
     const plain = open("|plain");
     expect(enterAtLineStart(plain)).toBe(false);
+  });
+});
+
+describe("code fences", () => {
+  const code = "```js\nlet a;\nlet b;\n```\n\nafter";
+  // Lines start at 0 (open), 6, 13, 20 (close), 24 (blank), 25 (after).
+
+  it("never leaves a cursor on the closing fence: forward goes on past the block", () => {
+    const view = open(`${code}`);
+    view.dispatch({ selection: { anchor: 19 } });
+    view.dispatch({ selection: { anchor: 22 } });
+    expect(head(view)).toBe(24);
+  });
+
+  it("including from the very end of the fence's line, where a vertical move lands", () => {
+    const view = open(code);
+    view.dispatch({ selection: { anchor: 19 } });
+    view.dispatch({ selection: { anchor: 23 } });
+    expect(head(view)).toBe(24);
+  });
+
+  it("and backward goes to the end of the code", () => {
+    const view = open(code);
+    view.dispatch({ selection: { anchor: 25 } });
+    view.dispatch({ selection: { anchor: 22 } });
+    expect(head(view)).toBe(19);
+  });
+
+  it("with nothing after the block, stays in the code", () => {
+    const view = open("```\nx\n```");
+    view.dispatch({ selection: { anchor: 3 } });
+    view.dispatch({ selection: { anchor: 7 } });
+    expect(head(view)).toBe(5);
+  });
+
+  it("Backspace at the start of the first line of code does not join it to the fence", () => {
+    const view = open(code);
+    view.dispatch({ selection: { anchor: 6 } });
+    expect(stepOverFence(-1)(view)).toBe(true);
+    expect(head(view)).toBe(5);
+    expect(view.state.doc.toString()).toBe(code);
+  });
+
+  it("Delete at the end of the last line of code does not join it to the fence", () => {
+    const view = open(code);
+    view.dispatch({ selection: { anchor: 19 } });
+    expect(stepOverFence(1)(view)).toBe(true);
+    expect(head(view)).toBe(24);
+    expect(view.state.doc.toString()).toBe(code);
+  });
+
+  it("Backspace on the line after the block moves to the end of the code", () => {
+    const view = open("```\nx\n```\ny");
+    view.dispatch({ selection: { anchor: 10 } });
+    expect(stepOverFence(-1)(view)).toBe(true);
+    expect(head(view)).toBe(5);
+  });
+
+  it("leaves other places to the editor", () => {
+    const view = open(code);
+    view.dispatch({ selection: { anchor: 8 } });
+    expect(stepOverFence(-1)(view)).toBe(false);
+    view.dispatch({ selection: { anchor: 13 } });
+    expect(stepOverFence(-1)(view)).toBe(false);
+    const plain = open("one\ntwo");
+    plain.dispatch({ selection: { anchor: 4 } });
+    expect(stepOverFence(-1)(plain)).toBe(false);
   });
 });
