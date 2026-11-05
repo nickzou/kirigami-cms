@@ -2,6 +2,7 @@ import { EditorSelection, EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { describe, expect, it } from "vitest";
 import {
+  activeFormats,
   continueMarkup,
   type FormatAction,
   formatChange,
@@ -338,5 +339,30 @@ describe("indentLines", () => {
   it("does nothing, and says so, in plain text", () => {
     expect(run("some ¦text", 1)).toEqual({ handled: false, out: "some ¦text" });
     expect(run("# Head¦ing", 1).handled).toBe(false);
+  });
+});
+
+describe("activeFormats", () => {
+  const active = (source: string) => [...activeFormats(parse(source))].sort();
+
+  it("finds each kind of formatting the selection is in", () => {
+    expect(active("a **bo¦ld** b")).toEqual(["bold"]);
+    expect(active("a *it¦* b")).toEqual(["italic"]);
+    expect(active("a `co¦de` b")).toEqual(["code"]);
+    expect(active("a [li¦nk](u) b")).toEqual(["link"]);
+    expect(active("## He¦ad")).toEqual(["heading"]);
+    expect(active("- it¦em")).toEqual(["bullets"]);
+    expect(active("```\nco¦de\n```")).toEqual(["code"]);
+  });
+
+  it("finds several at once, and none in plain text", () => {
+    expect(active("# **bo¦ld**")).toEqual(["bold", "heading"]);
+    expect(active("plain ¦ text")).toEqual([]);
+  });
+
+  it("counts a whole selection of the element, but not one that goes beyond it", () => {
+    expect(active("a «**bold**» b")).toEqual(["bold"]);
+    expect(active("a **«bold»** b")).toEqual(["bold"]);
+    expect(active("a «bo**ld** b»")).toEqual([]);
   });
 });

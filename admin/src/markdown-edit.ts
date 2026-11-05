@@ -499,3 +499,36 @@ export function indentLines(view: EditorView, direction: 1 | -1): boolean {
   }
   return true;
 }
+
+/**
+ * Which formatting the selection is in now, for the toolbar to show as pressed:
+ * bold, italic, a link, a heading, a bulleted list, code (inline or fenced).
+ */
+export function activeFormats(state: EditorState): Set<FormatAction> {
+  const range = state.selection.main;
+  const active = new Set<FormatAction>();
+  if (enclosing(state, range, "StrongEmphasis")) active.add("bold");
+  if (enclosing(state, range, "Emphasis")) active.add("italic");
+  if (linkRangeAt(state, range.from, range.to)) active.add("link");
+  if (
+    enclosing(
+      state,
+      range,
+      "ATXHeading1",
+      "ATXHeading2",
+      "ATXHeading3",
+      "ATXHeading4",
+      "ATXHeading5",
+      "ATXHeading6",
+      "SetextHeading1",
+      "SetextHeading2",
+    )
+  ) {
+    active.add("heading");
+  }
+  if (enclosing(state, range, "BulletList")) active.add("bullets");
+  if (enclosing(state, range, "InlineCode", "FencedCode", "CodeBlock")) {
+    active.add("code");
+  }
+  return active;
+}

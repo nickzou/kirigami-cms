@@ -385,4 +385,166 @@ describe("MarkdownEditor", () => {
       expect(faded()).toBe(false);
     });
   });
+
+  describe("toolbar", () => {
+    const toolbar = () => screen.queryByRole("toolbar", { name: "Formatting" });
+    const pressed = (name: string) =>
+      screen.getByRole("button", { name }).getAttribute("aria-pressed");
+    const focus = async () => {
+      act(() => editorView(box()).focus());
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+      });
+    };
+    const select = (from: number, to = from) =>
+      act(() =>
+        editorView(box()).dispatch({ selection: { anchor: from, head: to } }),
+      );
+    /** A window as wide as a tablet, so the bar floats. */
+    const wide = (matches: boolean) =>
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches,
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("floats over a selection, and not over a cursor in a line of text", async () => {
+      wide(true);
+      render(<MarkdownEditor value={"one two\n\nthree"} onChange={() => {}} />);
+      await focus();
+      select(1);
+      expect(toolbar()).toBeNull();
+      select(0, 3);
+      expect(toolbar()).not.toBeNull();
+      select(2);
+      expect(toolbar()).toBeNull();
+    });
+
+    it("shows on an empty line, and goes once the line has text", async () => {
+      wide(true);
+      render(<MarkdownEditor value={"one\n\nthree"} onChange={() => {}} />);
+      await focus();
+      select(4);
+      expect(toolbar()).not.toBeNull();
+      act(() =>
+        editorView(box()).dispatch({
+          changes: { from: 4, insert: "x" },
+          selection: { anchor: 5 },
+          userEvent: "input.type",
+        }),
+      );
+      expect(toolbar()).toBeNull();
+    });
+
+    it("is not on the screen while the text is not in use", () => {
+      wide(true);
+      render(<MarkdownEditor value="one two" onChange={() => {}} />);
+      select(0, 3);
+      expect(toolbar()).toBeNull();
+    });
+
+    it("is pinned on a phone, whatever is selected, while the text is in use", async () => {
+      wide(false);
+      render(<MarkdownEditor value="one two" onChange={() => {}} />);
+      await focus();
+      select(1);
+      expect(toolbar()).not.toBeNull();
+    });
+
+    it("shows what the selection is in as pressed", async () => {
+      wide(true);
+      render(
+        <MarkdownEditor
+          value={"# Head\n\nsome **bold** and *it* and `c`\n\n- item\n\n[a](u)"}
+          onChange={() => {}}
+        />,
+      );
+      await focus();
+      const text = editorView(box()).state.doc.toString();
+      select(text.indexOf("bold"), text.indexOf("bold") + 4);
+      expect(pressed("Bold")).toBe("true");
+      expect(pressed("Italic")).toBe("false");
+      select(text.indexOf("it*") - 0, text.indexOf("it*") + 2);
+      expect(pressed("Italic")).toBe("true");
+      expect(pressed("Bold")).toBe("false");
+      select(text.indexOf("c`"), text.indexOf("c`") + 1);
+      expect(pressed("Code")).toBe("true");
+      select(text.indexOf("item"), text.indexOf("item") + 4);
+      expect(pressed("Bulleted list")).toBe("true");
+      select(text.indexOf("Head"), text.indexOf("Head") + 4);
+      expect(pressed("Heading")).toBe("true");
+      select(text.indexOf("a]"), text.indexOf("a]") + 1);
+      expect(pressed("Link")).toBe("true");
+    });
+
+    it("formats the selection from its buttons, and the focus stays in the text", async () => {
+      wide(true);
+      const onChange = vi.fn();
+      render(<MarkdownEditor value="one two" onChange={onChange} />);
+      await focus();
+      select(0, 3);
+      fireEvent.click(screen.getByRole("button", { name: "Bold" }));
+      expect(editorText(box())).toBe("**one** two");
+      expect(box().contains(document.activeElement)).toBe(true);
+    });
+
+    it("makes a heading or a bullet of the whole line, whatever part is selected", async () => {
+      wide(true);
+      render(
+        <MarkdownEditor
+          value={"one two three\n\nfour five six"}
+          onChange={() => {}}
+        />,
+      );
+      await focus();
+      select(4, 7);
+      fireEvent.click(screen.getByRole("button", { name: "Heading" }));
+      expect(editorText(box())).toBe("# one two three\n\nfour five six");
+      select(21, 25);
+      fireEvent.click(screen.getByRole("button", { name: "Bulleted list" }));
+      expect(editorText(box())).toBe("# one two three\n\n- four five six");
+    });
+
+    it("has shortcuts for the heading, bullets and code", async () => {
+      render(
+        <MarkdownEditor value={"one two\n\nthree four"} onChange={() => {}} />,
+      );
+      await focus();
+      const press = (key: string, init: KeyboardEventInit) =>
+        act(() => {
+          fireEvent.keyDown(editorView(box()).contentDOM, { key, ...init });
+        });
+      select(2);
+      press("1", { ctrlKey: true, altKey: true, keyCode: 49 });
+      expect(editorText(box())).toBe("# one two\n\nthree four");
+      select(13, 14);
+      press("8", { ctrlKey: true, shiftKey: true, keyCode: 56 });
+      expect(editorText(box())).toBe("# one two\n\n- three four");
+      select(13, 18);
+      press("e", { ctrlKey: true, keyCode: 69 });
+      expect(editorText(box())).toBe("# one two\n\n- `three` four");
+    });
+
+    it("is reached from the keyboard with Alt-F10, and Escape comes back to the text", async () => {
+      wide(true);
+      render(<MarkdownEditor value="one two" onChange={() => {}} />);
+      await focus();
+      select(0, 3);
+      act(() => {
+        fireEvent.keyDown(editorView(box()).contentDOM, {
+          key: "F10",
+          keyCode: 121,
+          altKey: true,
+        });
+      });
+      expect(
+        document.activeElement?.closest('[role="toolbar"]'),
+      ).not.toBeNull();
+      expect(toolbar()).not.toBeNull();
+      fireEvent.keyDown(document.activeElement as Element, { key: "Escape" });
+      expect(box().contains(document.activeElement)).toBe(true);
+    });
+  });
 });

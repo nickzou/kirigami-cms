@@ -129,32 +129,22 @@ describe("Editor: formatting buttons", () => {
     serve({ "a.md": "# A\n\nsome words here\n" });
     open("/pages/a.md");
     const box = await editor();
-    const toolbar = await screen.findByRole("toolbar", { name: "Formatting" });
     const view = editorView(box);
+    act(() => view.focus());
     act(() => view.dispatch({ selection: { anchor: 10, head: 15 } }));
+    // The toolbar shows while the text is in use.
+    const toolbar = await screen.findByRole("toolbar", { name: "Formatting" });
     fireEvent.click(within(toolbar).getByRole("button", { name: "Bold" }));
     expect(editorText(box)).toBe("# A\n\nsome **words** here\n");
     expect(saveButton().disabled).toBe(false);
     expect(box.contains(document.activeElement)).toBe(true);
   });
 
-  it("make a link, a heading and a list", async () => {
-    serve({ "a.md": "one\n\ntwo\n" });
+  it("are not on the screen while the text is not in use", async () => {
+    serve({ "a.md": "# A\n\nsome words here\n" });
     open("/pages/a.md");
-    const box = await editor();
-    const toolbar = await screen.findByRole("toolbar");
-    const view = editorView(box);
-    const press = (name: string) =>
-      fireEvent.click(within(toolbar).getByRole("button", { name }));
-    act(() => view.dispatch({ selection: { anchor: 1 } }));
-    press("Heading");
-    expect(editorText(box)).toBe("# one\n\ntwo\n");
-    act(() => view.dispatch({ selection: { anchor: 7, head: 10 } }));
-    press("Bulleted list");
-    expect(editorText(box)).toBe("# one\n\n- two\n");
-    act(() => view.dispatch({ selection: { anchor: 9, head: 12 } }));
-    press("Link");
-    expect(editorText(box)).toBe("# one\n\n- [two]()\n");
+    await editor();
+    expect(screen.queryByRole("toolbar")).toBeNull();
   });
 });
 

@@ -33,9 +33,12 @@ import {
   stepIntoTables,
   tableWidgets,
 } from "../../editor-widgets.js";
+import { useMediaQuery } from "../../hooks/useMediaQuery.js";
 import {
+  activeFormats,
   applyFormat,
   continueMarkup,
+  type FormatAction,
   indentLines,
   unlink,
 } from "../../markdown-edit.js";
@@ -48,6 +51,7 @@ import {
   type Piece,
   toDecorations,
 } from "../../markdown-format.js";
+import { EditorToolbar } from "../EditorToolbar/EditorToolbar.js";
 import { LinkPopover } from "../LinkPopover/LinkPopover.js";
 
 export interface MarkdownEditorProps {
@@ -105,6 +109,25 @@ const formatting = ViewPlugin.fromClass(
       ),
   },
 );
+
+/** About how wide the toolbar is, to keep it inside the page. */
+const TOOLBAR_WIDTH = 272;
+
+/** Where the toolbar is, and what it shows as pressed. */
+type Bar =
+  | { kind: "pinned"; active: ReadonlySet<FormatAction> }
+  | {
+      kind: "float";
+      /** Across the page: the middle of the bar, or its left edge when not `centred`. */
+      x: number;
+      /** The first line's top and the last line's bottom, down the page. */
+      top: number;
+      bottom: number;
+      centred: boolean;
+      /** Under the text rather than over it. */
+      below: boolean;
+      active: ReadonlySet<FormatAction>;
+    };
 
 /** Marks a change that came from `value`, so it is not reported back or made undoable. */
 const fromOutside = Annotation.define<boolean>();
@@ -312,6 +335,15 @@ export function MarkdownEditor({
   const typingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // Raised to ask the popover to take the focus (Cmd/Ctrl+K, the toolbar's link button).
   const [focusTick, setFocusTick] = useState(0);
+  // The formatting toolbar: floating by the selection (or an empty line) from
+  // a tablet up, pinned above the keyboard on a phone. `null` when not shown.
+  const [bar, setBar] = useState<Bar | null>(null);
+  const toolbarBox = useRef<HTMLDivElement>(null);
+  const compact = !useMediaQuery("(min-width: 768px)");
+  const compactRef = useRef(compact);
+  compactRef.current = compact;
+  // How far the soft keyboard covers the bottom of the window (0 with none).
+  const [inset, setInset] = useState(0);
   // The latest callback, so the editor is made once and never rebuilt for it.
   const report = useRef(onChange);
   report.current = onChange;
@@ -356,6 +388,74 @@ export function MarkdownEditor({
     [popoverHasFocus],
   );
 
+  /** Shows the toolbar where it belongs for the selection, or takes it away. */
+  const syncBar = useCallback((editor: EditorView) => {
+    const inUse =
+      editor.hasFocus ||
+      (toolbarBox.current?.contains(document.activeElement) ?? false);
+    const origin = page.current?.getBoundingClientRect();
+    if (!inUse || !origin) return setBar(null);
+    const { state } = editor;
+    const active = activeFormats(state);
+    if (compactRef.current) return setBar({ kind: "pinned", active });
+    const sel = state.selection.main;
+    const none = {
+      left: origin.left,
+      right: origin.left,
+      top: origin.top,
+      bottom: origin.top,
+    };
+    let anchor: {
+      x: number;
+      top: number;
+      bottom: number;
+      centred: boolean;
+      viewportTop: number;
+    };
+    if (!sel.empty) {
+      const a = editor.coordsAtPos(sel.from, 1) ?? none;
+      const b = editor.coordsAtPos(sel.to, -1) ?? none;
+      const sameLine = Math.abs(a.top - b.top) < 2;
+      anchor = {
+        x: (sameLine ? (a.left + b.left) / 2 : a.left) - origin.left,
+        top: a.top - origin.top,
+        bottom: b.bottom - origin.top,
+        centred: true,
+        viewportTop: a.top,
+      };
+    } else if (state.doc.lineAt(sel.head).length === 0) {
+      const c = editor.coordsAtPos(sel.head) ?? none;
+      anchor = {
+        x: c.left - origin.left,
+        top: c.top - origin.top,
+        bottom: c.bottom - origin.top,
+        centred: false,
+        viewportTop: c.top,
+      };
+    } else {
+      return setBar(null);
+    }
+    // Over the first line, or under the last when there is no room above
+    // (the header and the bar itself take the first 120px of the window).
+    const below = anchor.viewportTop < 120;
+    const half = TOOLBAR_WIDTH / 2;
+    const x = anchor.centred
+      ? Math.min(Math.max(anchor.x, half), Math.max(half, origin.width - half))
+      : Math.min(
+          Math.max(anchor.x, 0),
+          Math.max(0, origin.width - TOOLBAR_WIDTH),
+        );
+    setBar({
+      kind: "float",
+      x,
+      top: anchor.top,
+      bottom: anchor.bottom,
+      centred: anchor.centred,
+      below,
+      active,
+    });
+  }, []);
+
   /** Follows the cursor to a link (and the typing, to fade the popover while it goes on). */
   const followLink = useCallback(
     (update: ViewUpdate) => {
@@ -374,9 +474,10 @@ export function MarkdownEditor({
       }
       if (update.docChanged || update.selectionSet || update.focusChanged) {
         syncLink(update.view, update.focusChanged);
+        syncBar(update.view);
       }
     },
-    [syncLink],
+    [syncBar, syncLink],
   );
 
   /** Cmd/Ctrl+K and the toolbar's link button: make a link, or go to the address of this one. */
@@ -392,6 +493,19 @@ export function MarkdownEditor({
   );
   const formatLinkRef = useRef(formatLink);
   formatLinkRef.current = formatLink;
+
+  /** A formatting action, from the toolbar or a shortcut. */
+  const runFormat = useCallback(
+    (action: FormatAction) => {
+      const editor = view.current;
+      if (!editor) return;
+      if (action === "link") formatLink(editor);
+      else applyFormat(editor, action);
+    },
+    [formatLink],
+  );
+  const runFormatRef = useRef(runFormat);
+  runFormatRef.current = runFormat;
 
   useEffect(() => {
     const parent = host.current;
@@ -414,6 +528,21 @@ export function MarkdownEditor({
               { key: "Mod-b", run: (v) => applyFormat(v, "bold") },
               { key: "Mod-i", run: (v) => applyFormat(v, "italic") },
               { key: "Mod-k", run: (v) => formatLink(v) },
+              // The rest of the toolbar. (Cmd-Alt-H is taken by the system on a Mac.)
+              { key: "Mod-Alt-1", run: (v) => applyFormat(v, "heading") },
+              { key: "Mod-Shift-8", run: (v) => applyFormat(v, "bullets") },
+              { key: "Mod-e", run: (v) => applyFormat(v, "code") },
+              // Into the toolbar, for the keyboard (Escape comes back).
+              {
+                key: "Alt-F10",
+                run: () => {
+                  const button = toolbarBox.current?.querySelector<HTMLElement>(
+                    'button[tabindex="0"]',
+                  );
+                  button?.focus();
+                  return button !== undefined && button !== null;
+                },
+              },
               // Tab nests a list item and indents code; elsewhere it moves
               // focus on. (CodeMirror itself lets Tab through for a moment
               // after Escape, so the keyboard is never trapped.)
@@ -483,6 +612,40 @@ export function MarkdownEditor({
     };
   }, [followLink, formatLink, syncLink]);
 
+  // The bar follows the window: a scroll moves the line it stands by, a change
+  // of size moves it between floating and pinned, and the keyboard covers the
+  // bottom of a phone.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `compact` changing is what moves the bar between floating and pinned.
+  useEffect(() => {
+    const editor = view.current;
+    if (editor) syncBar(editor);
+    const follow = () => {
+      const current = view.current;
+      if (current) syncBar(current);
+    };
+    window.addEventListener("scroll", follow, true);
+    window.addEventListener("resize", follow);
+    return () => {
+      window.removeEventListener("scroll", follow, true);
+      window.removeEventListener("resize", follow);
+    };
+  }, [syncBar, compact]);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const update = () =>
+      setInset(
+        Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop),
+      );
+    update();
+    viewport.addEventListener("resize", update);
+    viewport.addEventListener("scroll", update);
+    return () => {
+      viewport.removeEventListener("resize", update);
+      viewport.removeEventListener("scroll", update);
+    };
+  }, []);
+
   // Replaces the text when `value` is changed from outside (the page was
   // loaded again), keeping the cursor where it can be.
   useEffect(() => {
@@ -505,12 +668,7 @@ export function MarkdownEditor({
       });
       editor.focus();
     },
-    format: (action) => {
-      const editor = view.current;
-      if (!editor) return;
-      if (action === "link") formatLinkRef.current(editor);
-      else applyFormat(editor, action);
-    },
+    format: (action) => runFormatRef.current(action),
     selectAll: () => {
       const editor = view.current;
       if (!editor) return;
@@ -563,6 +721,54 @@ export function MarkdownEditor({
         ref={host}
         style={{ maxWidth: "var(--k-max-width)", margin: "0 auto" }}
       />
+      {bar && (
+        // Over the text it is about (or under it with no room above), or pinned
+        // above the keyboard. A press on a button keeps the focus in the text.
+        // biome-ignore lint/a11y/noStaticElementInteractions: only to see the focus leave the toolbar.
+        <div
+          ref={toolbarBox}
+          onBlurCapture={(event) => {
+            const next = event.relatedTarget as Node | null;
+            if (
+              next &&
+              (toolbarBox.current?.contains(next) ||
+                view.current?.dom.contains(next))
+            ) {
+              return;
+            }
+            setBar(null);
+          }}
+          style={
+            bar.kind === "pinned"
+              ? {
+                  position: "fixed",
+                  left: 0,
+                  right: 0,
+                  bottom: inset,
+                  zIndex: 30,
+                  display: "flex",
+                  justifyContent: "center",
+                  padding: "0.5rem",
+                  pointerEvents: "none",
+                }
+              : {
+                  position: "absolute",
+                  left: bar.x,
+                  top: bar.below ? bar.bottom + 8 : bar.top - 8,
+                  transform: `translate(${bar.centred ? "-50%" : "0"}, ${bar.below ? "0" : "-100%"})`,
+                  zIndex: 20,
+                }
+          }
+        >
+          <div style={{ pointerEvents: "auto" }}>
+            <EditorToolbar
+              active={bar.active}
+              onAction={(action) => runFormatRef.current(action)}
+              onEscape={() => view.current?.focus()}
+            />
+          </div>
+        </div>
+      )}
       <div ref={popover} style={{ display: "contents" }}>
         {link && (
           <LinkPopover
