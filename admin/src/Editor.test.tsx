@@ -55,15 +55,15 @@ describe("Editor: loading", () => {
     expect(screen.getByText("No changes")).toBeDefined();
   });
 
-  it("puts the cursor in the text when the bare sheet is clicked", async () => {
+  it("puts the cursor in the text when the bare page is clicked", async () => {
     serve({ "blog/hello.md": "# Hello\n" });
     open("/pages/blog/hello.md");
     const box = await editor();
     expect(box.contains(document.activeElement)).toBe(false);
 
-    // The sheet is the page the text sits on; a click on it, not on a control.
+    // The page is the surface the text sits on; a click on it, not on the text.
     fireEvent.click(
-      box.closest("form")?.parentElement?.parentElement as HTMLElement,
+      box.closest(".cm-editor")?.parentElement?.parentElement as HTMLElement,
     );
     expect(box.contains(document.activeElement)).toBe(true);
     const { head } = editorView(box).state.selection.main;
@@ -129,32 +129,22 @@ describe("Editor: formatting buttons", () => {
     serve({ "a.md": "# A\n\nsome words here\n" });
     open("/pages/a.md");
     const box = await editor();
-    const toolbar = await screen.findByRole("toolbar", { name: "Formatting" });
     const view = editorView(box);
+    act(() => view.focus());
     act(() => view.dispatch({ selection: { anchor: 10, head: 15 } }));
+    // The toolbar shows while the text is in use.
+    const toolbar = await screen.findByRole("toolbar", { name: "Formatting" });
     fireEvent.click(within(toolbar).getByRole("button", { name: "Bold" }));
     expect(editorText(box)).toBe("# A\n\nsome **words** here\n");
     expect(saveButton().disabled).toBe(false);
     expect(box.contains(document.activeElement)).toBe(true);
   });
 
-  it("make a link, a heading and a list", async () => {
-    serve({ "a.md": "one\n\ntwo\n" });
+  it("are not on the screen while the text is not in use", async () => {
+    serve({ "a.md": "# A\n\nsome words here\n" });
     open("/pages/a.md");
-    const box = await editor();
-    const toolbar = await screen.findByRole("toolbar");
-    const view = editorView(box);
-    const press = (name: string) =>
-      fireEvent.click(within(toolbar).getByRole("button", { name }));
-    act(() => view.dispatch({ selection: { anchor: 1 } }));
-    press("Heading");
-    expect(editorText(box)).toBe("# one\n\ntwo\n");
-    act(() => view.dispatch({ selection: { anchor: 7, head: 10 } }));
-    press("Bulleted list");
-    expect(editorText(box)).toBe("# one\n\n- two\n");
-    act(() => view.dispatch({ selection: { anchor: 9, head: 12 } }));
-    press("Link");
-    expect(editorText(box)).toBe("# one\n\n- [two]()\n");
+    await editor();
+    expect(screen.queryByRole("toolbar")).toBeNull();
   });
 });
 
@@ -436,6 +426,12 @@ describe("Editor: unsaved changes guard", () => {
   });
 });
 
+/** Opens the header's page menu and returns the item called `name`. */
+async function pageAction(name: string): Promise<HTMLElement> {
+  fireEvent.click(await screen.findByRole("button", { name: "Page actions" }));
+  return screen.findByRole("menuitem", { name });
+}
+
 describe("Editor: rename and delete", () => {
   it("renames the page from the title field and opens it at its new path", async () => {
     const store = serve({ "blog/hello.md": "# Hello\n" });
@@ -531,19 +527,19 @@ describe("Editor: rename and delete", () => {
     serve({ "a.md": "# A\n" });
     open("/pages/a.md");
     typeText(await editor(), "# A\n\nmore");
-    const remove = screen.getByRole("button", {
-      name: "Delete",
-    }) as HTMLButtonElement;
     expect(pagePath().readOnly).toBe(true);
     expect(pagePath().title).toBe("Save your changes first.");
-    expect(remove.disabled).toBe(true);
+    const remove = await pageAction("Delete");
+    expect(remove.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(remove);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("asks before deleting, then deletes the page and goes back to the list", async () => {
     const store = serve({ "a.md": "# A\n", "b.md": "# B\n" });
     open("/pages/a.md");
     await editor();
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(await pageAction("Delete"));
     const dialog = await screen.findByRole("dialog", { name: "Delete a.md?" });
     expect(within(dialog).getByText(/cannot be undone/)).toBeDefined();
     fireEvent.click(
@@ -561,7 +557,7 @@ describe("Editor: rename and delete", () => {
     const store = serve({ "a.md": "# A\n" });
     open("/pages/a.md");
     await editor();
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(await pageAction("Delete"));
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);

@@ -55,6 +55,10 @@ const tooltip = ({ label, shortcut, hint }: Item): string =>
 
 export interface EditorToolbarProps {
   onAction: (action: FormatAction) => void;
+  /** The formatting the text is in now; those buttons show as pressed. */
+  active?: ReadonlySet<FormatAction>;
+  /** Escape was pressed in the toolbar: go back to the text. */
+  onEscape?: () => void;
 }
 
 /**
@@ -63,7 +67,11 @@ export interface EditorToolbarProps {
  * selection is what they work on). It is one stop for the Tab key, and the
  * arrow keys, Home and End move between the buttons.
  */
-export function EditorToolbar({ onAction }: EditorToolbarProps) {
+export function EditorToolbar({
+  onAction,
+  active,
+  onEscape,
+}: EditorToolbarProps) {
   const [current, setCurrent] = useState(0);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -73,6 +81,11 @@ export function EditorToolbar({ onAction }: EditorToolbarProps) {
     buttons.current[index]?.focus();
   };
   const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape" && onEscape) {
+      event.preventDefault();
+      onEscape();
+      return;
+    }
     const keys: Record<string, number> = {
       ArrowRight: current + 1,
       ArrowLeft: current - 1,
@@ -102,6 +115,7 @@ export function EditorToolbar({ onAction }: EditorToolbarProps) {
           }}
           type="button"
           aria-label={item.label}
+          aria-pressed={active?.has(item.action) ?? false}
           aria-keyshortcuts={keyShortcuts(item.shortcut)}
           title={tooltip(item)}
           tabIndex={index === current ? 0 : -1}
@@ -109,7 +123,11 @@ export function EditorToolbar({ onAction }: EditorToolbarProps) {
           onMouseDown={(event) => event.preventDefault()}
           onFocus={() => setCurrent(index)}
           onClick={() => onAction(item.action)}
-          className=":uno: inline-flex size-9 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-text transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle focus-visible:[outline:2px_solid_var(--accent)] focus-visible:outline-offset-2 motion-reduce:transition-none"
+          className={
+            active?.has(item.action)
+              ? ":uno: inline-flex size-9 cursor-pointer items-center justify-center rounded-full border-0 bg-accent p-0 text-on-accent transition-colors duration-200 ease-[ease-in-out] hover:bg-accent-hover focus-visible:[outline:2px_solid_var(--accent)] focus-visible:outline-offset-2 motion-reduce:transition-none"
+              : ":uno: inline-flex size-9 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-text transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle focus-visible:[outline:2px_solid_var(--accent)] focus-visible:outline-offset-2 motion-reduce:transition-none"
+          }
         >
           <item.icon size={18} aria-hidden="true" />
         </button>

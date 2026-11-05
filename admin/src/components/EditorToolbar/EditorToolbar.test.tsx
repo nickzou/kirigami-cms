@@ -100,4 +100,37 @@ describe("EditorToolbar", () => {
     fireEvent.keyDown(screen.getByRole("toolbar"), { key: "a" });
     expect(document.activeElement?.getAttribute("aria-label")).toBe("Bold");
   });
+
+  it("shows the buttons for the formatting the text is in as pressed", () => {
+    render(
+      <EditorToolbar
+        onAction={() => {}}
+        active={new Set(["bold", "heading"])}
+      />,
+    );
+    const pressed = names.filter(
+      (name) =>
+        screen.getByRole("button", { name }).getAttribute("aria-pressed") ===
+        "true",
+    );
+    expect(pressed).toEqual(["Bold", "Heading"]);
+  });
+
+  it("shows nothing as pressed when it is not told", () => {
+    render(<EditorToolbar onAction={() => {}} />);
+    for (const name of names) {
+      expect(
+        screen.getByRole("button", { name }).getAttribute("aria-pressed"),
+      ).toBe("false");
+    }
+  });
+
+  it("asks to go back to the text on Escape", () => {
+    const onEscape = vi.fn();
+    render(<EditorToolbar onAction={() => {}} onEscape={onEscape} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Bold" }), {
+      key: "Escape",
+    });
+    expect(onEscape).toHaveBeenCalled();
+  });
 });

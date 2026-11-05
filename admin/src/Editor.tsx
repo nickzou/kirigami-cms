@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { deletePage, listPages, renamePage } from "./api.js";
+import { FullBleed } from "./components/AppShell/full-bleed.js";
 import { BackLink } from "./components/BackLink/BackLink.js";
 import { BuildProblem } from "./components/BuildProblem/BuildProblem.js";
-import { Button } from "./components/Button/Button.js";
 import { ConflictPanel } from "./components/ConflictPanel/ConflictPanel.js";
 import { DeleteDialog } from "./components/DeleteDialog/DeleteDialog.js";
 import {
   EDITOR_FORM_ID,
   EditorForm,
 } from "./components/EditorForm/EditorForm.js";
-import { EditorToolbar } from "./components/EditorToolbar/EditorToolbar.js";
 import { ErrorPanel } from "./components/ErrorPanel/ErrorPanel.js";
 import { HeaderActions } from "./components/HeaderActions/HeaderActions.js";
 import { HeaderTitle } from "./components/HeaderTitle/HeaderTitle.js";
@@ -19,6 +18,7 @@ import { LoadingMessage } from "./components/LoadingMessage/LoadingMessage.js";
 import { OutsideChangePanel } from "./components/OutsideChangePanel/OutsideChangePanel.js";
 import { pageHref } from "./components/PageListView/PageListView.js";
 import { PagePathField } from "./components/PagePathField/PagePathField.js";
+import { RowMenu } from "./components/RowMenu/RowMenu.js";
 import { SaveControls } from "./components/SaveControls/SaveControls.js";
 import { SaveFailedPanel } from "./components/SaveFailedPanel/SaveFailedPanel.js";
 import { Toast } from "./components/Toast/Toast.js";
@@ -82,44 +82,11 @@ export function Editor({ path }: { path: string }) {
     );
   }
 
-  // A click on the bare sheet (not on a control) puts the cursor in the text.
-  const focusText = () => editor.editorRef.current?.focusEnd();
-
   return (
     <>
-      {/* The sheet: the page as one long piece of paper, with no bottom edge. */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: a shortcut for the mouse; the text box is already reachable by keyboard. */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: as above. */}
-      <div
-        onClick={(event) => {
-          if (event.target === event.currentTarget) focusText();
-        }}
-        className=":uno: -mx-4 min-h-[calc(100vh-5rem)] px-4 pt-4 pb-28 md:mx-auto md:max-w-[55rem] md:rounded-t-lg md:px-12 md:pt-8"
-      >
-        <div className=":uno: mb-4 flex items-center justify-end gap-3">
-          {editor.version !== undefined && (
-            <div className=":uno: flex gap-2">
-              {editor.url && (
-                <Button
-                  size="small"
-                  href={editor.url}
-                  target="_blank"
-                  rel="noopener"
-                >
-                  Open page
-                </Button>
-              )}
-              <Button
-                size="small"
-                disabled={editor.dirty || editor.saving}
-                title={editor.dirty ? "Save your changes first." : undefined}
-                onClick={() => setDeleting(true)}
-              >
-                Delete
-              </Button>
-            </div>
-          )}
-        </div>
+      {/* The page takes the whole area under the header. */}
+      <FullBleed />
+      <div>
         <PagePathField
           path={path}
           before={<BackLink />}
@@ -137,8 +104,47 @@ export function Editor({ path }: { path: string }) {
             navigate(pageHref(moved.path), { replace: true });
           }}
         />
-        {build.error !== null && <BuildProblem message={build.error} />}
+        {/* Notices, above the page; nothing is drawn when there are none. */}
+        <div className=":uno: grid gap-4 px-4 pt-4 empty:hidden">
+          {build.error !== null && <BuildProblem message={build.error} />}
+          {editor.outside && (
+            <OutsideChangePanel
+              gone={editor.outside.kind === "gone"}
+              onLoadLatest={editor.reload}
+              onCopy={editor.copyDraft}
+              onKeepEditing={editor.dismissOutside}
+            />
+          )}
+          {save.status === "error" && (
+            <SaveFailedPanel message={save.message} />
+          )}
+          {save.status === "conflict" && (
+            <ConflictPanel
+              gone={save.gone}
+              onLoadLatest={editor.reload}
+              onCopy={editor.copyDraft}
+              onKeepEditing={editor.dismissSave}
+            />
+          )}
+        </div>
         <HeaderActions>
+          {editor.version !== undefined && (
+            <RowMenu
+              label="Page actions"
+              items={[
+                ...(editor.url
+                  ? [{ label: "Open page", href: editor.url }]
+                  : []),
+                {
+                  label: "Delete",
+                  danger: true,
+                  disabled: editor.dirty || editor.saving,
+                  title: editor.dirty ? "Save your changes first." : undefined,
+                  onSelect: () => setDeleting(true),
+                },
+              ]}
+            />
+          )}
           <SaveControls
             dirty={editor.dirty}
             saving={editor.saving}
@@ -154,33 +160,7 @@ export function Editor({ path }: { path: string }) {
                 : null
           }
         />
-        {editor.outside && (
-          <OutsideChangePanel
-            gone={editor.outside.kind === "gone"}
-            onLoadLatest={editor.reload}
-            onCopy={editor.copyDraft}
-            onKeepEditing={editor.dismissOutside}
-          />
-        )}
-        {save.status === "error" && <SaveFailedPanel message={save.message} />}
-        {save.status === "conflict" && (
-          <ConflictPanel
-            gone={save.gone}
-            onLoadLatest={editor.reload}
-            onCopy={editor.copyDraft}
-            onKeepEditing={editor.dismissSave}
-          />
-        )}
         <div>
-          {/* Stays in reach as a long page scrolls: under the header from a
-              tablet up (it is pinned there), at the top of the screen on a phone. */}
-          {theme !== undefined && (
-            <div className=":uno: sticky top-0 z-10 mb-3 flex justify-center md:top-[68px]">
-              <EditorToolbar
-                onAction={(action) => editor.editorRef.current?.format(action)}
-              />
-            </div>
-          )}
           <EditorForm
             value={editor.draft}
             onChange={editor.setDraft}

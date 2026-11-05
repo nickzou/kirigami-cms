@@ -166,7 +166,12 @@ export const BuildFailed: Story = {
 export const OpensThePage: Story = {
   beforeEach: () => installFakeApi(hello).restore,
   play: async ({ canvasElement }) => {
-    const link = await within(canvasElement).findByRole("link", {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Page actions",
+      }),
+    );
+    const link = await within(document.body).findByRole("menuitem", {
       name: "Open page",
     });
     await expect(link).toHaveAttribute("href", "/blog/hello/");
@@ -211,7 +216,10 @@ export const DeleteDialogOpen: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Delete" }),
+      await canvas.findByRole("button", { name: "Page actions" }),
+    );
+    await userEvent.click(
+      await within(document.body).findByRole("menuitem", { name: "Delete" }),
     );
     await expect(
       await canvas.findByRole("dialog", { name: "Delete blog/hello.md?" }),
@@ -230,6 +238,11 @@ export const RenameAndDeleteWaitForASave: Story = {
         canvas.getByRole("textbox", { name: "Page path" }),
       ).toHaveAttribute("readonly"),
     );
-    await expect(canvas.getByRole("button", { name: "Delete" })).toBeDisabled();
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Page actions" }),
+    );
+    await expect(
+      await within(document.body).findByRole("menuitem", { name: "Delete" }),
+    ).toHaveAttribute("aria-disabled", "true");
   },
 };

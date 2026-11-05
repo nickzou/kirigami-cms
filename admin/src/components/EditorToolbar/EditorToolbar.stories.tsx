@@ -13,6 +13,11 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+/** The formatting the text is in shows as pressed. */
+export const WithPressedButtons: Story = {
+  args: { active: new Set(["bold", "link"]) },
+};
+
 export const Clicking: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
