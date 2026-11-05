@@ -175,6 +175,7 @@ const look = EditorView.theme({
     paddingRight: "var(--k-space)",
   },
   ".kcm-code-first": {
+    position: "relative",
     paddingTop: "calc(var(--k-space) * 0.5)",
     borderTopLeftRadius: "6px",
     borderTopRightRadius: "6px",
@@ -186,8 +187,11 @@ const look = EditorView.theme({
   },
   // The language, as the block's label.
   ".kcm-code-info": {
+    position: "absolute",
+    top: "0.3em",
+    right: "var(--k-space)",
     color: "var(--k-color-muted)",
-    fontSize: "0.8em",
+    fontSize: "0.7em",
   },
   // The closing fence line is only the block's bottom edge.
   ".kcm-code-closing": {
