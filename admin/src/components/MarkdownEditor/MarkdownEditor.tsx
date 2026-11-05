@@ -709,9 +709,9 @@ export function MarkdownEditor({
       style={{
         ...variables,
         position: "relative",
-        minHeight: "60vh",
+        // Fills the screen under the 60px header, whatever the text's length.
+        minHeight: "calc(100dvh - 60px)",
         padding: "calc(var(--k-space) * 2) var(--k-space)",
-        borderRadius: "0.5rem",
         backgroundColor: "var(--k-color-background)",
         color: "var(--k-color-text)",
         fontFamily: "var(--k-font-body)",

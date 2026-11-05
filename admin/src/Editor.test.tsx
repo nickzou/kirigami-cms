@@ -55,15 +55,15 @@ describe("Editor: loading", () => {
     expect(screen.getByText("No changes")).toBeDefined();
   });
 
-  it("puts the cursor in the text when the bare sheet is clicked", async () => {
+  it("puts the cursor in the text when the bare page is clicked", async () => {
     serve({ "blog/hello.md": "# Hello\n" });
     open("/pages/blog/hello.md");
     const box = await editor();
     expect(box.contains(document.activeElement)).toBe(false);
 
-    // The sheet is the page the text sits on; a click on it, not on a control.
+    // The page is the surface the text sits on; a click on it, not on the text.
     fireEvent.click(
-      box.closest("form")?.parentElement?.parentElement as HTMLElement,
+      box.closest(".cm-editor")?.parentElement?.parentElement as HTMLElement,
     );
     expect(box.contains(document.activeElement)).toBe(true);
     const { head } = editorView(box).state.selection.main;
@@ -426,6 +426,12 @@ describe("Editor: unsaved changes guard", () => {
   });
 });
 
+/** Opens the header's page menu and returns the item called `name`. */
+async function pageAction(name: string): Promise<HTMLElement> {
+  fireEvent.click(await screen.findByRole("button", { name: "Page actions" }));
+  return screen.findByRole("menuitem", { name });
+}
+
 describe("Editor: rename and delete", () => {
   it("renames the page from the title field and opens it at its new path", async () => {
     const store = serve({ "blog/hello.md": "# Hello\n" });
@@ -521,19 +527,19 @@ describe("Editor: rename and delete", () => {
     serve({ "a.md": "# A\n" });
     open("/pages/a.md");
     typeText(await editor(), "# A\n\nmore");
-    const remove = screen.getByRole("button", {
-      name: "Delete",
-    }) as HTMLButtonElement;
     expect(pagePath().readOnly).toBe(true);
     expect(pagePath().title).toBe("Save your changes first.");
-    expect(remove.disabled).toBe(true);
+    const remove = await pageAction("Delete");
+    expect(remove.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(remove);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("asks before deleting, then deletes the page and goes back to the list", async () => {
     const store = serve({ "a.md": "# A\n", "b.md": "# B\n" });
     open("/pages/a.md");
     await editor();
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(await pageAction("Delete"));
     const dialog = await screen.findByRole("dialog", { name: "Delete a.md?" });
     expect(within(dialog).getByText(/cannot be undone/)).toBeDefined();
     fireEvent.click(
@@ -551,7 +557,7 @@ describe("Editor: rename and delete", () => {
     const store = serve({ "a.md": "# A\n" });
     open("/pages/a.md");
     await editor();
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(await pageAction("Delete"));
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect((await store.list()).map((e) => e.path)).toEqual(["a.md"]);

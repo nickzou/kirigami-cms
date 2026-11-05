@@ -16,8 +16,13 @@ export interface RowMenuItem {
   to?: string;
   /** State handed to the screen `to` opens. */
   state?: unknown;
+  /** ... or opens this address (outside the admin) in a new tab, or ... */
+  href?: string;
   /** ... does this. */
   onSelect?: () => void;
+  /** Cannot be chosen now; `title` says why. */
+  disabled?: boolean;
+  title?: string;
   /** For an action that cannot be undone. */
   danger?: boolean;
 }
@@ -32,6 +37,9 @@ const itemClass =
   ":uno: block w-full cursor-pointer rounded border-0 bg-transparent px-3 py-2 text-left text-sm text-text no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle focus-visible:bg-subtle focus-visible:outline-none motion-reduce:transition-none";
 const dangerClass =
   ":uno: block w-full cursor-pointer rounded border-0 bg-transparent px-3 py-2 text-left text-sm text-danger no-underline transition-colors duration-200 ease-[ease-in-out] hover:bg-subtle focus-visible:bg-subtle focus-visible:outline-none motion-reduce:transition-none";
+
+const disabledClass =
+  ":uno: block w-full cursor-not-allowed rounded border-0 bg-transparent px-3 py-2 text-left text-sm text-muted no-underline opacity-60";
 
 /**
  * A kebab button that opens a small menu of actions for a row. The menu is
@@ -138,13 +146,34 @@ export function RowMenu({ label, items }: RowMenuProps): ReactNode {
                 >
                   {item.label}
                 </Link>
+              ) : item.href !== undefined ? (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener"
+                  role="menuitem"
+                  className={item.danger ? dangerClass : itemClass}
+                  onClick={() => close(false)}
+                >
+                  {item.label}
+                </a>
               ) : (
                 <button
                   key={item.label}
                   type="button"
                   role="menuitem"
-                  className={item.danger ? dangerClass : itemClass}
+                  aria-disabled={item.disabled || undefined}
+                  title={item.title}
+                  className={
+                    item.disabled
+                      ? disabledClass
+                      : item.danger
+                        ? dangerClass
+                        : itemClass
+                  }
                   onClick={() => {
+                    if (item.disabled) return;
                     close(false);
                     item.onSelect?.();
                   }}

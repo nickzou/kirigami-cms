@@ -1,5 +1,12 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
@@ -63,9 +70,17 @@ describe("Editor: the dev server's builds", () => {
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
-  it("opens the live page in a new tab from the Open page link", async () => {
+  /** Opens the header's page menu and returns Open page. */
+  const openPage = async () => {
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Page actions" }),
+    );
+    return screen.findByRole("menuitem", { name: "Open page" });
+  };
+
+  it("opens the live page in a new tab from the page menu", async () => {
     open("/pages/blog/hello.md", hello);
-    const link = await screen.findByRole("link", { name: "Open page" });
+    const link = await openPage();
     expect(link.getAttribute("href")).toBe("/blog/hello/");
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
@@ -73,7 +88,7 @@ describe("Editor: the dev server's builds", () => {
 
   it("links the home page as /", async () => {
     open("/pages/index.md", { "index.md": "# Home\n" });
-    const link = await screen.findByRole("link", { name: "Open page" });
+    const link = await openPage();
     expect(link.getAttribute("href")).toBe("/");
   });
 
