@@ -12,19 +12,32 @@ import { BrandLink } from "../BrandLink/BrandLink.js";
 export function AppHeader({
   title,
   children,
+  fade = false,
 }: {
   /** Sits after the logo (see `HeaderTitle`). */
   title?: ReactNode;
   children?: ReactNode;
+  /**
+   * Fade the page into the header's edge as it scrolls under it, so content is
+   * not cut off hard. For a screen on the page's own background; one with a
+   * background of its own (the page editor) leaves it off.
+   */
+  fade?: boolean;
 }) {
   return (
-    <header className=":uno: flex h-[60px] items-center justify-start gap-4 bg-surface px-4 shadow md:sticky md:top-0 md:z-20">
+    <header className=":uno: relative flex h-[60px] items-center justify-start gap-4 bg-surface px-4 shadow md:sticky md:top-0 md:z-20">
       {/* From a tablet width the logo lives in the sidebar instead. */}
       <div className=":uno: md:hidden">
         <BrandLink markOnPhone />
       </div>
       {title}
       <div className=":uno: ml-auto flex items-center gap-3">{children}</div>
+      {fade && (
+        <div
+          aria-hidden="true"
+          className=":uno: pointer-events-none absolute inset-x-0 top-full hidden h-8 bg-gradient-to-b from-bg to-transparent md:block"
+        />
+      )}
     </header>
   );
 }

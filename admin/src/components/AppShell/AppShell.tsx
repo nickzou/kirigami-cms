@@ -63,6 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </aside>
             <div className=":uno: min-w-0 flex-1">
               <AppHeader
+                fade={!bleed}
                 title={
                   <div
                     ref={setTitleSlot}
