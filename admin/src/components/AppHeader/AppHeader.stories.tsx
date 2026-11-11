@@ -16,3 +16,8 @@ export const Default: StoryObj<typeof meta> = {};
 export const WithAction: StoryObj<typeof meta> = {
   args: { children: <Button variant="primary">Save</Button> },
 };
+
+/** From a tablet up, the page fades into the header's lower edge as it scrolls under it. */
+export const WithFade: StoryObj<typeof meta> = {
+  args: { fade: true, children: <Button variant="primary">Save</Button> },
+};
